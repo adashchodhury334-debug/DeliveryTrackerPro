@@ -2,111 +2,158 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Delivery Tracker Pro</title>
     <style>
-        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
-        body { background-color: #121212; color: #e0e0e0; padding: 16px; min-height: 100vh; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-top: 6px; }
-        h1 { font-size: 20px; color: #00E676; }
-        .btn-lock { background: #333; color: #00E676; border: 1px solid #00E676; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .card { background: #1e1e1e; padding: 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #333; }
-        .card-title { font-size: 15px; font-weight: bold; margin-bottom: 12px; color: #fff; display: flex; justify-content: space-between; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #0d1117; color: #e6edf3; padding: 12px; min-height: 100vh; padding-bottom: 70px; }
         
-        /* Filter Tabs */
-        .filter-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
-        .tab-btn { flex: 1; padding: 8px; font-size: 13px; font-weight: bold; border-radius: 8px; background: #2a2a2a; color: #aaa; border: 1px solid #444; cursor: pointer; text-align: center; }
-        .tab-btn.active { background: #00E676; color: #000; border-color: #00E676; }
+        /* Navigation Header */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .app-title { font-size: 17px; font-weight: 800; color: #00E676; letter-spacing: 0.5px; }
+        .sync-badge { font-size: 10px; color: #8b949e; margin-top: 2px; }
+        .btn-lock { background: #161b22; color: #00E676; border: 1px solid #30363d; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
 
-        /* Highlights / Leaderboard */
-        .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-        .hl-box { background: #282828; padding: 10px; border-radius: 8px; border: 1px solid #444; border-top: 3px solid #ffca28; }
-        .hl-box.green { border-top-color: #00E676; }
-        .hl-box.orange { border-top-color: #ff9800; }
-        .hl-title { font-size: 11px; color: #aaa; text-transform: uppercase; margin-bottom: 4px; }
-        .hl-name { font-size: 14px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .hl-stat { font-size: 13px; font-weight: bold; margin-top: 2px; }
+        /* Main View Switcher */
+        .main-nav { display: flex; gap: 8px; margin-bottom: 14px; background: #161b22; padding: 4px; border-radius: 10px; border: 1px solid #30363d; }
+        .nav-btn { flex: 1; padding: 9px; font-size: 13px; font-weight: 700; border-radius: 8px; background: transparent; color: #8b949e; border: none; cursor: pointer; text-align: center; }
+        .nav-btn.active { background: #00E676; color: #000; }
 
-        textarea { width: 100%; height: 90px; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: #fff; font-size: 13px; outline: none; margin-bottom: 10px; resize: none; }
-        input { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: #fff; font-size: 15px; outline: none; margin-bottom: 10px; }
-        .btn-add { background: #00E676; color: #000; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 8px; }
-        .btn-sync { background: #0288d1; color: #fff; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 8px; }
-        .btn-danger { background: #c62828; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 10px; }
-        .order-item { background: #252525; padding: 14px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #00E676; display: flex; justify-content: space-between; align-items: center; }
-        .order-info { font-size: 14px; line-height: 1.6; word-break: break-all; }
-        .track-id { font-size: 13px; color: #aaa; }
-        .order-id { font-size: 16px; font-weight: bold; color: #81c784; margin-top: 2px; }
-        .action-btns { display: flex; gap: 8px; flex-shrink: 0; margin-left: 10px; }
-        .btn-copy { background: #333; color: #fff; border: 1px solid #555; padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }
-        .btn-delete { background: #c62828; color: #fff; border: none; padding: 8px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; }
-        .no-result { text-align: center; color: #888; padding: 15px 0; font-size: 14px; }
-        .status-info { text-align: center; font-size: 13px; color: #00E676; margin-bottom: 8px; font-weight: bold; }
-        #admin-panel, #pass-box { display: none; }
-        .perf-card { background: #252525; border-radius: 10px; padding: 14px; margin-bottom: 12px; border-left: 5px solid #00E676; }
-        .perf-name { font-size: 16px; font-weight: bold; color: #00E676; margin-bottom: 2px; display: flex; justify-content: space-between; }
-        .perf-phone { font-size: 13px; color: #aaa; margin-bottom: 8px; }
-        .perf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; }
-        .perf-item { background: #1a1a1a; padding: 6px 8px; border-radius: 6px; border: 1px solid #333; }
-        .perf-item span { font-weight: bold; }
-        .c-ofd { color: #29b6f6; }
-        .c-del { color: #66bb6a; }
-        .c-ofp { color: #ffa726; }
-        .c-ofpc { color: #ab47bc; }
-        .c-tot { color: #ffca28; }
-        .c-rate { color: #ff4081; font-size: 14px; }
-        .badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #333; color: #ffca28; }
-        .welcome-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(30, 30, 30, 0.95); color: #00E676; padding: 20px 30px; border-radius: 16px; font-weight: bold; font-size: 18px; text-align: center; border: 2px solid #00E676; box-shadow: 0 10px 30px rgba(0,0,0,0.8); opacity: 0; transition: opacity 0.4s ease; pointer-events: none; z-index: 9999; letter-spacing: 1px; }
-        .welcome-popup.show { opacity: 1; }
+        .card { background: #161b22; padding: 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; }
+        .card-title { font-size: 13px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+        input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; outline: none; margin-bottom: 8px; }
+        .btn-add { background: #00E676; color: #000; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 8px; }
+        .btn-sync { background: #0284c7; color: #fff; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 8px; }
+        .btn-danger { background: #da3633; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 12px; }
+
+        /* Filter Sub-Tabs */
+        .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+        .tab-btn { flex: 1; padding: 7px; font-size: 11px; font-weight: 700; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
+        .tab-btn.active { background: #238636; color: #fff; border-color: #2ea043; }
+
+        /* Leaderboard Champions Grid */
+        .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; overflow: hidden; }
+        .hl-box.green { border-left: 3px solid #00E676; }
+        .hl-box.red { border-left: 3px solid #f85149; }
+        .hl-title { font-size: 10px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
+        .hl-name { font-size: 13px; font-weight: 700; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hl-stat { font-size: 13px; font-weight: 800; margin-top: 2px; }
+
+        /* Agent Performance Card */
+        .perf-card { background: #21262d; border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid #30363d; border-left: 4px solid #00E676; cursor: pointer; position: relative; }
+        .perf-card:active { background: #292e36; }
+        .perf-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .perf-name { font-size: 14px; font-weight: 700; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+        .perf-phone { font-size: 11px; color: #8b949e; margin-top: 1px; }
+        .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #382c00; color: #d29922; border: 1px solid #bb8009; }
+
+        .perf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 11px; }
+        .perf-item { background: #161b22; padding: 5px 6px; border-radius: 5px; border: 1px solid #30363d; text-align: center; }
+        .perf-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 1px; }
+        .perf-item b { font-size: 12px; font-weight: 700; }
+
+        .c-ofd { color: #58a6ff; }
+        .c-del { color: #3fb950; }
+        .c-ofp { color: #d29922; }
+        .c-piked { color: #bc8cff; }
+        .c-dnpa { color: #f85149; }
+        .c-dnpc { color: #ff7b72; }
+        .c-rate { color: #f43f5e; }
+        .c-tot { color: #e6edf3; }
+
+        /* Order Items */
+        .order-item { background: #21262d; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #00E676; display: flex; justify-content: space-between; align-items: center; }
+        .track-id { font-size: 11px; color: #8b949e; }
+        .order-id { font-size: 14px; font-weight: 700; color: #3fb950; margin-top: 2px; }
+        .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
+        .btn-delete { background: #da3633; color: #fff; border: none; padding: 5px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: 5px; }
+
+        /* Modal Popup for 30-Day Day-by-Day View */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: flex-end; }
+        .modal-content { background: #161b22; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; padding: 16px; border-top: 2px solid #00E676; display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .modal-title { font-size: 16px; font-weight: 800; color: #00E676; }
+        .btn-close { background: #30363d; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .modal-body { overflow-y: auto; flex: 1; }
+        .day-row { background: #21262d; border-radius: 8px; padding: 10px; margin-bottom: 8px; border: 1px solid #30363d; font-size: 11px; }
+        .day-date { font-weight: 700; color: #58a6ff; margin-bottom: 4px; display: flex; justify-content: space-between; }
+
+        .no-result { text-align: center; color: #8b949e; padding: 16px 0; font-size: 12px; }
+        #admin-panel, #pass-box, #view-perf { display: none; }
     </style>
 </head>
 <body>
-    <div id="welcome-toast" class="welcome-popup">✨ MANAGED BY ADARSH ✨</div>
-    <header>
-        <h1>Delivery Tracker Pro</h1>
-        <button class="btn-lock" id="lock-btn" onclick="handleAdminClick()">🔒 Admin Login</button>
-    </header>
+    <div class="top-bar">
+        <div>
+            <div class="app-title">⚡ Delivery Tracker Pro</div>
+            <div class="sync-badge" id="sync-time">Last Sync: Checking...</div>
+        </div>
+        <button class="btn-lock" id="lock-btn" onclick="handleAdminClick()">🔒 Admin</button>
+    </div>
 
+    <!-- Main View Navigation -->
+    <div class="main-nav">
+        <button class="nav-btn active" id="btn-view-track" onclick="switchView('track')">🔍 Tracker</button>
+        <button class="nav-btn" id="btn-view-perf" onclick="switchView('perf')">📊 Performance</button>
+    </div>
+
+    <!-- Admin Panel -->
     <div class="card" id="pass-box">
-        <div class="card-title">🔐 Enter Admin PIN</div>
+        <div class="card-title">🔐 Admin PIN</div>
         <input type="password" id="pin-input" placeholder="Enter PIN..." />
         <button class="btn-add" onclick="verifyPin()">Login</button>
     </div>
 
     <div class="card" id="admin-panel">
-        <div class="card-title">🔄 Google Sheet Auto Sync (Capacity 30k+)</div>
-        <button class="btn-sync" onclick="syncGoogleSheet()">🔄 Sync From Google Sheet</button>
-        <div class="card-title" style="margin-top:15px;">📋 Manual Import (Copy/Paste)</div>
-        <textarea id="bulk-input" placeholder="Google Sheet से टेक्स्ट कॉपी करके पेस्ट करें..."></textarea>
-        <button class="btn-add" onclick="bulkImport()">⚡ Import Manual Orders</button>
-        <button class="btn-danger" onclick="clearAllOrders()">⚠️ Clear All Saved Data</button>
+        <div class="card-title">🔄 Google Sheet Sync</div>
+        <button class="btn-sync" onclick="syncGoogleSheet()">🔄 Live Sync Now</button>
+        <div class="card-title" style="margin-top:10px;">📋 Manual Bulk Import</div>
+        <textarea id="bulk-input" placeholder="Paste data from Sheet..."></textarea>
+        <button class="btn-add" onclick="bulkImport()">⚡ Import Orders</button>
+        <button class="btn-danger" onclick="clearAllOrders()">⚠️ Clear All Data</button>
     </div>
 
-    <div class="card">
-        <div class="card-title">🔍 Enter Tracking ID</div>
-        <input type="text" id="search-input" placeholder="Enter Tracking ID (e.g. 4-5 digits)..." oninput="searchOrders()" style="margin-bottom:0;">
-    </div>
-
-    <div class="card">
-        <div class="card-title">📦 Order Result</div>
-        <div id="status-text" class="status-info"></div>
-        <div id="orders-list"></div>
-    </div>
-
-    <div class="card">
-        <div class="card-title">📊 Performance & Leaderboard</div>
-        
-        <!-- Filter Tabs -->
-        <div class="filter-tabs">
-            <button class="tab-btn active" id="tab-daily" onclick="changeMode('daily')">📅 Daily</button>
-            <button class="tab-btn" id="tab-weekly" onclick="changeMode('weekly')">📆 Weekly</button>
-            <button class="tab-btn" id="tab-monthly" onclick="changeMode('monthly')">🗓️ Monthly</button>
+    <!-- VIEW 1: Tracker View -->
+    <div id="view-track">
+        <div class="card">
+            <div class="card-title">🔍 Quick Search</div>
+            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." oninput="searchOrders()" style="margin-bottom:0;">
         </div>
 
-        <!-- Top Champions Leaderboard -->
-        <div class="hl-grid" id="leaderboard-section"></div>
+        <div class="card">
+            <div class="card-title">📦 Order Results <span id="status-text" style="color:#3fb950; font-size:11px;"></span></div>
+            <div id="orders-list"></div>
+        </div>
+    </div>
 
-        <!-- Agent List -->
-        <div id="perf-list"><div class="no-result">सिंक करने पर लोड होगा...</div></div>
+    <!-- VIEW 2: Performance View -->
+    <div id="view-perf">
+        <div class="card">
+            <div class="filter-tabs">
+                <button class="tab-btn active" id="tab-daily" onclick="changeMode('daily')">📅 Daily</button>
+                <button class="tab-btn" id="tab-weekly" onclick="changeMode('weekly')">📆 Weekly</button>
+                <button class="tab-btn" id="tab-monthly" onclick="changeMode('monthly')">🗓️ Monthly</button>
+            </div>
+
+            <div class="hl-grid" id="leaderboard-section"></div>
+            <div id="perf-list"></div>
+        </div>
+    </div>
+
+    <!-- 30-Day Day-by-Day Modal Popup -->
+    <div class="modal" id="agentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" id="modalAgentName">Agent Name</div>
+                    <div style="font-size:11px; color:#8b949e;" id="modalAgentPhone">📞 Mobile</div>
+                </div>
+                <button class="btn-close" onclick="closeModal()">✕ Close</button>
+            </div>
+            <div class="modal-body" id="modalAgentHistory"></div>
+        </div>
     </div>
 
     <script>
@@ -114,15 +161,25 @@
         const ADMIN_PIN = '9547927698';
         let currentMode = 'daily';
 
-        function showWelcomePopup() {
-            let toast = document.getElementById('welcome-toast');
-            toast.classList.add('show');
-            setTimeout(() => { toast.classList.remove('show'); }, 2000);
+        function switchView(view) {
+            if(view === 'track') {
+                document.getElementById('view-track').style.display = 'block';
+                document.getElementById('view-perf').style.display = 'none';
+                document.getElementById('btn-view-track').classList.add('active');
+                document.getElementById('btn-view-perf').classList.remove('active');
+            } else {
+                document.getElementById('view-track').style.display = 'none';
+                document.getElementById('view-perf').style.display = 'block';
+                document.getElementById('btn-view-track').classList.remove('active');
+                document.getElementById('btn-view-perf').classList.add('active');
+                loadPerformance();
+            }
         }
 
         function updateStatus() {
             let total = AndroidNative.getTotalCount();
-            document.getElementById('status-text').innerText = '✅ Total Active Orders: ' + total;
+            document.getElementById('status-text').innerText = 'Active: ' + total;
+            document.getElementById('sync-time').innerText = 'Last Sync: ' + AndroidNative.getLastSyncTime();
             loadPerformance();
         }
 
@@ -130,7 +187,7 @@
             if(isAdmin) {
                 isAdmin = false;
                 document.getElementById('admin-panel').style.display = 'none';
-                document.getElementById('lock-btn').innerText = '🔒 Admin Login';
+                document.getElementById('lock-btn').innerText = '🔒 Admin';
                 searchOrders();
             } else {
                 let box = document.getElementById('pass-box');
@@ -145,9 +202,9 @@
                 document.getElementById('pin-input').value = '';
                 document.getElementById('pass-box').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
-                document.getElementById('lock-btn').innerText = '🔓 Logout Admin';
+                document.getElementById('lock-btn').innerText = '🔓 Logout';
                 searchOrders();
-                alert('Admin Mode Activated!');
+                alert('Admin Logged In!');
             } else { alert('Wrong PIN!'); }
         }
 
@@ -160,7 +217,7 @@
                     updateStatus();
                     searchOrders();
                 } else {
-                    alert('❌ Error! इंटरनेट कनेक्शन चेक करें।');
+                    alert('❌ Connection Error!');
                 }
             }, 100);
         }
@@ -181,103 +238,105 @@
             
             if(!json || json === '[]') {
                 leaderboard.innerHTML = '';
-                list.innerHTML = '<div class="no-result">इस टाइम पीरियड का कोई डेटा उपलब्ध नहीं है</div>';
+                list.innerHTML = '<div class="no-result">कोई डेटा उपलब्ध नहीं है</div>';
                 return;
             }
 
             let data = JSON.parse(json);
-
-            // Find Top Conversion % and Most Pickups
             let topConversionAgent = null;
-            let topPickupAgent = null;
+            let topDapcAgent = null;
             let maxConv = -1;
-            let maxPickup = -1;
+            let maxDapc = -1;
 
             data.forEach(item => {
-                if(item.conversionNum > maxConv && item.totalOfdOfp > 0) {
+                if(item.conversionNum > maxConv && item.total > 0) {
                     maxConv = item.conversionNum;
                     topConversionAgent = item;
                 }
-                if(item.ofpComp > maxPickup) {
-                    maxPickup = item.ofpComp;
-                    topPickupAgent = item;
+                if(item.dapc > maxDapc) {
+                    maxDapc = item.dapc;
+                    topDapcAgent = item;
                 }
             });
 
-            // Render Leaderboard Cards
             leaderboard.innerHTML = `
                 <div class="hl-box green">
-                    <div class="hl-title">🏆 Top Conversion %</div>
+                    <div class="hl-title">🏆 Top Conv %</div>
                     <div class="hl-name">${topConversionAgent ? topConversionAgent.name : 'N/A'}</div>
                     <div class="hl-stat c-del">${topConversionAgent ? topConversionAgent.conversionRate : '0%'}</div>
                 </div>
-                <div class="hl-box orange">
-                    <div class="hl-title">📦 Highest Pickups</div>
-                    <div class="hl-name">${topPickupAgent ? topPickupAgent.name : 'N/A'}</div>
-                    <div class="hl-stat c-ofpc">${topPickupAgent ? topPickupAgent.ofpComp + ' Done' : '0'}</div>
+                <div class="hl-box red">
+                    <div class="hl-title">⚠️ Top DAPC</div>
+                    <div class="hl-name">${topDapcAgent ? topDapcAgent.name : 'N/A'}</div>
+                    <div class="hl-stat c-dnpa">${topDapcAgent ? topDapcAgent.dapc + ' Pkts' : '0'}</div>
                 </div>
             `;
 
-            // Render Full List
             list.innerHTML = '';
             data.forEach((item, index) => {
-                let badge = index === 0 ? '<span class="badge">🥇 #1 Performer</span>' : '';
-                let card = `<div class='perf-card'>
-                    <div class='perf-name'>
-                        <span>👤 ${item.name}</span>
+                let badge = index === 0 ? '<span class="badge">🥇 #1</span>' : '';
+                let phoneHtml = item.mobile ? `<div class="perf-phone">📞 ${item.mobile}</div>` : '';
+                
+                let card = document.createElement('div');
+                card.className = 'perf-card';
+                card.onclick = () => openAgentDetails(item.name, item.mobile);
+                card.innerHTML = `
+                    <div class='perf-header'>
+                        <div style="overflow:hidden;">
+                            <div class='perf-name'>👤 ${item.name}</div>
+                            ${phoneHtml}
+                        </div>
                         ${badge}
                     </div>
-                    <div class='perf-phone'>📞 ${item.mobile}</div>
                     <div class='perf-grid'>
-                        <div class='perf-item'>OFD: <span class='c-ofd'>${item.ofd}</span></div>
-                        <div class='perf-item'>Delivered: <span class='c-del'>${item.delivered}</span></div>
-                        <div class='perf-item'>OFP: <span class='c-ofp'>${item.ofp}</span></div>
-                        <div class='perf-item'>OFP Done: <span class='c-ofpc'>${item.ofpComp}</span></div>
-                        <div class='perf-item'>Total: <span class='c-tot'>${item.totalOfdOfp}</span></div>
-                        <div class='perf-item'>Conv %: <span class='c-rate'>${item.conversionRate}</span></div>
-                    </div></div>`;
-                list.innerHTML += card;
+                        <div class='perf-item'><span>OFD</span><b class='c-ofd'>${item.ofd}</b></div>
+                        <div class='perf-item'><span>DEL</span><b class='c-del'>${item.del}</b></div>
+                        <div class='perf-item'><span>OFP</span><b class='c-ofp'>${item.ofp}</b></div>
+                        <div class='perf-item'><span>PIKED</span><b class='c-piked'>${item.piked}</b></div>
+                        <div class='perf-item'><span>DNPA</span><b class='c-dnpa'>${item.dnpa}</b></div>
+                        <div class='perf-item'><span>DNPC</span><b class='c-dnpc'>${item.dnpc}</b></div>
+                        <div class='perf-item'><span>TOTAL</span><b class='c-tot'>${item.total}</b></div>
+                        <div class='perf-item' style='grid-column: span 2;'><span>CONVERSATION %</span><b class='c-rate'>${item.conversionRate}</b></div>
+                    </div>`;
+                list.appendChild(card);
             });
         }
 
-        function bulkImport() {
-            let rawText = document.getElementById('bulk-input').value.trim();
-            if(!rawText) { alert('पेस्ट बॉक्स खाली है!'); return; }
-            let lines = rawText.split(/\r?\n/);
-            let items = [];
-            for(let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
-                if(!line) continue;
-                let parts = line.split(/[\t,]/).map(p => p.trim());
-                if(parts.length >= 2 && parts[0] && parts[1]) {
-                    if(!parts[0].toUpperCase().includes('TRACKING')) {
-                        items.push({ t: parts[0], o: parts[1] });
-                    }
-                }
+        function openAgentDetails(name, mobile) {
+            document.getElementById('modalAgentName').innerText = '👤 ' + name;
+            document.getElementById('modalAgentPhone').innerText = mobile ? '📞 ' + mobile : '';
+            let histList = document.getElementById('modalAgentHistory');
+            histList.innerHTML = '<div class="no-result">लोड हो रहा है...</div>';
+            document.getElementById('agentModal').style.display = 'flex';
+
+            let json = AndroidNative.getAgentHistory(name, mobile);
+            if(!json || json === '[]') {
+                histList.innerHTML = '<div class="no-result">कोई 30 दिन का इतिहास नहीं मिला</div>';
+                return;
             }
-            let added = AndroidNative.insertBulk(JSON.stringify(items));
-            document.getElementById('bulk-input').value = '';
-            alert('सफलतापूर्वक ' + added + ' ऑर्डर्स मैन्युअली सेव हो गए!');
-            updateStatus();
-            searchOrders();
+
+            let data = JSON.parse(json);
+            histList.innerHTML = '';
+            data.forEach(d => {
+                let row = `
+                    <div class='day-row'>
+                        <div class='day-date'><span>📅 ${d.date}</span><span style='color:#f43f5e; font-weight:800;'>Conv: ${d.conv}</span></div>
+                        <div style='display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; text-align:center; margin-top:6px;'>
+                            <div style='background:#161b22; padding:3px; border-radius:4px;'>OFD: <b class='c-ofd'>${d.ofd}</b></div>
+                            <div style='background:#161b22; padding:3px; border-radius:4px;'>DEL: <b class='c-del'>${d.del}</b></div>
+                            <div style='background:#161b22; padding:3px; border-radius:4px;'>OFP: <b class='c-ofp'>${d.ofp}</b></div>
+                            <div style='background:#161b22; padding:3px; border-radius:4px;'>PIK: <b class='c-piked'>${d.piked}</b></div>
+                            <div style='background:#161b22; padding:3px; border-radius:4px;'>DNPA: <b class='c-dnpa'>${d.dnpa}</b></div>
+                            <div style='background:#161b22; padding:3px; border-radius:4px;'>DNPC: <b class='c-dnpc'>${d.dnpc}</b></div>
+                            <div style='background:#161b22; padding:3px; border-radius:4px; grid-column: span 2;'>TOT: <b class='c-tot'>${d.total}</b></div>
+                        </div>
+                    </div>`;
+                histList.innerHTML += row;
+            });
         }
 
-        function clearAllOrders() {
-            AndroidNative.deleteAll();
-            updateStatus();
-            searchOrders();
-            alert('सारा डेटा डिलीट हो गया है!');
-        }
-
-        function deleteSingle(id) {
-            AndroidNative.deleteOrder(id);
-            updateStatus();
-            searchOrders();
-        }
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text);
-            alert('Order ID Copied: ' + text);
+        function closeModal() {
+            document.getElementById('agentModal').style.display = 'none';
         }
 
         function searchOrders() {
@@ -292,18 +351,4 @@
             if(results.length === 0) {
                 list.innerHTML = '<div class="no-result">❌ No Order ID found</div>';
                 return;
-            }
-            results.forEach(item => {
-                const div = document.createElement('div'); 
-                div.className = 'order-item';
-                let delBtn = isAdmin ? `<button class='btn-delete' onclick='deleteSingle(${item.id})'>🗑️</button>` : '';
-                div.innerHTML = `<div class='order-info'><div class='track-id'>Tracking ID: ${item.t}</div><div class='order-id'>Order ID: ${item.o}</div></div><div class='action-btns'><button class='btn-copy' onclick='copyToClipboard("${item.o}")'>Copy</button>${delBtn}</div>`;
-                list.appendChild(div);
-            });
-        }
-
-        updateStatus();
-        showWelcomePopup();
-    </script>
-</body>
-</html>
+          
