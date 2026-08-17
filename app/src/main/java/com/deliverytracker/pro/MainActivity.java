@@ -16,6 +16,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -50,6 +52,8 @@ public class MainActivity extends Activity {
             int count = 0;
             SQLiteDatabase db = null;
             BufferedReader reader = null;
+            String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            
             try {
                 URL url = new URL(GOOGLE_SHEET_CSV_URL);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -62,7 +66,7 @@ public class MainActivity extends Activity {
                 db.beginTransaction();
 
                 db.delete("orders", null, null);
-                db.delete("agent_performance", null, null);
+                db.delete("agent_performance", "entry_date = ?", new String[]{todayDate});
 
                 HashSet<String> seenTrackingIds = new HashSet<>();
                 LinkedHashMap<String, PerformanceData> agentMap = new LinkedHashMap<>();
@@ -81,17 +85,15 @@ public class MainActivity extends Activity {
                         String trackingId = parts[0].replace("\"", "").trim();
                         String orderId = parts[1].replace("\"", "").trim();
 
-                        if (trackingId.isEmpty() || seenTrackingIds.contains(trackingId)) {
-                            continue;
-                        }
-                        seenTrackingIds.add(trackingId);
-
-                        if (!trackingId.toUpperCase().contains("TRACKING") && !orderId.isEmpty()) {
-                            ContentValues cv = new ContentValues();
-                            cv.put("tracking_id", trackingId);
-                            cv.put("order_id", orderId);
-                            db.insert("orders", null, cv);
-                            count++;
+                        if (!trackingId.isEmpty() && !seenTrackingIds.contains(trackingId)) {
+                            seenTrackingIds.add(trackingId);
+                            if (!trackingId.toUpperCase().contains("TRACKING") && !orderId.isEmpty()) {
+                                ContentValues cv = new ContentValues();
+                                cv.put("tracking_id", trackingId);
+                                cv.put("order_id", orderId);
+                                db.insert("orders", null, cv);
+                                count++;
+                            }
                         }
 
                         String name = (parts.length > 2) ? parts[2].replace("\"", "").trim() : "";
@@ -125,18 +127,9 @@ public class MainActivity extends Activity {
                     pCv.put("delivered", p.delivered);
                     pCv.put("ofp", p.ofp);
                     pCv.put("ofp_comp", p.ofpComp);
-                    
-                    int totalAttempts = p.ofd + p.ofp;
-                    int totalComplete = p.delivered + p.ofpComp;
-                    pCv.put("total_attempts", totalAttempts);
-                    pCv.put("total_complete", totalComplete);
-                    
-                    String rate = "0%";
-                    if (totalAttempts > 0) {
-                        double r = ((double) totalComplete / totalAttempts) * 100.0;
-                        rate = String.format(Locale.US, "%.1f%%", r);
-                    }
-                    pCv.put("conversion_rate", rate);
+                    pCv.put("total_attempts", (p.ofd + p.ofp));
+                    pCv.put("total_complete", (p.delivered + p.ofpComp));
+                    pCv.put("entry_date", todayDate);
 
                     db.insert("agent_performance", null, pCv);
                 }
@@ -165,23 +158,55 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public String getPerformanceJson() {
+        public String getPerformanceJson(String filterMode) {
             SQLiteDatabase db = dbHelper.getReadableDatabase();
             JSONArray arr = new JSONArray();
-            Cursor cursor = db.rawQuery("SELECT name, mobile, ofd, delivered, ofp, ofp_comp, total_attempts, total_complete, conversion_rate FROM agent_performance", null);
+            String dateCondition = "";
+
+            if ("daily".equalsIgnoreCase(filterMode)) {
+                dateCondition = " WHERE entry_date = date('now', 'localtime') ";
+            } else if ("weekly".equalsIgnoreCase(filterMode)) {
+                dateCondition = " WHERE entry_date >= date('now', 'localtime', '-7 days') ";
+            } else if ("monthly".equalsIgnoreCase(filterMode)) {
+                dateCondition = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
+            }
+
+            String query = "SELECT name, mobile, " +
+                    "SUM(ofd) as sum_ofd, " +
+                    "SUM(delivered) as sum_del, " +
+                    "SUM(ofp) as sum_ofp, " +
+                    "SUM(ofp_comp) as sum_ofp_comp, " +
+                    "SUM(total_attempts) as sum_attempts, " +
+                    "SUM(total_complete) as sum_complete " +
+                    "FROM agent_performance " + dateCondition +
+                    "GROUP BY name, mobile " +
+                    "ORDER BY sum_complete DESC";
+
+            Cursor cursor = db.rawQuery(query, null);
             try {
                 if (cursor.moveToFirst()) {
                     do {
                         JSONObject obj = new JSONObject();
                         obj.put("name", cursor.getString(0));
                         obj.put("mobile", cursor.getString(1));
-                        obj.put("ofd", cursor.getInt(2));
-                        obj.put("delivered", cursor.getInt(3));
-                        obj.put("ofp", cursor.getInt(4));
-                        obj.put("ofpComp", cursor.getInt(5));
-                        obj.put("totalOfdOfp", cursor.getInt(6));
-                        obj.put("totalComplete", cursor.getInt(7));
-                        obj.put("conversionRate", cursor.getString(8));
+                        int ofd = cursor.getInt(2);
+                        int del = cursor.getInt(3);
+                        int ofp = cursor.getInt(4);
+                        int ofpComp = cursor.getInt(5);
+                        int totalAttempts = cursor.getInt(6);
+                        int totalComplete = cursor.getInt(7);
+
+                        obj.put("ofd", ofd);
+                        obj.put("delivered", del);
+                        obj.put("ofp", ofp);
+                        obj.put("ofpComp", ofpComp);
+                        obj.put("totalOfdOfp", totalAttempts);
+                        obj.put("totalComplete", totalComplete);
+
+                        double rateNum = (totalAttempts > 0) ? ((double) totalComplete / totalAttempts) * 100.0 : 0.0;
+                        obj.put("conversionRate", String.format(Locale.US, "%.1f%%", rateNum));
+                        obj.put("conversionNum", rateNum);
+
                         arr.put(obj);
                     } while (cursor.moveToNext());
                 }
@@ -287,7 +312,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 1;
+        private static final int DATABASE_VERSION = 2;
 
         public DatabaseHelper(Activity context) {
             super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -297,7 +322,7 @@ public class MainActivity extends Activity {
         public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, tracking_id TEXT, order_id TEXT);");
             db.execSQL("CREATE INDEX idx_tracking_id ON orders(tracking_id);");
-            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, delivered INTEGER, ofp INTEGER, ofp_comp INTEGER, total_attempts INTEGER, total_complete INTEGER, conversion_rate TEXT);");
+            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, delivered INTEGER, ofp INTEGER, ofp_comp INTEGER, total_attempts INTEGER, total_complete INTEGER, entry_date TEXT);");
         }
 
         @Override
