@@ -63,6 +63,10 @@
         .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
         .btn-delete { background: #da3633; color: #fff; border: none; padding: 5px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: 5px; }
 
+        /* Smooth In-App Toast (Replaces blocking alert) */
+        #toast-box { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #238636; color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 99999; text-align: center; max-width: 90%; }
+        #toast-box.show { opacity: 1; }
+
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: flex-end; }
         .modal-content { background: #161b22; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; padding: 16px; border-top: 2px solid #00E676; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -77,42 +81,44 @@
     </style>
 </head>
 <body>
+    <div id="toast-box">Notification</div>
+
     <div class="top-bar">
         <div>
             <div class="app-title">⚡ Delivery Tracker Pro</div>
             <div class="sync-badge" id="sync-time">Last Sync: Never</div>
         </div>
-        <button class="btn-lock" id="lock-btn">🔒 Admin</button>
+        <button class="btn-lock" id="lock-btn" onclick="toggleAdmin()">🔒 Admin</button>
     </div>
 
     <!-- MAIN TABS -->
     <div class="main-nav">
-        <button class="nav-btn active" id="btn-view-track">🔍 Tracker</button>
-        <button class="nav-btn" id="btn-view-perf">📊 Performance</button>
+        <button class="nav-btn active" id="btn-view-track" onclick="showTab('track')">🔍 Tracker</button>
+        <button class="nav-btn" id="btn-view-perf" onclick="showTab('perf')">📊 Performance</button>
     </div>
 
     <!-- ADMIN PIN -->
     <div class="card" id="pass-box">
         <div class="card-title">🔐 Admin PIN</div>
         <input type="password" id="pin-input" placeholder="Enter PIN..." />
-        <button class="btn-add" id="btn-submit-pin">Login</button>
+        <button class="btn-add" onclick="submitPin()">Login</button>
     </div>
 
     <!-- ADMIN PANEL -->
     <div class="card" id="admin-panel">
         <div class="card-title">🔄 Google Sheet Sync</div>
-        <button class="btn-sync" id="btn-do-sync">🔄 Live Sync Now</button>
+        <button class="btn-sync" onclick="doSync()">🔄 Live Sync Now</button>
         <div class="card-title" style="margin-top:10px;">📋 Manual Bulk Import</div>
         <textarea id="bulk-input" placeholder="Paste data from Sheet..."></textarea>
-        <button class="btn-add" id="btn-do-import">⚡ Import Orders</button>
-        <button class="btn-danger" id="btn-do-clear">⚠️ Clear All Data</button>
+        <button class="btn-add" onclick="doBulkImport()">⚡ Import Orders</button>
+        <button class="btn-danger" onclick="doClearAll()">⚠️ Clear All Data</button>
     </div>
 
     <!-- TAB 1: TRACKER -->
     <div id="view-track">
         <div class="card">
             <div class="card-title">🔍 Quick Search</div>
-            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." style="margin-bottom:0;">
+            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." oninput="doSearch()" style="margin-bottom:0;">
         </div>
 
         <div class="card">
@@ -125,9 +131,9 @@
     <div id="view-perf">
         <div class="card">
             <div class="filter-tabs">
-                <button class="tab-btn active" id="tab-daily">📅 Daily</button>
-                <button class="tab-btn" id="tab-weekly">📆 Weekly</button>
-                <button class="tab-btn" id="tab-monthly">🗓️ Monthly</button>
+                <button class="tab-btn active" id="tab-daily" onclick="setMode('daily')">📅 Daily</button>
+                <button class="tab-btn" id="tab-weekly" onclick="setMode('weekly')">📆 Weekly</button>
+                <button class="tab-btn" id="tab-monthly" onclick="setMode('monthly')">🗓️ Monthly</button>
             </div>
 
             <div class="hl-grid" id="leaderboard-section"></div>
@@ -143,7 +149,7 @@
                     <div class="modal-title" id="modalAgentName">Agent Name</div>
                     <div style="font-size:11px; color:#8b949e;" id="modalAgentPhone">📞 Mobile</div>
                 </div>
-                <button class="btn-close" id="btn-close-modal">✕ Close</button>
+                <button class="btn-close" onclick="closeDetailModal()">✕ Close</button>
             </div>
             <div class="modal-body" id="modalAgentHistory"></div>
         </div>
@@ -153,6 +159,18 @@
         var isAdmin = false;
         var ADMIN_PIN = '9547927698';
         var currentMode = 'daily';
+        var toastTimer = null;
+
+        function showToast(msg, isError) {
+            var toast = document.getElementById('toast-box');
+            toast.innerText = msg;
+            toast.style.background = isError ? '#da3633' : '#238636';
+            toast.className = 'show';
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(function() {
+                toast.className = '';
+            }, 2200);
+        }
 
         function showTab(tabName) {
             var trackDiv = document.getElementById('view-track');
@@ -192,6 +210,7 @@
                 isAdmin = false;
                 document.getElementById('admin-panel').style.display = 'none';
                 document.getElementById('lock-btn').innerText = '🔒 Admin';
+                showToast("Admin Logged Out");
             } else {
                 var box = document.getElementById('pass-box');
                 box.style.display = (box.style.display === 'block') ? 'none' : 'block';
@@ -206,14 +225,14 @@
                 document.getElementById('pass-box').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
                 document.getElementById('lock-btn').innerText = '🔓 Logout';
-                alert('Admin Mode Activated!');
+                showToast("Admin Mode Activated!");
             } else {
-                alert('Wrong PIN!');
+                showToast("Wrong PIN!", true);
             }
         }
 
         function doSync() {
-            alert('गूगल शीट से लाइव डाटा सिंक शुरू हो रहा है...');
+            showToast("गूगल शीट से लाइव डाटा सिंक शुरू...");
             if (window.AndroidNative) {
                 window.AndroidNative.startSync();
             }
@@ -221,13 +240,13 @@
 
         function onSyncFinished(count) {
             if (count >= 0) {
-                alert('सफलतापूर्वक ' + count + ' ऑर्डर्स सिंक हो गए!');
+                showToast("सफलतापूर्वक " + count + " ऑर्डर्स सिंक हो गए!");
                 refreshAppStatus();
                 if (document.getElementById('view-perf').style.display === 'block') {
                     renderPerformance();
                 }
             } else {
-                alert('❌ सिंक फ़ेल हुआ! इंटरनेट कनेक्शन चेक करें।');
+                showToast("❌ सिंक फ़ेल हुआ! इंटरनेट कनेक्शन चेक करें।", true);
             }
         }
 
@@ -342,29 +361,4 @@
                             '<div style="background:#161b22; padding:4px; border-radius:4px;">OFD: <b class="c-ofd">' + d.ofd + '</b></div>' +
                             '<div style="background:#161b22; padding:4px; border-radius:4px;">DEL: <b class="c-del">' + d.del + '</b></div>' +
                             '<div style="background:#161b22; padding:4px; border-radius:4px;">OFP: <b class="c-ofp">' + d.ofp + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">PIK: <b class="c-piked">' + d.piked + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DNP: <b class="c-dnp">' + d.dnp + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DNPC: <b class="c-dnpc">' + d.dnpc + '</b></div>' +
-                        '</div>' +
-                    '</div>';
-                histList.innerHTML += row;
-            });
-        }
-
-        function closeDetailModal() {
-            document.getElementById('agentModal').style.display = 'none';
-        }
-
-        function doSearch() {
-            var list = document.getElementById('orders-list');
-            var search = document.getElementById('search-input').value.trim();
-            list.innerHTML = '';
-            if (search === '') {
-                list.innerHTML = '<div class="no-result">ऑर्डर खोजने के लिए Tracking ID दर्ज करें</div>';
-                return;
-            }
-            var results = [];
-            if (window.AndroidNative) {
-                try {
-                    results = JSON.parse(window.AndroidNative.searchByTrackingId(search));
-            
+                            '<div sty
