@@ -40,211 +40,7 @@ public class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
         
-        String htmlData = "<!DOCTYPE html><html lang='hi'><head><meta charset='UTF-8'>" +
-            "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
-            "<title>Delivery Tracker Pro</title><style>" +
-            "* { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }" +
-            "body { background-color: #121212; color: #e0e0e0; padding: 16px; min-height: 100vh; }" +
-            "header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-top: 10px; }" +
-            "h1 { font-size: 20px; color: #00E676; }" +
-            ".btn-lock { background: #333; color: #00E676; border: 1px solid #00E676; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }" +
-            ".card { background: #1e1e1e; padding: 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #333; }" +
-            ".card-title { font-size: 15px; font-weight: bold; margin-bottom: 12px; color: #fff; display: flex; justify-content: space-between; }" +
-            "textarea { width: 100%; height: 90px; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: #fff; font-size: 13px; outline: none; margin-bottom: 10px; resize: none; }" +
-            "input { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: #fff; font-size: 15px; outline: none; margin-bottom: 10px; }" +
-            ".btn-add { background: #00E676; color: #000; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 8px; }" +
-            ".btn-sync { background: #0288d1; color: #fff; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 8px; }" +
-            ".btn-danger { background: #c62828; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 10px; }" +
-            ".order-item { background: #252525; padding: 14px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #00E676; display: flex; justify-content: space-between; align-items: center; }" +
-            ".order-info { font-size: 14px; line-height: 1.6; word-break: break-all; }" +
-            ".track-id { font-size: 13px; color: #aaa; }" +
-            ".order-id { font-size: 16px; font-weight: bold; color: #81c784; margin-top: 2px; }" +
-            ".action-btns { display: flex; gap: 8px; flex-shrink: 0; margin-left: 10px; }" +
-            ".btn-copy { background: #333; color: #fff; border: 1px solid #555; padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }" +
-            ".btn-delete { background: #c62828; color: #fff; border: none; padding: 8px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; }" +
-            ".no-result { text-align: center; color: #888; padding: 15px 0; font-size: 14px; }" +
-            ".status-info { text-align: center; font-size: 13px; color: #00E676; margin-bottom: 8px; font-weight: bold; }" +
-            "#admin-panel, #pass-box { display: none; }" +
-            ".perf-card { background: #252525; border-radius: 10px; padding: 14px; margin-bottom: 12px; border-left: 5px solid #00E676; }" +
-            ".perf-name { font-size: 16px; font-weight: bold; color: #00E676; margin-bottom: 2px; }" +
-            ".perf-phone { font-size: 13px; color: #aaa; margin-bottom: 8px; }" +
-            ".perf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; }" +
-            ".perf-item { background: #1a1a1a; padding: 6px 8px; border-radius: 6px; border: 1px solid #333; }" +
-            ".perf-item span { font-weight: bold; }" +
-            ".c-ofd { color: #29b6f6; }" +
-            ".c-del { color: #66bb6a; }" +
-            ".c-ofp { color: #ffa726; }" +
-            ".c-ofpc { color: #ab47bc; }" +
-            ".c-tot { color: #ffca28; }" +
-            ".c-rate { color: #ff4081; font-size: 14px; }" +
-            ".welcome-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(30, 30, 30, 0.95); color: #00E676; padding: 20px 30px; border-radius: 16px; font-weight: bold; font-size: 18px; text-align: center; border: 2px solid #00E676; box-shadow: 0 10px 30px rgba(0,0,0,0.8); opacity: 0; transition: opacity 0.4s ease; pointer-events: none; z-index: 9999; letter-spacing: 1px; }" +
-            ".welcome-popup.show { opacity: 1; }" +
-            "</style></head><body>" +
-            "<div id='welcome-toast' class='welcome-popup'>✨ MANAGED BY ADARSH ✨</div>" +
-            "<header>" +
-            "<h1>Delivery Tracker Pro</h1>" +
-            "<button class='btn-lock' id='lock-btn' onclick='handleAdminClick()'>🔒 Admin Login</button>" +
-            "</header>" +
-            "<div class='card' id='pass-box'>" +
-            "<div class='card-title'>🔐 Enter Admin PIN</div>" +
-            "<input type='password' id='pin-input' placeholder='Enter PIN...' />" +
-            "<button class='btn-add' onclick='verifyPin()'>Login</button>" +
-            "</div>" +
-            "<div class='card' id='admin-panel'>" +
-            "<div class='card-title'>🔄 Google Sheet Auto Sync (30k+ Capacity)</div>" +
-            "<button class='btn-sync' onclick='syncGoogleSheet()'>🔄 Sync From Google Sheet</button>" +
-            "<div class='card-title' style='margin-top:15px;'>📋 Manual Import (Copy/Paste)</div>" +
-            "<textarea id='bulk-input' placeholder='Google Sheet से टेक्स्ट कॉपी करके पेस्ट करें...'></textarea>" +
-            "<button class='btn-add' onclick='bulkImport()'>⚡ Import Manual Orders</button>" +
-            "<button class='btn-danger' onclick='clearAllOrders()'>⚠️ Clear All Saved Data</button>" +
-            "</div>" +
-            "<div class='card'>" +
-            "<div class='card-title'>🔍 Enter Tracking ID</div>" +
-            "<input type='text' id='search-input' placeholder='Enter Tracking ID (e.g. last 4-5 digits)...' oninput='searchOrders()' style='margin-bottom:0;'>" +
-            "</div>" +
-            "<div class='card'>" +
-            "<div class='card-title'>📦 Order Result</div>" +
-            "<div id='status-text' class='status-info'></div>" +
-            "<div id='orders-list'></div>" +
-            "</div>" +
-            "<div class='card'>" +
-            "<div class='card-title'>📊 Agent Performance & Conversion %</div>" +
-            "<div id='perf-list'><div class='no-result'>सिंक करने पर परफॉरमेंस लोड होगी...</div></div>" +
-            "</div>" +
-            "<script>" +
-            "let isAdmin = false;" +
-            "const ADMIN_PIN = '9547927698';" +
-            "function showWelcomePopup() {" +
-            "let toast = document.getElementById('welcome-toast');" +
-            "toast.classList.add('show');" +
-            "setTimeout(() => { toast.classList.remove('show'); }, 2000);" +
-            "}" +
-            "function updateStatus() {" +
-            "let total = AndroidNative.getTotalCount();" +
-            "document.getElementById('status-text').innerText = '✅ Total Active Orders: ' + total;" +
-            "loadPerformance();" +
-            "}" +
-            "function handleAdminClick() {" +
-            "if(isAdmin) {" +
-            "isAdmin = false;" +
-            "document.getElementById('admin-panel').style.display = 'none';" +
-            "document.getElementById('lock-btn').innerText = '🔒 Admin Login';" +
-            "searchOrders();" +
-            "} else {" +
-            "let box = document.getElementById('pass-box');" +
-            "box.style.display = box.style.display === 'block' ? 'none' : 'block';" +
-            "}" +
-            "}" +
-            "function verifyPin() {" +
-            "let inputPin = document.getElementById('pin-input').value.trim();" +
-            "if(inputPin === ADMIN_PIN) {" +
-            "isAdmin = true;" +
-            "document.getElementById('pin-input').value = '';" +
-            "document.getElementById('pass-box').style.display = 'none';" +
-            "document.getElementById('admin-panel').style.display = 'block';" +
-            "document.getElementById('lock-btn').innerText = '🔓 Logout Admin';" +
-            "searchOrders();" +
-            "alert('Admin Mode Activated!');" +
-            "} else { alert('Wrong PIN!'); }" +
-            "}" +
-            "function syncGoogleSheet() {" +
-            "alert('गूगल शीट से लाइव डाटा सिंक हो रहा है...');" +
-            "setTimeout(() => {" +
-            "let added = AndroidNative.syncFromSheet();" +
-            "if(added >= 0) {" +
-            "alert('सफलतापूर्वक ' + added + ' ऑर्डर्स सिंक हो गए!');" +
-            "updateStatus();" +
-            "searchOrders();" +
-            "} else {" +
-            "alert('❌ Error! इंटरनेट कनेक्शन चेक करें।');" +
-            "}" +
-            "}, 100);" +
-            "}" +
-            "function loadPerformance() {" +
-            "let json = AndroidNative.getPerformanceJson();" +
-            "let list = document.getElementById('perf-list');" +
-            "if(!json || json === '[]') {" +
-            "list.innerHTML = '<div class=\"no-result\">कोई परफॉरमेंस डेटा उपलब्ध नहीं है</div>';" +
-            "return;" +
-            "}" +
-            "let data = JSON.parse(json);" +
-            "list.innerHTML = '';" +
-            "data.forEach(item => {" +
-            "let card = `<div class='perf-card'>" +
-            "<div class='perf-name'>👤 ${item.name}</div>" +
-            "<div class='perf-phone'>📞 ${item.mobile}</div>" +
-            "<div class='perf-grid'>" +
-            "<div class='perf-item'>OFD: <span class='c-ofd'>${item.ofd}</span></div>" +
-            "<div class='perf-item'>Delivered: <span class='c-del'>${item.delivered}</span></div>" +
-            "<div class='perf-item'>OFP: <span class='c-ofp'>${item.ofp}</span></div>" +
-            "<div class='perf-item'>OFP Done: <span class='c-ofpc'>${item.ofpComp}</span></div>" +
-            "<div class='perf-item'>Total: <span class='c-tot'>${item.totalOfdOfp}</span></div>" +
-            "<div class='perf-item'>Conv %: <span class='c-rate'>${item.conversionRate}</span></div>" +
-            "</div></div>`;" +
-            "list.innerHTML += card;" +
-            "});" +
-            "}" +
-            "function bulkImport() {" +
-            "let rawText = document.getElementById('bulk-input').value.trim();" +
-            "if(!rawText) { alert('पेस्ट बॉक्स खाली है!'); return; }" +
-            "let lines = rawText.split(/\\r?\\n/);" +
-            "let items = [];" +
-            "for(let i = 0; i < lines.length; i++) {" +
-            "let line = lines[i].trim();" +
-            "if(!line) continue;" +
-            "let parts = line.split(/[\\t,]/).map(p => p.trim());" +
-            "if(parts.length >= 2 && parts[0] && parts[1]) {" +
-            "if(!parts[0].toUpperCase().includes('TRACKING')) {" +
-            "items.push({ t: parts[0], o: parts[1] });" +
-            "}" +
-            "}" +
-            "}" +
-            "let added = AndroidNative.insertBulk(JSON.stringify(items));" +
-            "document.getElementById('bulk-input').value = '';" +
-            "alert('सफलतापूर्वक ' + added + ' ऑर्डर्स मैन्युअली सेव हो गए!');" +
-            "updateStatus();" +
-            "searchOrders();" +
-            "}" +
-            "function clearAllOrders() {" +
-            "AndroidNative.deleteAll();" +
-            "updateStatus();" +
-            "searchOrders();" +
-            "alert('सारा डेटा डिलीट हो गया है!');" +
-            "}" +
-            "function deleteSingle(id) {" +
-            "AndroidNative.deleteOrder(id);" +
-            "updateStatus();" +
-            "searchOrders();" +
-            "}" +
-            "function copyToClipboard(text) {" +
-            "navigator.clipboard.writeText(text);" +
-            "alert('Order ID Copied: ' + text);" +
-            "}" +
-            "function searchOrders() {" +
-            "const list = document.getElementById('orders-list');" +
-            "const search = document.getElementById('search-input').value.trim();" +
-            "list.innerHTML = '';" +
-            "if(search === '') {" +
-            "list.innerHTML = '<div class=\"no-result\">ऑर्डर देखने के लिए Tracking ID दर्ज करें</div>';" +
-            "return;" +
-            "}" +
-            "let results = JSON.parse(AndroidNative.searchByTrackingId(search));" +
-            "if(results.length === 0) {" +
-            "list.innerHTML = '<div class=\"no-result\">❌ No Order ID found for this Tracking ID</div>';" +
-            "return;" +
-            "}" +
-            "results.forEach(item => {" +
-            "const div = document.createElement('div'); div.className = 'order-item';" +
-            "let delBtn = isAdmin ? `<button class='btn-delete' onclick='deleteSingle(${item.id})'>🗑️</button>` : '';" +
-            "div.innerHTML = `<div class='order-info'><div class='track-id'>Tracking ID: ${item.t}</div><div class='order-id'>Order ID: ${item.o}</div></div><div class='action-btns'><button class='btn-copy' onclick='copyToClipboard(\"${item.o}\")'>Copy</button>${delBtn}</div>`;" +
-            "list.appendChild(div);" +
-            "});" +
-            "}" +
-            "updateStatus();" +
-            "showWelcomePopup();" +
-            "</script></body></html>";
-
-        webView.loadDataWithBaseURL(null, htmlData, "text/html", "UTF-8", null);
+        webView.loadUrl("file:///android_asset/index.html");
         setContentView(webView);
     }
 
@@ -360,4 +156,155 @@ public class MainActivity extends Activity {
             return count;
         }
 
-        private int parseSafeIn
+        private int parseSafeInt(String str) {
+            try {
+                return Integer.parseInt(str.replace("\"", "").trim());
+            } catch (Exception e) {
+                return 0;
+            }
+        }
+
+        @JavascriptInterface
+        public String getPerformanceJson() {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            JSONArray arr = new JSONArray();
+            Cursor cursor = db.rawQuery("SELECT name, mobile, ofd, delivered, ofp, ofp_comp, total_attempts, total_complete, conversion_rate FROM agent_performance", null);
+            try {
+                if (cursor.moveToFirst()) {
+                    do {
+                        JSONObject obj = new JSONObject();
+                        obj.put("name", cursor.getString(0));
+                        obj.put("mobile", cursor.getString(1));
+                        obj.put("ofd", cursor.getInt(2));
+                        obj.put("delivered", cursor.getInt(3));
+                        obj.put("ofp", cursor.getInt(4));
+                        obj.put("ofpComp", cursor.getInt(5));
+                        obj.put("totalOfdOfp", cursor.getInt(6));
+                        obj.put("totalComplete", cursor.getInt(7));
+                        obj.put("conversionRate", cursor.getString(8));
+                        arr.put(obj);
+                    } while (cursor.moveToNext());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                cursor.close();
+            }
+            return arr.toString();
+        }
+
+        @JavascriptInterface
+        public int insertBulk(String jsonStr) {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            int count = 0;
+            try {
+                db.beginTransaction();
+                JSONArray arr = new JSONArray(jsonStr);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.getJSONObject(i);
+                    ContentValues cv = new ContentValues();
+                    cv.put("tracking_id", obj.getString("t"));
+                    cv.put("order_id", obj.getString("o"));
+                    db.insert("orders", null, cv);
+                    count++;
+                }
+                db.setTransactionSuccessful();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                db.endTransaction();
+            }
+            return count;
+        }
+
+        @JavascriptInterface
+        public String searchByTrackingId(String trackingQuery) {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            JSONArray arr = new JSONArray();
+            Cursor cursor = db.rawQuery("SELECT id, tracking_id, order_id FROM orders WHERE tracking_id LIKE ? LIMIT 30", 
+                    new String[]{"%" + trackingQuery + "%"});
+            try {
+                if (cursor.moveToFirst()) {
+                    do {
+                        JSONObject obj = new JSONObject();
+                        obj.put("id", cursor.getInt(0));
+                        obj.put("t", cursor.getString(1));
+                        obj.put("o", cursor.getString(2));
+                        arr.put(obj);
+                    } while (cursor.moveToNext());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                cursor.close();
+            }
+            return arr.toString();
+        }
+
+        @JavascriptInterface
+        public void deleteOrder(int id) {
+            try {
+                SQLiteDatabase db = dbHelper.getWritableDatabase();
+                db.delete("orders", "id = ?", new String[]{String.valueOf(id)});
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @JavascriptInterface
+        public void deleteAll() {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            db.delete("orders", null, null);
+            db.delete("agent_performance", null, null);
+        }
+
+        @JavascriptInterface
+        public int getTotalCount() {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM orders", null);
+            int count = 0;
+            if (cursor.moveToFirst()) {
+                count = cursor.getInt(0);
+            }
+            cursor.close();
+            return count;
+        }
+    }
+
+    private static class PerformanceData {
+        String name;
+        String mobile;
+        int ofd = 0;
+        int delivered = 0;
+        int ofp = 0;
+        int ofpComp = 0;
+
+        PerformanceData(String name, String mobile) {
+            this.name = name;
+            this.mobile = mobile;
+        }
+    }
+
+    private static class DatabaseHelper extends SQLiteOpenHelper {
+        private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
+        private static final int DATABASE_VERSION = 1;
+
+        public DatabaseHelper(Activity context) {
+            super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        }
+
+        @Override
+        public void onCreate(SQLiteDatabase db) {
+            db.execSQL("CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, tracking_id TEXT, order_id TEXT);");
+            db.execSQL("CREATE INDEX idx_tracking_id ON orders(tracking_id);");
+            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, delivered INTEGER, ofp INTEGER, ofp_comp INTEGER, total_attempts INTEGER, total_complete INTEGER, conversion_rate TEXT);");
+        }
+
+        @Override
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            db.execSQL("DROP TABLE IF EXISTS orders");
+            db.execSQL("DROP TABLE IF EXISTS agent_performance");
+            onCreate(db);
+        }
+    }
+}
