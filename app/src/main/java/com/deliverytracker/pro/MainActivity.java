@@ -2,6 +2,7 @@ package com.deliverytracker.pro;
 
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -31,17 +32,13 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
         dbHelper = new DatabaseHelper(this);
         webView = new WebView(this);
-        
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
-        
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
-        
         webView.loadUrl("file:///android_asset/index.html");
         setContentView(webView);
     }
@@ -50,170 +47,203 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public int syncFromSheet() {
             int count = 0;
+            String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             SQLiteDatabase db = null;
             BufferedReader reader = null;
-            String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-            
             try {
                 URL url = new URL(GOOGLE_SHEET_CSV_URL);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setInstanceFollowRedirects(true);
                 conn.setConnectTimeout(15000);
-                
                 reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 db = dbHelper.getWritableDatabase();
                 db.beginTransaction();
-
+                
                 db.delete("orders", null, null);
-                db.delete("agent_performance", "entry_date = ?", new String[]{todayDate});
 
                 HashSet<String> seenTrackingIds = new HashSet<>();
                 LinkedHashMap<String, PerformanceData> agentMap = new LinkedHashMap<>();
+                HashSet<String> datesInSheet = new HashSet<>();
 
                 String line;
                 boolean isHeader = true;
-
                 while ((line = reader.readLine()) != null) {
-                    if (isHeader) {
-                        isHeader = false;
-                        continue;
-                    }
-
+                    if (isHeader) { isHeader = false; continue; }
                     String[] parts = line.split(",", -1);
-                    if (parts.length >= 2) {
-                        String trackingId = parts[0].replace("\"", "").trim();
-                        String orderId = parts[1].replace("\"", "").trim();
+                    if (parts.length < 3) continue;
 
-                        if (!trackingId.isEmpty() && !seenTrackingIds.contains(trackingId)) {
-                            seenTrackingIds.add(trackingId);
-                            if (!trackingId.toUpperCase().contains("TRACKING") && !orderId.isEmpty()) {
-                                ContentValues cv = new ContentValues();
-                                cv.put("tracking_id", trackingId);
-                                cv.put("order_id", orderId);
-                                db.insert("orders", null, cv);
-                                count++;
-                            }
-                        }
+                    String rawDate = parts[0].replace("\"", "").trim();
+                    String tId = parts[1].replace("\"", "").trim();
+                    String oId = parts[2].replace("\"", "").trim();
+                    
+                    if (rawDate.isEmpty() || rawDate.toUpperCase().contains("DATE")) {
+                        rawDate = todayDate;
+                    }
+                    datesInSheet.add(rawDate);
 
-                        String name = (parts.length > 2) ? parts[2].replace("\"", "").trim() : "";
-                        String mobile = (parts.length > 3) ? parts[3].replace("\"", "").trim() : "";
-
-                        if (!name.isEmpty()) {
-                            int ofd = (parts.length > 4 && !parts[4].trim().isEmpty()) ? parseSafeInt(parts[4]) : 0;
-                            int del = (parts.length > 5 && !parts[5].trim().isEmpty()) ? parseSafeInt(parts[5]) : 0;
-                            int ofp = (parts.length > 6 && !parts[6].trim().isEmpty()) ? parseSafeInt(parts[6]) : 0;
-                            int ofpComp = (parts.length > 7 && !parts[7].trim().isEmpty()) ? parseSafeInt(parts[7]) : 0;
-
-                            String key = name + "_" + mobile;
-                            PerformanceData pData = agentMap.get(key);
-                            if (pData == null) {
-                                pData = new PerformanceData(name, mobile);
-                                agentMap.put(key, pData);
-                            }
-                            pData.ofd += ofd;
-                            pData.delivered += del;
-                            pData.ofp += ofp;
-                            pData.ofpComp += ofpComp;
+                    if (!tId.isEmpty() && !seenTrackingIds.contains(tId) && !tId.toUpperCase().contains("TRACKING")) {
+                        seenTrackingIds.add(tId);
+                        if (!oId.isEmpty()) {
+                            ContentValues cv = new ContentValues();
+                            cv.put("tracking_id", tId);
+                            cv.put("order_id", oId);
+                            db.insert("orders", null, cv);
+                            count++;
                         }
                     }
+
+                    String name = parts.length > 3 ? parts[3].replace("\"", "").trim() : "";
+                    String mobile = parts.length > 4 ? parts[4].replace("\"", "").trim() : "";
+
+                    if (!name.isEmpty()) {
+                        int ofd = parts.length > 5 ? parseSafeInt(parts[5]) : 0;
+                        int del = parts.length > 6 ? parseSafeInt(parts[6]) : 0;
+                        int ofp = parts.length > 7 ? parseSafeInt(parts[7]) : 0;
+                        int piked = parts.length > 8 ? parseSafeInt(parts[8]) : 0;
+
+                        String key = rawDate + "_" + name + "_" + mobile;
+                        PerformanceData p = agentMap.get(key);
+                        if (p == null) {
+                            p = new PerformanceData(name, mobile, rawDate);
+                            agentMap.put(key, p);
+                        }
+                        p.ofd += ofd;
+                        p.del += del;
+                        p.ofp += ofp;
+                        p.piked += piked;
+                    }
+                }
+
+                for (String d : datesInSheet) {
+                    db.delete("agent_performance", "entry_date = ?", new String[]{d});
                 }
 
                 for (PerformanceData p : agentMap.values()) {
-                    ContentValues pCv = new ContentValues();
-                    pCv.put("name", p.name);
-                    pCv.put("mobile", p.mobile);
-                    pCv.put("ofd", p.ofd);
-                    pCv.put("delivered", p.delivered);
-                    pCv.put("ofp", p.ofp);
-                    pCv.put("ofp_comp", p.ofpComp);
-                    pCv.put("total_attempts", (p.ofd + p.ofp));
-                    pCv.put("total_complete", (p.delivered + p.ofpComp));
-                    pCv.put("entry_date", todayDate);
-
-                    db.insert("agent_performance", null, pCv);
+                    ContentValues cv = new ContentValues();
+                    cv.put("name", p.name);
+                    cv.put("mobile", p.mobile);
+                    cv.put("ofd", p.ofd);
+                    cv.put("del", p.del);
+                    cv.put("ofp", p.ofp);
+                    cv.put("piked", p.piked);
+                    cv.put("dnpa", (p.ofd - p.del > 0 ? p.ofd - p.del : 0));
+                    cv.put("dnpc", (p.ofp - p.piked > 0 ? p.ofp - p.piked : 0));
+                    cv.put("total_attempts", (p.ofd + p.ofp));
+                    cv.put("total_complete", (p.del + p.piked));
+                    cv.put("entry_date", p.date);
+                    db.insert("agent_performance", null, cv);
                 }
 
                 db.setTransactionSuccessful();
+                String syncTime = new SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(new Date());
+                getSharedPreferences("SyncPrefs", MODE_PRIVATE).edit().putString("last_sync", syncTime).apply();
             } catch (Exception e) {
                 e.printStackTrace();
                 return -1;
             } finally {
-                if (db != null) {
-                    db.endTransaction();
-                }
-                if (reader != null) {
-                    try { reader.close(); } catch (Exception ignored) {}
-                }
+                if (db != null) db.endTransaction();
+                if (reader != null) { try { reader.close(); } catch (Exception ignored) {} }
             }
             return count;
         }
 
         private int parseSafeInt(String str) {
-            try {
-                return Integer.parseInt(str.replace("\"", "").trim());
-            } catch (Exception e) {
-                return 0;
-            }
+            try { return Integer.parseInt(str.replace("\"", "").trim()); } catch (Exception e) { return 0; }
+        }
+
+        @JavascriptInterface
+        public String getLastSyncTime() {
+            return getSharedPreferences("SyncPrefs", MODE_PRIVATE).getString("last_sync", "Never");
         }
 
         @JavascriptInterface
         public String getPerformanceJson(String filterMode) {
             SQLiteDatabase db = dbHelper.getReadableDatabase();
             JSONArray arr = new JSONArray();
-            String dateCondition = "";
-
+            String cond = "";
             if ("daily".equalsIgnoreCase(filterMode)) {
-                dateCondition = " WHERE entry_date = date('now', 'localtime') ";
+                cond = " WHERE entry_date = (SELECT MAX(entry_date) FROM agent_performance) ";
             } else if ("weekly".equalsIgnoreCase(filterMode)) {
-                dateCondition = " WHERE entry_date >= date('now', 'localtime', '-7 days') ";
+                cond = " WHERE entry_date >= date('now', 'localtime', '-7 days') ";
             } else if ("monthly".equalsIgnoreCase(filterMode)) {
-                dateCondition = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
+                cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
             }
 
-            String query = "SELECT name, mobile, " +
-                    "SUM(ofd) as sum_ofd, " +
-                    "SUM(delivered) as sum_del, " +
-                    "SUM(ofp) as sum_ofp, " +
-                    "SUM(ofp_comp) as sum_ofp_comp, " +
-                    "SUM(total_attempts) as sum_attempts, " +
-                    "SUM(total_complete) as sum_complete " +
-                    "FROM agent_performance " + dateCondition +
+            String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnpa), SUM(dnpc), SUM(total_attempts), SUM(total_complete) " +
+                    "FROM agent_performance " + cond +
                     "GROUP BY name, mobile " +
-                    "ORDER BY sum_complete DESC";
+                    "ORDER BY SUM(total_complete) DESC";
 
-            Cursor cursor = db.rawQuery(query, null);
+            Cursor c = db.rawQuery(query, null);
             try {
-                if (cursor.moveToFirst()) {
+                if (c.moveToFirst()) {
                     do {
-                        JSONObject obj = new JSONObject();
-                        obj.put("name", cursor.getString(0));
-                        obj.put("mobile", cursor.getString(1));
-                        int ofd = cursor.getInt(2);
-                        int del = cursor.getInt(3);
-                        int ofp = cursor.getInt(4);
-                        int ofpComp = cursor.getInt(5);
-                        int totalAttempts = cursor.getInt(6);
-                        int totalComplete = cursor.getInt(7);
+                        JSONObject o = new JSONObject();
+                        o.put("name", c.getString(0));
+                        o.put("mobile", c.getString(1));
+                        int ofd = c.getInt(2);
+                        int del = c.getInt(3);
+                        int ofp = c.getInt(4);
+                        int piked = c.getInt(5);
+                        int dnpa = c.getInt(6);
+                        int dnpc = c.getInt(7);
+                        int totAtt = c.getInt(8);
+                        int totDone = c.getInt(9);
 
-                        obj.put("ofd", ofd);
-                        obj.put("delivered", del);
-                        obj.put("ofp", ofp);
-                        obj.put("ofpComp", ofpComp);
-                        obj.put("totalOfdOfp", totalAttempts);
-                        obj.put("totalComplete", totalComplete);
+                        o.put("ofd", ofd);
+                        o.put("del", del);
+                        o.put("ofp", ofp);
+                        o.put("piked", piked);
+                        o.put("dnpa", dnpa);
+                        o.put("dnpc", dnpc);
+                        o.put("dapc", (dnpa + dnpc));
+                        o.put("total", totAtt);
+                        o.put("totalComplete", totDone);
 
-                        double rateNum = (totalAttempts > 0) ? ((double) totalComplete / totalAttempts) * 100.0 : 0.0;
-                        obj.put("conversionRate", String.format(Locale.US, "%.1f%%", rateNum));
-                        obj.put("conversionNum", rateNum);
-
-                        arr.put(obj);
-                    } while (cursor.moveToNext());
+                        double r = totAtt > 0 ? ((double) totDone / totAtt) * 100.0 : 0.0;
+                        o.put("conversionRate", String.format(Locale.US, "%.1f%%", r));
+                        o.put("conversionNum", r);
+                        arr.put(o);
+                    } while (c.moveToNext());
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                cursor.close();
+                c.close();
+            }
+            return arr.toString();
+        }
+
+        @JavascriptInterface
+        public String getAgentHistory(String name, String mobile) {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            JSONArray arr = new JSONArray();
+            String query = "SELECT entry_date, ofd, del, ofp, piked, dnpa, dnpc, total_attempts, total_complete " +
+                    "FROM agent_performance WHERE name = ? AND mobile = ? " +
+                    "ORDER BY entry_date DESC LIMIT 30";
+            Cursor c = db.rawQuery(query, new String[]{name, mobile});
+            try {
+                if (c.moveToFirst()) {
+                    do {
+                        JSONObject o = new JSONObject();
+                        o.put("date", c.getString(0));
+                        o.put("ofd", c.getInt(1));
+                        o.put("del", c.getInt(2));
+                        o.put("ofp", c.getInt(3));
+                        o.put("piked", c.getInt(4));
+                        o.put("dnpa", c.getInt(5));
+                        o.put("dnpc", c.getInt(6));
+                        int tot = c.getInt(7);
+                        int comp = c.getInt(8);
+                        o.put("total", tot);
+                        double r = tot > 0 ? ((double) comp / tot) * 100.0 : 0.0;
+                        o.put("conv", String.format(Locale.US, "%.1f%%", r));
+                        arr.put(o);
+                    } while (c.moveToNext());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                c.close();
             }
             return arr.toString();
         }
@@ -266,63 +296,41 @@ public class MainActivity extends Activity {
             return arr.toString();
         }
 
-        @JavascriptInterface
-        public void deleteOrder(int id) {
-            try {
-                SQLiteDatabase db = dbHelper.getWritableDatabase();
-                db.delete("orders", "id = ?", new String[]{String.valueOf(id)});
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        @JavascriptInterface public void deleteOrder(int id) {
+            try { dbHelper.getWritableDatabase().delete("orders", "id = ?", new String[]{String.valueOf(id)}); } catch (Exception ignored) {}
         }
-
-        @JavascriptInterface
-        public void deleteAll() {
+        @JavascriptInterface public void deleteAll() {
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             db.delete("orders", null, null);
             db.delete("agent_performance", null, null);
         }
-
-        @JavascriptInterface
-        public int getTotalCount() {
+        @JavascriptInterface public int getTotalCount() {
             SQLiteDatabase db = dbHelper.getReadableDatabase();
             Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM orders", null);
             int count = 0;
-            if (cursor.moveToFirst()) {
-                count = cursor.getInt(0);
-            }
+            if (cursor.moveToFirst()) count = cursor.getInt(0);
             cursor.close();
             return count;
         }
     }
 
     private static class PerformanceData {
-        String name;
-        String mobile;
-        int ofd = 0;
-        int delivered = 0;
-        int ofp = 0;
-        int ofpComp = 0;
-
-        PerformanceData(String name, String mobile) {
-            this.name = name;
-            this.mobile = mobile;
-        }
+        String name, mobile, date;
+        int ofd = 0, del = 0, ofp = 0, piked = 0;
+        PerformanceData(String n, String m, String d) { name = n; mobile = m; date = d; }
     }
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 2;
+        private static final int DATABASE_VERSION = 4;
 
-        public DatabaseHelper(Activity context) {
-            super(context, DATABASE_NAME, null, DATABASE_VERSION);
-        }
+        public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
         @Override
         public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, tracking_id TEXT, order_id TEXT);");
             db.execSQL("CREATE INDEX idx_tracking_id ON orders(tracking_id);");
-            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, delivered INTEGER, ofp INTEGER, ofp_comp INTEGER, total_attempts INTEGER, total_complete INTEGER, entry_date TEXT);");
+            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, del INTEGER, ofp INTEGER, piked INTEGER, dnpa INTEGER, dnpc INTEGER, total_attempts INTEGER, total_complete INTEGER, entry_date TEXT);");
         }
 
         @Override
@@ -332,4 +340,4 @@ public class MainActivity extends Activity {
             onCreate(db);
         }
     }
-}
+                }
