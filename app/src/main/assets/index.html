@@ -14,7 +14,7 @@
         .btn-lock { background: #161b22; color: #00E676; border: 1px solid #30363d; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
 
         .main-nav { display: flex; gap: 8px; margin-bottom: 14px; background: #161b22; padding: 4px; border-radius: 10px; border: 1px solid #30363d; }
-        .nav-btn { flex: 1; padding: 9px; font-size: 13px; font-weight: 700; border-radius: 8px; background: transparent; color: #8b949e; border: none; cursor: pointer; text-align: center; }
+        .nav-btn { flex: 1; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 8px; background: transparent; color: #8b949e; border: none; cursor: pointer; text-align: center; }
         .nav-btn.active { background: #00E676; color: #000; }
 
         .card { background: #161b22; padding: 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; }
@@ -26,13 +26,13 @@
         .btn-danger { background: #da3633; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 12px; }
 
         .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-        .tab-btn { flex: 1; padding: 7px; font-size: 11px; font-weight: 700; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
+        .tab-btn { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
         .tab-btn.active { background: #238636; color: #fff; border-color: #2ea043; }
 
         .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; overflow: hidden; }
         .hl-box.green { border-left: 3px solid #00E676; }
-        .hl-box.red { border-left: 3px solid #f85149; }
+        .hl-box.blue { border-left: 3px solid #38bdf8; }
         .hl-title { font-size: 10px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
         .hl-name { font-size: 13px; font-weight: 700; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .hl-stat { font-size: 13px; font-weight: 800; margin-top: 2px; }
@@ -45,18 +45,17 @@
         .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #382c00; color: #d29922; border: 1px solid #bb8009; }
 
         .perf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 11px; }
-        .perf-item { background: #161b22; padding: 5px 6px; border-radius: 5px; border: 1px solid #30363d; text-align: center; }
-        .perf-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 1px; }
+        .perf-item { background: #161b22; padding: 6px; border-radius: 5px; border: 1px solid #30363d; text-align: center; }
+        .perf-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 1px; font-weight: 600; }
         .perf-item b { font-size: 12px; font-weight: 700; }
 
         .c-ofd { color: #58a6ff; }
         .c-del { color: #3fb950; }
         .c-ofp { color: #d29922; }
         .c-piked { color: #bc8cff; }
-        .c-dnpa { color: #f85149; }
-        .c-dnpc { color: #ff7b72; }
+        .c-dnp { color: #38bdf8; }
+        .c-dnpc { color: #22c55e; }
         .c-rate { color: #f43f5e; }
-        .c-tot { color: #e6edf3; }
 
         .order-item { background: #21262d; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #00E676; display: flex; justify-content: space-between; align-items: center; }
         .track-id { font-size: 11px; color: #8b949e; }
@@ -68,10 +67,10 @@
         .modal-content { background: #161b22; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; padding: 16px; border-top: 2px solid #00E676; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .modal-title { font-size: 16px; font-weight: 800; color: #00E676; }
-        .btn-close { background: #30363d; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .btn-close { background: #30363d; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .modal-body { overflow-y: auto; flex: 1; }
         .day-row { background: #21262d; border-radius: 8px; padding: 10px; margin-bottom: 8px; border: 1px solid #30363d; font-size: 11px; }
-        .day-date { font-weight: 700; color: #58a6ff; margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .day-date { font-weight: 700; color: #58a6ff; margin-bottom: 6px; display: flex; justify-content: space-between; }
 
         .no-result { text-align: center; color: #8b949e; padding: 16px 0; font-size: 12px; }
         #admin-panel, #pass-box, #view-perf { display: none; }
@@ -127,7 +126,7 @@
             </div>
 
             <div class="hl-grid" id="leaderboard-section"></div>
-            <div id="perf-list"><div class="no-result">डेटा लोड हो रहा है...</div></div>
+            <div id="perf-list"></div>
         </div>
     </div>
 
@@ -145,45 +144,39 @@
     </div>
 
     <script>
-        let isAdmin = false;
-        const ADMIN_PIN = '9547927698';
-        let currentMode = 'daily';
-
-        function safeNative(fn, fallback) {
-            try {
-                if (window.AndroidNative && typeof window.AndroidNative[fn] === 'function') {
-                    return window.AndroidNative[fn]();
-                }
-            } catch (e) {
-                console.error(e);
-            }
-            return fallback;
-        }
+        var isAdmin = false;
+        var ADMIN_PIN = '9547927698';
+        var currentMode = 'daily';
 
         function switchView(view) {
+            var trackDiv = document.getElementById('view-track');
+            var perfDiv = document.getElementById('view-perf');
+            var trackBtn = document.getElementById('btn-view-track');
+            var perfBtn = document.getElementById('btn-view-perf');
+
             if(view === 'track') {
-                document.getElementById('view-track').style.display = 'block';
-                document.getElementById('view-perf').style.display = 'none';
-                document.getElementById('btn-view-track').classList.add('active');
-                document.getElementById('btn-view-perf').classList.remove('active');
+                trackDiv.style.display = 'block';
+                perfDiv.style.display = 'none';
+                trackBtn.className = 'nav-btn active';
+                perfBtn.className = 'nav-btn';
             } else {
-                document.getElementById('view-track').style.display = 'none';
-                document.getElementById('view-perf').style.display = 'block';
-                document.getElementById('btn-view-track').classList.remove('active');
-                document.getElementById('btn-view-perf').classList.add('active');
+                trackDiv.style.display = 'none';
+                perfDiv.style.display = 'block';
+                trackBtn.className = 'nav-btn';
+                perfBtn.className = 'nav-btn active';
                 loadPerformance();
             }
         }
 
         function updateStatus() {
-            let total = 0;
-            let syncTime = "Never";
-            try {
-                if (window.AndroidNative) {
+            var total = 0;
+            var syncTime = "Never";
+            if (window.AndroidNative) {
+                try {
                     total = window.AndroidNative.getTotalCount();
                     syncTime = window.AndroidNative.getLastSyncTime();
-                }
-            } catch(e){}
+                } catch(e){}
+            }
             document.getElementById('status-text').innerText = 'Active: ' + total;
             document.getElementById('sync-time').innerText = 'Last Sync: ' + syncTime;
         }
@@ -193,22 +186,20 @@
                 isAdmin = false;
                 document.getElementById('admin-panel').style.display = 'none';
                 document.getElementById('lock-btn').innerText = '🔒 Admin';
-                searchOrders();
             } else {
-                let box = document.getElementById('pass-box');
+                var box = document.getElementById('pass-box');
                 box.style.display = box.style.display === 'block' ? 'none' : 'block';
             }
         }
 
         function verifyPin() {
-            let inputPin = document.getElementById('pin-input').value.trim();
+            var inputPin = document.getElementById('pin-input').value.trim();
             if(inputPin === ADMIN_PIN) {
                 isAdmin = true;
                 document.getElementById('pin-input').value = '';
                 document.getElementById('pass-box').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
                 document.getElementById('lock-btn').innerText = '🔓 Logout';
-                searchOrders();
                 alert('Admin Mode Activated!');
             } else { 
                 alert('Wrong PIN!'); 
@@ -217,9 +208,9 @@
 
         function syncGoogleSheet() {
             alert('गूगल शीट से लाइव डाटा सिंक हो रहा है...');
-            setTimeout(() => {
-                try {
-                    let added = window.AndroidNative ? window.AndroidNative.syncFromSheet() : -1;
+            setTimeout(function() {
+                if(window.AndroidNative) {
+                    var added = window.AndroidNative.syncFromSheet();
                     if(added >= 0) {
                         alert('सफलतापूर्वक ' + added + ' ऑर्डर्स सिंक हो गए!');
                         updateStatus();
@@ -229,95 +220,89 @@
                     } else {
                         alert('❌ सिंक फ़ेल हुआ! इंटरनेट कनेक्शन चेक करें।');
                     }
-                } catch(e) {
-                    alert('Error: ' + e);
                 }
             }, 100);
         }
 
         function changeMode(mode) {
             currentMode = mode;
-            document.getElementById('tab-daily').classList.remove('active');
-            document.getElementById('tab-weekly').classList.remove('active');
-            document.getElementById('tab-monthly').classList.remove('active');
-            document.getElementById('tab-' + mode).classList.add('active');
+            document.getElementById('tab-daily').className = 'tab-btn';
+            document.getElementById('tab-weekly').className = 'tab-btn';
+            document.getElementById('tab-monthly').className = 'tab-btn';
+            document.getElementById('tab-' + mode).className = 'tab-btn active';
             loadPerformance();
         }
 
         function loadPerformance() {
-            let list = document.getElementById('perf-list');
-            let leaderboard = document.getElementById('leaderboard-section');
-            let json = "[]";
-            try {
-                if (window.AndroidNative) {
+            var list = document.getElementById('perf-list');
+            var leaderboard = document.getElementById('leaderboard-section');
+            var json = "[]";
+            if (window.AndroidNative) {
+                try {
                     json = window.AndroidNative.getPerformanceJson(currentMode);
-                }
-            } catch(e){}
+                } catch(e){}
+            }
 
             if(!json || json === '[]') {
                 leaderboard.innerHTML = '';
-                list.innerHTML = '<div class="no-result">इस टाइम पीरियड का कोई डेटा उपलब्ध नहीं है</div>';
+                list.innerHTML = '<div class="no-result">कोई डेटा उपलब्ध नहीं है (पहले सिंक करें)</div>';
                 return;
             }
 
-            let data = JSON.parse(json);
-            let topConversionAgent = null;
-            let topDapcAgent = null;
-            let maxConv = -1;
-            let maxDapc = -1;
+            var data = JSON.parse(json);
+            var topConversionAgent = null;
+            var topDnpcAgent = null;
+            var maxConv = -1;
+            var maxDnpc = -1;
 
-            data.forEach(item => {
-                if(item.conversionNum > maxConv && item.total > 0) {
+            data.forEach(function(item) {
+                if(item.conversionNum > maxConv && item.dnp > 0) {
                     maxConv = item.conversionNum;
                     topConversionAgent = item;
                 }
-                let dapcVal = (item.dnpa || 0) + (item.dnpc || 0);
-                if(dapcVal > maxDapc) {
-                    maxDapc = dapcVal;
-                    topDapcAgent = item;
-                    topDapcAgent.calcDapc = dapcVal;
+                if(item.dnpc > maxDnpc) {
+                    maxDnpc = item.dnpc;
+                    topDnpcAgent = item;
                 }
             });
 
-            leaderboard.innerHTML = `
-                <div class="hl-box green">
-                    <div class="hl-title">🏆 Top Conv %</div>
-                    <div class="hl-name">${topConversionAgent ? topConversionAgent.name : 'N/A'}</div>
-                    <div class="hl-stat c-del">${topConversionAgent ? topConversionAgent.conversionRate : '0%'}</div>
-                </div>
-                <div class="hl-box red">
-                    <div class="hl-title">⚠️ Top DNPA+DNPC</div>
-                    <div class="hl-name">${topDapcAgent ? topDapcAgent.name : 'N/A'}</div>
-                    <div class="hl-stat c-dnpa">${topDapcAgent ? topDapcAgent.calcDapc + ' Pkts' : '0'}</div>
-                </div>
-            `;
+            leaderboard.innerHTML = 
+                '<div class="hl-box green">' +
+                    '<div class="hl-title">🏆 Top Conv %</div>' +
+                    '<div class="hl-name">' + (topConversionAgent ? topConversionAgent.name : 'N/A') + '</div>' +
+                    '<div class="hl-stat c-del">' + (topConversionAgent ? topConversionAgent.conversionRate : '0%') + '</div>' +
+                '</div>' +
+                '<div class="hl-box blue">' +
+                    '<div class="hl-title">⚡ Top DNPC (Complete)</div>' +
+                    '<div class="hl-name">' + (topDnpcAgent ? topDnpcAgent.name : 'N/A') + '</div>' +
+                    '<div class="hl-stat c-dnpc">' + (topDnpcAgent ? topDnpcAgent.dnpc + ' Done' : '0') + '</div>' +
+                '</div>';
 
             list.innerHTML = '';
-            data.forEach((item, index) => {
-                let badge = index === 0 ? '<span class="badge">🥇 #1</span>' : '';
-                let phoneHtml = item.mobile ? `<div class="perf-phone">📞 ${item.mobile}</div>` : '';
+            data.forEach(function(item, index) {
+                var badge = index === 0 ? '<span class="badge">🥇 #1</span>' : '';
+                var phoneHtml = item.mobile ? '<div class="perf-phone">📞 ' + item.mobile + '</div>' : '';
                 
-                let card = document.createElement('div');
+                var card = document.createElement('div');
                 card.className = 'perf-card';
-                card.onclick = () => openAgentDetails(item.name, item.mobile);
-                card.innerHTML = `
-                    <div class='perf-header'>
-                        <div style="overflow:hidden;">
-                            <div class='perf-name'>👤 ${item.name}</div>
-                            ${phoneHtml}
-                        </div>
-                        ${badge}
-                    </div>
-                    <div class='perf-grid'>
-                        <div class='perf-item'><span>OFD</span><b class='c-ofd'>${item.ofd}</b></div>
-                        <div class='perf-item'><span>DEL</span><b class='c-del'>${item.del}</b></div>
-                        <div class='perf-item'><span>OFP</span><b class='c-ofp'>${item.ofp}</b></div>
-                        <div class='perf-item'><span>PIKED</span><b class='c-piked'>${item.piked}</b></div>
-                        <div class='perf-item'><span>DNPA</span><b class='c-dnpa'>${item.dnpa}</b></div>
-                        <div class='perf-item'><span>DNPC</span><b class='c-dnpc'>${item.dnpc}</b></div>
-                        <div class='perf-item'><span>TOTAL</span><b class='c-tot'>${item.total}</b></div>
-                        <div class='perf-item' style='grid-column: span 2;'><span>CONV %</span><b class='c-rate'>${item.conversionRate}</b></div>
-                    </div>`;
+                card.onclick = function() { openAgentDetails(item.name, item.mobile); };
+                card.innerHTML = 
+                    '<div class="perf-header">' +
+                        '<div style="overflow:hidden;">' +
+                            '<div class="perf-name">👤 ' + item.name + '</div>' +
+                            phoneHtml +
+                        '</div>' +
+                        badge +
+                    '</div>' +
+                    '<div class="perf-grid">' +
+                        '<div class="perf-item"><span>OFD</span><b class="c-ofd">' + item.ofd + '</b></div>' +
+                        '<div class="perf-item"><span>DEL</span><b class="c-del">' + item.del + '</b></div>' +
+                        '<div class="perf-item"><span>OFP</span><b class="c-ofp">' + item.ofp + '</b></div>' +
+                        '<div class="perf-item"><span>PIKED</span><b class="c-piked">' + item.piked + '</b></div>' +
+                        '<div class="perf-item"><span>DNP (Total)</span><b class="c-dnp">' + item.dnp + '</b></div>' +
+                        '<div class="perf-item"><span>DNPC (Done)</span><b class="c-dnpc">' + item.dnpc + '</b></div>' +
+                        '<div class="perf-item" style="grid-column: span 3;"><span>CONVERSATION %</span><b class="c-rate">' + item.conversionRate + '</b></div>' +
+                    '</div>';
                 list.appendChild(card);
             });
         }
@@ -325,33 +310,48 @@
         function openAgentDetails(name, mobile) {
             document.getElementById('modalAgentName').innerText = '👤 ' + name;
             document.getElementById('modalAgentPhone').innerText = mobile ? '📞 ' + mobile : '';
-            let histList = document.getElementById('modalAgentHistory');
+            var histList = document.getElementById('modalAgentHistory');
             histList.innerHTML = '<div class="no-result">लोड हो रहा है...</div>';
             document.getElementById('agentModal').style.display = 'flex';
 
-            let json = "[]";
-            try {
-                if(window.AndroidNative) {
+            var json = "[]";
+            if(window.AndroidNative) {
+                try {
                     json = window.AndroidNative.getAgentHistory(name, mobile);
-                }
-            } catch(e){}
+                } catch(e){}
+            }
 
             if(!json || json === '[]') {
                 histList.innerHTML = '<div class="no-result">कोई 30 दिन का इतिहास नहीं मिला</div>';
                 return;
             }
 
-            let data = JSON.parse(json);
+            var data = JSON.parse(json);
             histList.innerHTML = '';
-            data.forEach(d => {
-                let row = `
-                    <div class='day-row'>
-                        <div class='day-date'><span>📅 ${d.date}</span><span style='color:#f43f5e; font-weight:800;'>Conv: ${d.conv}</span></div>
-                        <div style='display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; text-align:center; margin-top:6px;'>
-                            <div style='background:#161b22; padding:3px; border-radius:4px;'>OFD: <b class='c-ofd'>${d.ofd}</b></div>
-                            <div style='background:#161b22; padding:3px; border-radius:4px;'>DEL: <b class='c-del'>${d.del}</b></div>
-                            <div style='background:#161b22; padding:3px; border-radius:4px;'>OFP: <b class='c-ofp'>${d.ofp}</b></div>
-                            <div style='background:#161b22; padding:3px; border-radius:4px;'>PIK: <b class='c-piked'>${d.piked}</b></div>
-                            <div style='background:#161b22; padding:3px; border-radius:4px;'>DNPA: <b class='c-dnpa'>${d.dnpa}</b></div>
-                            <div style='background:#161b22; padding:3px; border-radius:4px;'>DNPC: <b class='c-dnpc'>${d.dnpc}</b></div>
-                            <div style='background
+            data.forEach(function(d) {
+                var row = 
+                    '<div class="day-row">' +
+                        '<div class="day-date"><span>📅 ' + d.date + '</span><span style="color:#f43f5e; font-weight:800;">Conv: ' + d.conv + '</span></div>' +
+                        '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; text-align:center;">' +
+                            '<div style="background:#161b22; padding:4px; border-radius:4px;">OFD: <b class="c-ofd">' + d.ofd + '</b></div>' +
+                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DEL: <b class="c-del">' + d.del + '</b></div>' +
+                            '<div style="background:#161b22; padding:4px; border-radius:4px;">OFP: <b class="c-ofp">' + d.ofp + '</b></div>' +
+                            '<div style="background:#161b22; padding:4px; border-radius:4px;">PIK: <b class="c-piked">' + d.piked + '</b></div>' +
+                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DNP: <b class="c-dnp">' + d.dnp + '</b></div>' +
+                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DNPC: <b class="c-dnpc">' + d.dnpc + '</b></div>' +
+                        '</div>' +
+                    '</div>';
+                histList.innerHTML += row;
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('agentModal').style.display = 'none';
+        }
+
+        function searchOrders() {
+            var list = document.getElementById('orders-list');
+            var search = document.getElementById('search-input').value.trim();
+            list.innerHTML = '';
+            if(search === '') {
+                list.innerHTML = '<div class="no-result">ऑर्डर खोजने क
