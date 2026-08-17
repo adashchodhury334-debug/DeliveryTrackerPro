@@ -2,7 +2,6 @@ package com.deliverytracker.pro;
 
 import android.app.Activity;
 import android.content.ContentValues;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -125,8 +124,10 @@ public class MainActivity extends Activity {
                     cv.put("del", p.del);
                     cv.put("ofp", p.ofp);
                     cv.put("piked", p.piked);
-                    cv.put("dnpa", (p.ofd - p.del > 0 ? p.ofd - p.del : 0));
-                    cv.put("dnpc", (p.ofp - p.piked > 0 ? p.ofp - p.piked : 0));
+                    // DNPA = Active Total (OFD + OFP)
+                    cv.put("dnpa", (p.ofd + p.ofp));
+                    // DNPC = Completed Total (DEL + PIKED)
+                    cv.put("dnpc", (p.del + p.piked));
                     cv.put("total_attempts", (p.ofd + p.ofp));
                     cv.put("total_complete", (p.del + p.piked));
                     cv.put("entry_date", p.date);
@@ -195,7 +196,6 @@ public class MainActivity extends Activity {
                         o.put("piked", piked);
                         o.put("dnpa", dnpa);
                         o.put("dnpc", dnpc);
-                        o.put("dapc", (dnpa + dnpc));
                         o.put("total", totAtt);
                         o.put("totalComplete", totDone);
 
@@ -322,7 +322,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 4;
+        private static final int DATABASE_VERSION = 5;
 
         public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
@@ -340,4 +340,4 @@ public class MainActivity extends Activity {
             onCreate(db);
         }
     }
-                }
+}
