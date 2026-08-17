@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Delivery Tracker Pro</title>
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
         body { background-color: #0d1117; color: #e6edf3; padding: 12px; min-height: 100vh; padding-bottom: 70px; }
         
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .app-title { font-size: 18px; font-weight: 800; color: #00E676; letter-spacing: 0.5px; }
+        .app-title { font-size: 18px; font-weight: 800; color: #00E676; }
         .btn-lock { background: #161b22; color: #00E676; border: 1px solid #30363d; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
         .main-nav { display: flex; gap: 8px; margin-bottom: 14px; background: #161b22; padding: 4px; border-radius: 10px; border: 1px solid #30363d; }
-        .nav-btn { flex: 1; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; background: transparent; color: #8b949e; border: none; cursor: pointer; text-align: center; }
+        .nav-btn { flex: 1; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 8px; background: transparent; color: #8b949e; border: none; cursor: pointer; text-align: center; }
         .nav-btn.active { background: #00E676; color: #000; }
 
         .card { background: #161b22; padding: 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; }
-        .card-title { font-size: 13px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 13px; font-weight: bold; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
         input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; outline: none; margin-bottom: 8px; }
         .btn-add { background: #00E676; color: #000; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 8px; }
@@ -25,34 +25,32 @@
         .btn-danger { background: #da3633; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 12px; }
 
         .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-        .tab-btn { flex: 1; padding: 10px; font-size: 12px; font-weight: 700; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
+        .tab-btn { flex: 1; padding: 10px; font-size: 12px; font-weight: bold; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
         .tab-btn.active { background: #238636; color: #fff; border-color: #2ea043; }
 
-        /* HUB Card */
-        .hub-card { background: linear-gradient(145deg, #1c2331, #131922); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 2px solid #00E676; }
+        .hub-card { background: #1c2331; border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 2px solid #00E676; }
         .hub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .hub-name { font-size: 15px; font-weight: 900; color: #00E676; }
-        .hub-target-badge { font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; background: #382c00; color: #ffca28; border: 1px solid #bb8009; }
+        .hub-name { font-size: 15px; font-weight: bold; color: #00E676; }
+        .hub-target-badge { font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 6px; background: #382c00; color: #ffca28; border: 1px solid #bb8009; }
 
         .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; overflow: hidden; }
+        .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; }
         .hl-box.green { border-left: 3px solid #00E676; }
         .hl-box.blue { border-left: 3px solid #38bdf8; }
-        .hl-title { font-size: 10px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
-        .hl-name { font-size: 13px; font-weight: 700; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .hl-stat { font-size: 13px; font-weight: 800; margin-top: 2px; }
+        .hl-title { font-size: 10px; font-weight: bold; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
+        .hl-name { font-size: 13px; font-weight: bold; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hl-stat { font-size: 13px; font-weight: bold; margin-top: 2px; }
 
         .perf-card { background: #21262d; border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid #30363d; border-left: 4px solid #00E676; cursor: pointer; }
-        .perf-card:active { background: #292e36; }
         .perf-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-        .perf-name { font-size: 14px; font-weight: 700; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+        .perf-name { font-size: 14px; font-weight: bold; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
         .perf-phone { font-size: 11px; color: #8b949e; margin-top: 1px; }
-        .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #382c00; color: #d29922; border: 1px solid #bb8009; }
+        .badge { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #382c00; color: #d29922; border: 1px solid #bb8009; }
 
         .perf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 11px; }
         .perf-item { background: #161b22; padding: 6px; border-radius: 5px; border: 1px solid #30363d; text-align: center; }
-        .perf-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 1px; font-weight: 600; }
-        .perf-item b { font-size: 12px; font-weight: 700; }
+        .perf-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 1px; font-weight: bold; }
+        .perf-item b { font-size: 12px; font-weight: bold; }
 
         .c-ofd { color: #58a6ff; }
         .c-del { color: #3fb950; }
@@ -64,21 +62,20 @@
 
         .order-item { background: #21262d; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #00E676; display: flex; justify-content: space-between; align-items: center; }
         .track-id { font-size: 11px; color: #8b949e; }
-        .order-id { font-size: 14px; font-weight: 700; color: #3fb950; margin-top: 2px; }
-        .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .order-id { font-size: 14px; font-weight: bold; color: #3fb950; margin-top: 2px; }
+        .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .btn-delete { background: #da3633; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 5px; }
 
-        #toast-box { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #238636; color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 99999; text-align: center; max-width: 90%; }
-        #toast-box.show { opacity: 1; }
+        #toast-box { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #238636; color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.6); display: none; z-index: 99999; text-align: center; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: flex-end; }
         .modal-content { background: #161b22; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; padding: 16px; border-top: 2px solid #00E676; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .modal-title { font-size: 16px; font-weight: 800; color: #00E676; }
+        .modal-title { font-size: 16px; font-weight: bold; color: #00E676; }
         .btn-close { background: #30363d; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .modal-body { overflow-y: auto; flex: 1; }
         .day-row { background: #21262d; border-radius: 8px; padding: 10px; margin-bottom: 8px; border: 1px solid #30363d; font-size: 11px; }
-        .day-date { font-weight: 700; color: #58a6ff; margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .day-date { font-weight: bold; color: #58a6ff; margin-bottom: 6px; display: flex; justify-content: space-between; }
 
         .no-result { text-align: center; color: #8b949e; padding: 16px 0; font-size: 12px; }
         #admin-panel, #pass-box, #view-perf { display: none; }
@@ -89,37 +86,37 @@
 
     <div class="top-bar">
         <div class="app-title">⚡ Delivery Tracker Pro</div>
-        <button class="btn-lock" id="lock-btn" onclick="toggleAdmin()">🔒 Admin</button>
+        <button type="button" class="btn-lock" id="lock-btn" onclick="toggleAdmin()">🔒 Admin</button>
     </div>
 
     <!-- MAIN TABS -->
     <div class="main-nav">
-        <button class="nav-btn active" id="btn-view-track" onclick="showTab('track')">🔍 Tracker</button>
-        <button class="nav-btn" id="btn-view-perf" onclick="showTab('perf')">📊 Performance</button>
+        <button type="button" class="nav-btn active" id="btn-view-track" onclick="showTab('track')">🔍 Tracker</button>
+        <button type="button" class="nav-btn" id="btn-view-perf" onclick="showTab('perf')">📊 Performance</button>
     </div>
 
     <!-- ADMIN PIN -->
     <div class="card" id="pass-box">
         <div class="card-title">🔐 Admin PIN</div>
         <input type="password" id="pin-input" placeholder="Enter PIN..." />
-        <button class="btn-add" onclick="submitPin()">Login</button>
+        <button type="button" class="btn-add" onclick="submitPin()">Login</button>
     </div>
 
     <!-- ADMIN PANEL -->
     <div class="card" id="admin-panel">
         <div class="card-title">🔄 Google Sheet Sync</div>
-        <button class="btn-sync" onclick="doSync()">🔄 Live Sync Now</button>
+        <button type="button" class="btn-sync" onclick="doSync()">🔄 Live Sync Now</button>
         <div class="card-title" style="margin-top:10px;">📋 Manual Bulk Import</div>
         <textarea id="bulk-input" placeholder="Paste data from Sheet..."></textarea>
-        <button class="btn-add" onclick="doBulkImport()">⚡ Import Orders</button>
-        <button class="btn-danger" onclick="doClearAll()">⚠️ Clear All Data</button>
+        <button type="button" class="btn-add" onclick="doBulkImport()">⚡ Import Orders</button>
+        <button type="button" class="btn-danger" onclick="doClearAll()">⚠️ Clear All Data</button>
     </div>
 
     <!-- TAB 1: TRACKER -->
     <div id="view-track">
         <div class="card">
             <div class="card-title">🔍 Quick Search</div>
-            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." oninput="doSearch()" onkeyup="doSearch()" style="margin-bottom:0;">
+            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." oninput="doSearch()" style="margin-bottom:0;">
         </div>
 
         <div class="card">
@@ -132,9 +129,9 @@
     <div id="view-perf">
         <div class="card">
             <div class="filter-tabs">
-                <button class="tab-btn active" id="tab-daily" onclick="setMode('daily')">📅 Daily</button>
-                <button class="tab-btn" id="tab-weekly" onclick="setMode('weekly')">📆 Weekly</button>
-                <button class="tab-btn" id="tab-monthly" onclick="setMode('monthly')">🗓️ Monthly</button>
+                <button type="button" class="tab-btn active" id="tab-daily" onclick="setMode('daily')">📅 Daily</button>
+                <button type="button" class="tab-btn" id="tab-weekly" onclick="setMode('weekly')">📆 Weekly</button>
+                <button type="button" class="tab-btn" id="tab-monthly" onclick="setMode('monthly')">🗓️ Monthly</button>
             </div>
 
             <!-- HUB Summary Section -->
@@ -157,7 +154,7 @@
                     <div class="modal-title" id="modalAgentName">Agent Name</div>
                     <div style="font-size:11px; color:#8b949e;" id="modalAgentPhone">📞 Mobile</div>
                 </div>
-                <button class="btn-close" onclick="closeDetailModal()">✕ Close</button>
+                <button type="button" class="btn-close" onclick="closeDetailModal()">✕ Close</button>
             </div>
             <div class="modal-body" id="modalAgentHistory"></div>
         </div>
@@ -170,89 +167,70 @@
         var toastTimer = null;
 
         function showToast(msg, isError) {
-            try {
-                var toast = document.getElementById('toast-box');
-                if(!toast) return;
-                toast.innerText = msg;
-                toast.style.background = isError ? '#da3633' : '#238636';
-                toast.className = 'show';
-                if (toastTimer) clearTimeout(toastTimer);
-                toastTimer = setTimeout(function() { toast.className = ''; }, 2200);
-            } catch(e){}
+            var toast = document.getElementById('toast-box');
+            if(!toast) return;
+            toast.innerText = msg;
+            toast.style.background = isError ? '#da3633' : '#238636';
+            toast.style.display = 'block';
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(function() { toast.style.display = 'none'; }, 2200);
         }
 
         function showTab(tabName) {
-            try {
-                var trackDiv = document.getElementById('view-track');
-                var perfDiv = document.getElementById('view-perf');
-                var trackBtn = document.getElementById('btn-view-track');
-                var perfBtn = document.getElementById('btn-view-perf');
+            var trackDiv = document.getElementById('view-track');
+            var perfDiv = document.getElementById('view-perf');
+            var trackBtn = document.getElementById('btn-view-track');
+            var perfBtn = document.getElementById('btn-view-perf');
 
-                if (tabName === 'track') {
-                    if(trackDiv) trackDiv.style.display = 'block';
-                    if(perfDiv) perfDiv.style.display = 'none';
-                    if(trackBtn) trackBtn.className = 'nav-btn active';
-                    if(perfBtn) perfBtn.className = 'nav-btn';
-                } else {
-                    if(trackDiv) trackDiv.style.display = 'none';
-                    if(perfDiv) perfDiv.style.display = 'block';
-                    if(trackBtn) trackBtn.className = 'nav-btn';
-                    if(perfBtn) perfBtn.className = 'nav-btn active';
-                    renderPerformance();
-                }
-            } catch(e) {
-                console.error(e);
+            if (tabName === 'track') {
+                trackDiv.style.display = 'block';
+                perfDiv.style.display = 'none';
+                trackBtn.className = 'nav-btn active';
+                perfBtn.className = 'nav-btn';
+            } else {
+                trackDiv.style.display = 'none';
+                perfDiv.style.display = 'block';
+                trackBtn.className = 'nav-btn';
+                perfBtn.className = 'nav-btn active';
+                renderPerformance();
             }
         }
 
         function refreshAppStatus() {
+            var total = 0;
             try {
-                var total = 0;
                 if (window.AndroidNative && typeof window.AndroidNative.getTotalCount === 'function') {
                     total = window.AndroidNative.getTotalCount();
                 }
-                var st = document.getElementById('status-text');
-                if (st) st.innerText = 'Active: ' + total;
             } catch(e){}
+            var st = document.getElementById('status-text');
+            if (st) st.innerText = 'Active: ' + total;
         }
 
         function toggleAdmin() {
-            try {
-                if (isAdmin) {
-                    isAdmin = false;
-                    var panel = document.getElementById('admin-panel');
-                    if (panel) panel.style.display = 'none';
-                    var lBtn = document.getElementById('lock-btn');
-                    if (lBtn) lBtn.innerText = '🔒 Admin';
-                    showToast("Admin Logged Out");
-                } else {
-                    var box = document.getElementById('pass-box');
-                    if (box) box.style.display = (box.style.display === 'block') ? 'none' : 'block';
-                }
-            } catch(e) {
-                console.error(e);
+            if (isAdmin) {
+                isAdmin = false;
+                document.getElementById('admin-panel').style.display = 'none';
+                document.getElementById('lock-btn').innerText = '🔒 Admin';
+                showToast("Admin Logged Out");
+            } else {
+                var box = document.getElementById('pass-box');
+                box.style.display = (box.style.display === 'block') ? 'none' : 'block';
             }
         }
 
         function submitPin() {
-            try {
-                var input = document.getElementById('pin-input');
-                var val = input ? input.value.trim() : '';
-                if (val === ADMIN_PIN) {
-                    isAdmin = true;
-                    if (input) input.value = '';
-                    var box = document.getElementById('pass-box');
-                    if (box) box.style.display = 'none';
-                    var panel = document.getElementById('admin-panel');
-                    if (panel) panel.style.display = 'block';
-                    var lBtn = document.getElementById('lock-btn');
-                    if (lBtn) lBtn.innerText = '🔓 Logout';
-                    showToast("Admin Mode Activated!");
-                } else {
-                    showToast("Wrong PIN!", true);
-                }
-            } catch(e) {
-                console.error(e);
+            var input = document.getElementById('pin-input');
+            var val = input ? input.value.trim() : '';
+            if (val === ADMIN_PIN) {
+                isAdmin = true;
+                if (input) input.value = '';
+                document.getElementById('pass-box').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                document.getElementById('lock-btn').innerText = '🔓 Logout';
+                showToast("Admin Mode Activated!");
+            } else {
+                showToast("Wrong PIN!", true);
             }
         }
 
@@ -281,20 +259,12 @@
         };
 
         function setMode(mode) {
-            try {
-                currentMode = mode;
-                var bDaily = document.getElementById('tab-daily');
-                var bWeekly = document.getElementById('tab-weekly');
-                var bMonthly = document.getElementById('tab-monthly');
-                if (bDaily) bDaily.className = 'tab-btn';
-                if (bWeekly) bWeekly.className = 'tab-btn';
-                if (bMonthly) bMonthly.className = 'tab-btn';
-                var curBtn = document.getElementById('tab-' + mode);
-                if (curBtn) curBtn.className = 'tab-btn active';
-                renderPerformance();
-            } catch(e) {
-                console.error(e);
-            }
+            currentMode = mode;
+            document.getElementById('tab-daily').className = 'tab-btn';
+            document.getElementById('tab-weekly').className = 'tab-btn';
+            document.getElementById('tab-monthly').className = 'tab-btn';
+            document.getElementById('tab-' + mode).className = 'tab-btn active';
+            renderPerformance();
         }
 
         function renderPerformance() {
@@ -363,4 +333,26 @@
                     }
                 });
 
-                if (leader
+                if (leaderboard) {
+                    leaderboard.innerHTML = 
+                        '<div class="hl-box green">' +
+                            '<div class="hl-title">🏆 Top Conv %</div>' +
+                            '<div class="hl-name">' + (topConv ? topConv.name : 'N/A') + '</div>' +
+                            '<div class="hl-stat c-del">' + (topConv ? topConv.conversionRate : '0%') + '</div>' +
+                        '</div>' +
+                        '<div class="hl-box blue">' +
+                            '<div class="hl-title">⚡ Top DNPC (Done)</div>' +
+                            '<div class="hl-name">' + (topDnpc ? topDnpc.name : 'N/A') + '</div>' +
+                            '<div class="hl-stat c-dnpc">' + (topDnpc ? topDnpc.dnpc + ' Done' : '0') + '</div>' +
+                        '</div>';
+                }
+
+                if (list) {
+                    list.innerHTML = '';
+                    agents.forEach(function(item, index) {
+                        var badge = (index === 0) ? '<span class="badge">🥇 #1</span>' : '';
+                        var phone = item.mobile ? '<div class="perf-phone">📞 ' + item.mobile + '</div>' : '';
+                        
+                        var card = document.createElement('div');
+                        card.className = 'perf-card';
+                        card.onclick = function() {
