@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Delivery Tracker Pro</title>
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { background-color: #0d1117; color: #e6edf3; padding: 12px; min-height: 100vh; padding-bottom: 70px; }
         
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -82,37 +82,37 @@
             <div class="app-title">⚡ Delivery Tracker Pro</div>
             <div class="sync-badge" id="sync-time">Last Sync: Never</div>
         </div>
-        <button class="btn-lock" id="lock-btn" onclick="toggleAdmin()">🔒 Admin</button>
+        <button class="btn-lock" id="lock-btn">🔒 Admin</button>
     </div>
 
     <!-- MAIN TABS -->
     <div class="main-nav">
-        <button class="nav-btn active" id="btn-view-track" onclick="showTab('track')">🔍 Tracker</button>
-        <button class="nav-btn" id="btn-view-perf" onclick="showTab('perf')">📊 Performance</button>
+        <button class="nav-btn active" id="btn-view-track">🔍 Tracker</button>
+        <button class="nav-btn" id="btn-view-perf">📊 Performance</button>
     </div>
 
     <!-- ADMIN PIN -->
     <div class="card" id="pass-box">
         <div class="card-title">🔐 Admin PIN</div>
         <input type="password" id="pin-input" placeholder="Enter PIN..." />
-        <button class="btn-add" onclick="submitPin()">Login</button>
+        <button class="btn-add" id="btn-submit-pin">Login</button>
     </div>
 
     <!-- ADMIN PANEL -->
     <div class="card" id="admin-panel">
         <div class="card-title">🔄 Google Sheet Sync</div>
-        <button class="btn-sync" onclick="doSync()">🔄 Live Sync Now</button>
+        <button class="btn-sync" id="btn-do-sync">🔄 Live Sync Now</button>
         <div class="card-title" style="margin-top:10px;">📋 Manual Bulk Import</div>
         <textarea id="bulk-input" placeholder="Paste data from Sheet..."></textarea>
-        <button class="btn-add" onclick="doBulkImport()">⚡ Import Orders</button>
-        <button class="btn-danger" onclick="doClearAll()">⚠️ Clear All Data</button>
+        <button class="btn-add" id="btn-do-import">⚡ Import Orders</button>
+        <button class="btn-danger" id="btn-do-clear">⚠️ Clear All Data</button>
     </div>
 
     <!-- TAB 1: TRACKER -->
     <div id="view-track">
         <div class="card">
             <div class="card-title">🔍 Quick Search</div>
-            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." oninput="doSearch()" style="margin-bottom:0;">
+            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." style="margin-bottom:0;">
         </div>
 
         <div class="card">
@@ -125,9 +125,9 @@
     <div id="view-perf">
         <div class="card">
             <div class="filter-tabs">
-                <button class="tab-btn active" id="tab-daily" onclick="setMode('daily')">📅 Daily</button>
-                <button class="tab-btn" id="tab-weekly" onclick="setMode('weekly')">📆 Weekly</button>
-                <button class="tab-btn" id="tab-monthly" onclick="setMode('monthly')">🗓️ Monthly</button>
+                <button class="tab-btn active" id="tab-daily">📅 Daily</button>
+                <button class="tab-btn" id="tab-weekly">📆 Weekly</button>
+                <button class="tab-btn" id="tab-monthly">🗓️ Monthly</button>
             </div>
 
             <div class="hl-grid" id="leaderboard-section"></div>
@@ -143,7 +143,7 @@
                     <div class="modal-title" id="modalAgentName">Agent Name</div>
                     <div style="font-size:11px; color:#8b949e;" id="modalAgentPhone">📞 Mobile</div>
                 </div>
-                <button class="btn-close" onclick="closeDetailModal()">✕ Close</button>
+                <button class="btn-close" id="btn-close-modal">✕ Close</button>
             </div>
             <div class="modal-body" id="modalAgentHistory"></div>
         </div>
@@ -177,12 +177,12 @@
         function refreshAppStatus() {
             var total = 0;
             var syncTime = "Never";
-            try {
-                if (window.AndroidNative) {
+            if (window.AndroidNative) {
+                try {
                     total = window.AndroidNative.getTotalCount();
                     syncTime = window.AndroidNative.getLastSyncTime();
-                }
-            } catch(e){}
+                } catch(e){}
+            }
             document.getElementById('status-text').innerText = 'Active: ' + total;
             document.getElementById('sync-time').innerText = 'Last Sync: ' + syncTime;
         }
@@ -213,25 +213,22 @@
         }
 
         function doSync() {
-            alert('गूगल शीट से सिंक हो रहा है...');
-            setTimeout(function() {
-                try {
-                    if (window.AndroidNative) {
-                        var added = window.AndroidNative.syncFromSheet();
-                        if (added >= 0) {
-                            alert('सफलतापूर्वक ' + added + ' ऑर्डर्स सिंक हो गए!');
-                            refreshAppStatus();
-                            if (document.getElementById('view-perf').style.display === 'block') {
-                                renderPerformance();
-                            }
-                        } else {
-                            alert('❌ सिंक फ़ेल हुआ! इंटरनेट कनेक्शन चेक करें।');
-                        }
-                    }
-                } catch(e) {
-                    alert('Error: ' + e);
+            alert('गूगल शीट से लाइव डाटा सिंक शुरू हो रहा है...');
+            if (window.AndroidNative) {
+                window.AndroidNative.startSync();
+            }
+        }
+
+        function onSyncFinished(count) {
+            if (count >= 0) {
+                alert('सफलतापूर्वक ' + count + ' ऑर्डर्स सिंक हो गए!');
+                refreshAppStatus();
+                if (document.getElementById('view-perf').style.display === 'block') {
+                    renderPerformance();
                 }
-            }, 100);
+            } else {
+                alert('❌ सिंक फ़ेल हुआ! इंटरनेट कनेक्शन चेक करें।');
+            }
         }
 
         function setMode(mode) {
@@ -248,11 +245,11 @@
             var leaderboard = document.getElementById('leaderboard-section');
             var json = "[]";
 
-            try {
-                if (window.AndroidNative) {
+            if (window.AndroidNative) {
+                try {
                     json = window.AndroidNative.getPerformanceJson(currentMode);
-                }
-            } catch(e){}
+                } catch(e){}
+            }
 
             if (!json || json === '[]') {
                 leaderboard.innerHTML = '';
@@ -324,11 +321,11 @@
             document.getElementById('agentModal').style.display = 'flex';
 
             var json = "[]";
-            try {
-                if (window.AndroidNative) {
+            if (window.AndroidNative) {
+                try {
                     json = window.AndroidNative.getAgentHistory(name, mobile);
-                }
-            } catch(e){}
+                } catch(e){}
+            }
 
             if (!json || json === '[]') {
                 histList.innerHTML = '<div class="no-result">कोई 30 दिन का इतिहास नहीं मिला</div>';
@@ -360,4 +357,14 @@
 
         function doSearch() {
             var list = document.getElementById('orders-list');
-            var search = document.getElementById('search-input').value.t
+            var search = document.getElementById('search-input').value.trim();
+            list.innerHTML = '';
+            if (search === '') {
+                list.innerHTML = '<div class="no-result">ऑर्डर खोजने के लिए Tracking ID दर्ज करें</div>';
+                return;
+            }
+            var results = [];
+            if (window.AndroidNative) {
+                try {
+                    results = JSON.parse(window.AndroidNative.searchByTrackingId(search));
+            
