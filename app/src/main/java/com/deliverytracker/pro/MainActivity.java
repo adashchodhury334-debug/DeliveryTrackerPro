@@ -8,6 +8,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.View;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -51,9 +53,22 @@ public class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
+        settings.setDefaultTextEncodingName("utf-8");
+        
+        // Touch and Focus Fix
+        webView.setFocusable(true);
+        webView.setFocusableInTouchMode(true);
+        webView.requestFocus(View.FOCUS_DOWN);
+        webView.requestFocusFromTouch();
         
         webView.setWebViewClient(new WebViewClient());
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                return super.onConsoleMessage(consoleMessage);
+            }
+        });
+        
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
         
         setContentView(webView);
@@ -65,7 +80,7 @@ public class MainActivity extends Activity {
         int hour = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
 
-        // Before 9:00:59 AM count as Previous Day
+        // Before 9:00:59 AM counts as previous day
         if (hour < 9 || (hour == 9 && minute == 0)) {
             cal.add(Calendar.DAY_OF_YEAR, -1);
         }
@@ -217,7 +232,7 @@ public class MainActivity extends Activity {
                     cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
                 }
 
-                // 1. Calculate HUB Totals
+                // HUB Summary
                 String hubQuery = "SELECT SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) FROM agent_performance " + cond;
                 hubCursor = db.rawQuery(hubQuery, null);
                 JSONObject hubObj = new JSONObject();
@@ -253,7 +268,7 @@ public class MainActivity extends Activity {
                 }
                 response.put("hub", hubObj);
 
-                // 2. Agents list sorted by Low Conversion ASC
+                // Agents List Sorted by Low Conversion ASC
                 String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) " +
                         "FROM agent_performance " + cond +
                         "GROUP BY name, mobile " +
@@ -419,7 +434,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 13;
+        private static final int DATABASE_VERSION = 14;
 
         public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
@@ -437,4 +452,4 @@ public class MainActivity extends Activity {
             onCreate(db);
         }
     }
-}
+                              }
