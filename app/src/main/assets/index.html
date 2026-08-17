@@ -9,12 +9,11 @@
         body { background-color: #0d1117; color: #e6edf3; padding: 12px; min-height: 100vh; padding-bottom: 70px; }
         
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .app-title { font-size: 17px; font-weight: 800; color: #00E676; letter-spacing: 0.5px; }
-        .sync-badge { font-size: 10px; color: #8b949e; margin-top: 2px; }
-        .btn-lock { background: #161b22; color: #00E676; border: 1px solid #30363d; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .app-title { font-size: 18px; font-weight: 800; color: #00E676; letter-spacing: 0.5px; }
+        .btn-lock { background: #161b22; color: #00E676; border: 1px solid #30363d; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
         .main-nav { display: flex; gap: 8px; margin-bottom: 14px; background: #161b22; padding: 4px; border-radius: 10px; border: 1px solid #30363d; }
-        .nav-btn { flex: 1; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 8px; background: transparent; color: #8b949e; border: none; cursor: pointer; text-align: center; }
+        .nav-btn { flex: 1; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; background: transparent; color: #8b949e; border: none; cursor: pointer; text-align: center; }
         .nav-btn.active { background: #00E676; color: #000; }
 
         .card { background: #161b22; padding: 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; }
@@ -26,8 +25,14 @@
         .btn-danger { background: #da3633; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 12px; }
 
         .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-        .tab-btn { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
+        .tab-btn { flex: 1; padding: 10px; font-size: 12px; font-weight: 700; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
         .tab-btn.active { background: #238636; color: #fff; border-color: #2ea043; }
+
+        /* HUB Card */
+        .hub-card { background: linear-gradient(145deg, #1c2331, #131922); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 2px solid #00E676; box-shadow: 0 4px 15px rgba(0, 230, 118, 0.15); }
+        .hub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .hub-name { font-size: 15px; font-weight: 900; color: #00E676; letter-spacing: 0.5px; }
+        .hub-target-badge { font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; background: #382c00; color: #ffca28; border: 1px solid #bb8009; }
 
         .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; overflow: hidden; }
@@ -60,10 +65,9 @@
         .order-item { background: #21262d; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #00E676; display: flex; justify-content: space-between; align-items: center; }
         .track-id { font-size: 11px; color: #8b949e; }
         .order-id { font-size: 14px; font-weight: 700; color: #3fb950; margin-top: 2px; }
-        .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
-        .btn-delete { background: #da3633; color: #fff; border: none; padding: 5px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: 5px; }
+        .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .btn-delete { background: #da3633; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 5px; }
 
-        /* Smooth In-App Toast (Replaces blocking alert) */
         #toast-box { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #238636; color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 99999; text-align: center; max-width: 90%; }
         #toast-box.show { opacity: 1; }
 
@@ -71,7 +75,7 @@
         .modal-content { background: #161b22; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; padding: 16px; border-top: 2px solid #00E676; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .modal-title { font-size: 16px; font-weight: 800; color: #00E676; }
-        .btn-close { background: #30363d; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .btn-close { background: #30363d; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .modal-body { overflow-y: auto; flex: 1; }
         .day-row { background: #21262d; border-radius: 8px; padding: 10px; margin-bottom: 8px; border: 1px solid #30363d; font-size: 11px; }
         .day-date { font-weight: 700; color: #58a6ff; margin-bottom: 6px; display: flex; justify-content: space-between; }
@@ -84,10 +88,7 @@
     <div id="toast-box">Notification</div>
 
     <div class="top-bar">
-        <div>
-            <div class="app-title">⚡ Delivery Tracker Pro</div>
-            <div class="sync-badge" id="sync-time">Last Sync: Never</div>
-        </div>
+        <div class="app-title">⚡ Delivery Tracker Pro</div>
         <button class="btn-lock" id="lock-btn" onclick="toggleAdmin()">🔒 Admin</button>
     </div>
 
@@ -136,7 +137,14 @@
                 <button class="tab-btn" id="tab-monthly" onclick="setMode('monthly')">🗓️ Monthly</button>
             </div>
 
+            <!-- HUB Summary Section -->
+            <div id="hub-section"></div>
+
+            <!-- Leaderboard Highlights -->
             <div class="hl-grid" id="leaderboard-section"></div>
+
+            <!-- Individual Agents List -->
+            <div class="card-title" style="margin-top: 10px; margin-bottom: 6px;">👥 Delivery Agents Report</div>
             <div id="perf-list"></div>
         </div>
     </div>
@@ -167,78 +175,89 @@
             toast.style.background = isError ? '#da3633' : '#238636';
             toast.className = 'show';
             if (toastTimer) clearTimeout(toastTimer);
-            toastTimer = setTimeout(function() {
-                toast.className = '';
-            }, 2200);
+            toastTimer = setTimeout(function() { toast.className = ''; }, 2200);
         }
 
         function showTab(tabName) {
-            var trackDiv = document.getElementById('view-track');
-            var perfDiv = document.getElementById('view-perf');
-            var trackBtn = document.getElementById('btn-view-track');
-            var perfBtn = document.getElementById('btn-view-perf');
+            try {
+                var trackDiv = document.getElementById('view-track');
+                var perfDiv = document.getElementById('view-perf');
+                var trackBtn = document.getElementById('btn-view-track');
+                var perfBtn = document.getElementById('btn-view-perf');
 
-            if (tabName === 'track') {
-                trackDiv.style.display = 'block';
-                perfDiv.style.display = 'none';
-                trackBtn.className = 'nav-btn active';
-                perfBtn.className = 'nav-btn';
-            } else {
-                trackDiv.style.display = 'none';
-                perfDiv.style.display = 'block';
-                trackBtn.className = 'nav-btn';
-                perfBtn.className = 'nav-btn active';
-                renderPerformance();
+                if (tabName === 'track') {
+                    trackDiv.style.display = 'block';
+                    perfDiv.style.display = 'none';
+                    trackBtn.className = 'nav-btn active';
+                    perfBtn.className = 'nav-btn';
+                } else {
+                    trackDiv.style.display = 'none';
+                    perfDiv.style.display = 'block';
+                    trackBtn.className = 'nav-btn';
+                    perfBtn.className = 'nav-btn active';
+                    renderPerformance();
+                }
+            } catch(e) {
+                console.error(e);
             }
         }
 
         function refreshAppStatus() {
             var total = 0;
-            var syncTime = "Never";
-            if (window.AndroidNative) {
-                try {
+            try {
+                if (window.AndroidNative) {
                     total = window.AndroidNative.getTotalCount();
-                    syncTime = window.AndroidNative.getLastSyncTime();
-                } catch(e){}
-            }
+                }
+            } catch(e){}
             document.getElementById('status-text').innerText = 'Active: ' + total;
-            document.getElementById('sync-time').innerText = 'Last Sync: ' + syncTime;
         }
 
         function toggleAdmin() {
-            if (isAdmin) {
-                isAdmin = false;
-                document.getElementById('admin-panel').style.display = 'none';
-                document.getElementById('lock-btn').innerText = '🔒 Admin';
-                showToast("Admin Logged Out");
-            } else {
-                var box = document.getElementById('pass-box');
-                box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+            try {
+                if (isAdmin) {
+                    isAdmin = false;
+                    document.getElementById('admin-panel').style.display = 'none';
+                    document.getElementById('lock-btn').innerText = '🔒 Admin';
+                    showToast("Admin Logged Out");
+                } else {
+                    var box = document.getElementById('pass-box');
+                    box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+                }
+            } catch(e) {
+                console.error(e);
             }
         }
 
         function submitPin() {
-            var val = document.getElementById('pin-input').value.trim();
-            if (val === ADMIN_PIN) {
-                isAdmin = true;
-                document.getElementById('pin-input').value = '';
-                document.getElementById('pass-box').style.display = 'none';
-                document.getElementById('admin-panel').style.display = 'block';
-                document.getElementById('lock-btn').innerText = '🔓 Logout';
-                showToast("Admin Mode Activated!");
-            } else {
-                showToast("Wrong PIN!", true);
+            try {
+                var val = document.getElementById('pin-input').value.trim();
+                if (val === ADMIN_PIN) {
+                    isAdmin = true;
+                    document.getElementById('pin-input').value = '';
+                    document.getElementById('pass-box').style.display = 'none';
+                    document.getElementById('admin-panel').style.display = 'block';
+                    document.getElementById('lock-btn').innerText = '🔓 Logout';
+                    showToast("Admin Mode Activated!");
+                } else {
+                    showToast("Wrong PIN!", true);
+                }
+            } catch(e) {
+                console.error(e);
             }
         }
 
         function doSync() {
-            showToast("गूगल शीट से लाइव डाटा सिंक शुरू...");
-            if (window.AndroidNative) {
-                window.AndroidNative.startSync();
+            showToast("गूगल शीट से लाइव सिंक शुरू...");
+            try {
+                if (window.AndroidNative) {
+                    window.AndroidNative.startSync();
+                }
+            } catch(e) {
+                showToast("Sync Error: " + e, true);
             }
         }
 
-        function onSyncFinished(count) {
+        window.onSyncFinished = function(count) {
             if (count >= 0) {
                 showToast("सफलतापूर्वक " + count + " ऑर्डर्स सिंक हो गए!");
                 refreshAppStatus();
@@ -248,117 +267,102 @@
             } else {
                 showToast("❌ सिंक फ़ेल हुआ! इंटरनेट कनेक्शन चेक करें।", true);
             }
-        }
+        };
 
         function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('tab-daily').className = 'tab-btn';
-            document.getElementById('tab-weekly').className = 'tab-btn';
-            document.getElementById('tab-monthly').className = 'tab-btn';
-            document.getElementById('tab-' + mode).className = 'tab-btn active';
-            renderPerformance();
+            try {
+                currentMode = mode;
+                document.getElementById('tab-daily').className = 'tab-btn';
+                document.getElementById('tab-weekly').className = 'tab-btn';
+                document.getElementById('tab-monthly').className = 'tab-btn';
+                document.getElementById('tab-' + mode).className = 'tab-btn active';
+                renderPerformance();
+            } catch(e) {
+                console.error(e);
+            }
         }
 
         function renderPerformance() {
+            var hubContainer = document.getElementById('hub-section');
             var list = document.getElementById('perf-list');
             var leaderboard = document.getElementById('leaderboard-section');
-            var json = "[]";
+            var json = "{}";
 
-            if (window.AndroidNative) {
-                try {
+            try {
+                if (window.AndroidNative) {
                     json = window.AndroidNative.getPerformanceJson(currentMode);
-                } catch(e){}
-            }
+                }
+            } catch(e){}
 
-            if (!json || json === '[]') {
+            if (!json || json === '{}') {
+                hubContainer.innerHTML = '';
                 leaderboard.innerHTML = '';
                 list.innerHTML = '<div class="no-result">कोई डेटा उपलब्ध नहीं है (पहले Admin में जाकर Sync करें)</div>';
                 return;
             }
 
-            var data = JSON.parse(json);
-            var topConv = null, topDnpc = null;
-            var maxConv = -1, maxDnpc = -1;
+            try {
+                var response = JSON.parse(json);
+                var hub = response.hub;
+                var agents = response.agents || [];
 
-            data.forEach(function(item) {
-                if (item.conversionNum > maxConv && item.dnp > 0) {
-                    maxConv = item.conversionNum;
-                    topConv = item;
+                // 1. Render HUB Summary Card
+                if (hub) {
+                    hubContainer.innerHTML = 
+                        '<div class="hub-card">' +
+                            '<div class="hub-header">' +
+                                '<div class="hub-name">🏢 ' + hub.hubName + '</div>' +
+                                '<div class="hub-target-badge">🎯 Target: ' + hub.target + '</div>' +
+                            '</div>' +
+                            '<div class="perf-grid">' +
+                                '<div class="perf-item"><span>TOTAL OFD</span><b class="c-ofd">' + hub.ofd + '</b></div>' +
+                                '<div class="perf-item"><span>TOTAL DEL</span><b class="c-del">' + hub.del + '</b></div>' +
+                                '<div class="perf-item"><span>TOTAL OFP</span><b class="c-ofp">' + hub.ofp + '</b></div>' +
+                                '<div class="perf-item"><span>TOTAL PIKED</span><b class="c-piked">' + hub.piked + '</b></div>' +
+                                '<div class="perf-item"><span>TOTAL DNP</span><b class="c-dnp">' + hub.dnp + '</b></div>' +
+                                '<div class="perf-item"><span>TOTAL DNPC</span><b class="c-dnpc">' + hub.dnpc + '</b></div>' +
+                                '<div class="perf-item" style="grid-column: span 3; background: #0f141c; border-color: #00E676;">' +
+                                    '<span>HUB ACTUAL CONVERSION %</span>' +
+                                    '<b class="c-rate" style="font-size: 15px;">' + hub.conversionRate + '</b>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                } else {
+                    hubContainer.innerHTML = '';
                 }
-                if (item.dnpc > maxDnpc) {
-                    maxDnpc = item.dnpc;
-                    topDnpc = item;
+
+                if (agents.length === 0) {
+                    leaderboard.innerHTML = '';
+                    list.innerHTML = '<div class="no-result">कोई एजेंट डेटा उपलब्ध नहीं है</div>';
+                    return;
                 }
-            });
 
-            leaderboard.innerHTML = 
-                '<div class="hl-box green">' +
-                    '<div class="hl-title">🏆 Top Conv %</div>' +
-                    '<div class="hl-name">' + (topConv ? topConv.name : 'N/A') + '</div>' +
-                    '<div class="hl-stat c-del">' + (topConv ? topConv.conversionRate : '0%') + '</div>' +
-                '</div>' +
-                '<div class="hl-box blue">' +
-                    '<div class="hl-title">⚡ Top DNPC (Done)</div>' +
-                    '<div class="hl-name">' + (topDnpc ? topDnpc.name : 'N/A') + '</div>' +
-                    '<div class="hl-stat c-dnpc">' + (topDnpc ? topDnpc.dnpc + ' Done' : '0') + '</div>' +
-                '</div>';
+                var topConv = null, topDnpc = null;
+                var maxConv = -1, maxDnpc = -1;
 
-            list.innerHTML = '';
-            data.forEach(function(item, index) {
-                var badge = (index === 0) ? '<span class="badge">🥇 #1</span>' : '';
-                var phone = item.mobile ? '<div class="perf-phone">📞 ' + item.mobile + '</div>' : '';
-                
-                var card = document.createElement('div');
-                card.className = 'perf-card';
-                card.onclick = function() { showHistory(item.name, item.mobile); };
-                card.innerHTML = 
-                    '<div class="perf-header">' +
-                        '<div style="overflow:hidden;">' +
-                            '<div class="perf-name">👤 ' + item.name + '</div>' +
-                            phone +
-                        '</div>' +
-                        badge +
+                agents.forEach(function(item) {
+                    if (item.conversionNum > maxConv && item.dnp > 0) {
+                        maxConv = item.conversionNum;
+                        topConv = item;
+                    }
+                    if (item.dnpc > maxDnpc) {
+                        maxDnpc = item.dnpc;
+                        topDnpc = item;
+                    }
+                });
+
+                leaderboard.innerHTML = 
+                    '<div class="hl-box green">' +
+                        '<div class="hl-title">🏆 Top Conv %</div>' +
+                        '<div class="hl-name">' + (topConv ? topConv.name : 'N/A') + '</div>' +
+                        '<div class="hl-stat c-del">' + (topConv ? topConv.conversionRate : '0%') + '</div>' +
                     '</div>' +
-                    '<div class="perf-grid">' +
-                        '<div class="perf-item"><span>OFD</span><b class="c-ofd">' + item.ofd + '</b></div>' +
-                        '<div class="perf-item"><span>DEL</span><b class="c-del">' + item.del + '</b></div>' +
-                        '<div class="perf-item"><span>OFP</span><b class="c-ofp">' + item.ofp + '</b></div>' +
-                        '<div class="perf-item"><span>PIKED</span><b class="c-piked">' + item.piked + '</b></div>' +
-                        '<div class="perf-item"><span>DNP</span><b class="c-dnp">' + item.dnp + '</b></div>' +
-                        '<div class="perf-item"><span>DNPC</span><b class="c-dnpc">' + item.dnpc + '</b></div>' +
-                        '<div class="perf-item" style="grid-column: span 3;"><span>CONVERSATION %</span><b class="c-rate">' + item.conversionRate + '</b></div>' +
+                    '<div class="hl-box blue">' +
+                        '<div class="hl-title">⚡ Top DNPC (Done)</div>' +
+                        '<div class="hl-name">' + (topDnpc ? topDnpc.name : 'N/A') + '</div>' +
+                        '<div class="hl-stat c-dnpc">' + (topDnpc ? topDnpc.dnpc + ' Done' : '0') + '</div>' +
                     '</div>';
-                list.appendChild(card);
-            });
-        }
 
-        function showHistory(name, mobile) {
-            document.getElementById('modalAgentName').innerText = '👤 ' + name;
-            document.getElementById('modalAgentPhone').innerText = mobile ? '📞 ' + mobile : '';
-            var histList = document.getElementById('modalAgentHistory');
-            histList.innerHTML = '<div class="no-result">लोड हो रहा है...</div>';
-            document.getElementById('agentModal').style.display = 'flex';
-
-            var json = "[]";
-            if (window.AndroidNative) {
-                try {
-                    json = window.AndroidNative.getAgentHistory(name, mobile);
-                } catch(e){}
-            }
-
-            if (!json || json === '[]') {
-                histList.innerHTML = '<div class="no-result">कोई 30 दिन का इतिहास नहीं मिला</div>';
-                return;
-            }
-
-            var data = JSON.parse(json);
-            histList.innerHTML = '';
-            data.forEach(function(d) {
-                var row = 
-                    '<div class="day-row">' +
-                        '<div class="day-date"><span>📅 ' + d.date + '</span><span style="color:#f43f5e; font-weight:800;">Conv: ' + d.conv + '</span></div>' +
-                        '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; text-align:center;">' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">OFD: <b class="c-ofd">' + d.ofd + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DEL: <b class="c-del">' + d.del + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">OFP: <b class="c-ofp">' + d.ofp + '</b></div>' +
-                            '<div sty
+                list.innerHTML = '';
+                agents.forEach(function(item, index) {
+                    var badge = (index === 0) ? '<span 
