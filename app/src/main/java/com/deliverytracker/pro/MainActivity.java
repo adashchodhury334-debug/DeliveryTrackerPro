@@ -33,9 +33,12 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         dbHelper = new DatabaseHelper(this);
         webView = new WebView(this);
+        
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setAllowFileAccess(true);
+        
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
         webView.loadUrl("file:///android_asset/index.html");
@@ -124,12 +127,13 @@ public class MainActivity extends Activity {
                     cv.put("del", p.del);
                     cv.put("ofp", p.ofp);
                     cv.put("piked", p.piked);
-                    // DNPA = Active Total (OFD + OFP)
-                    cv.put("dnpa", (p.ofd + p.ofp));
-                    // DNPC = Completed Total (DEL + PIKED)
-                    cv.put("dnpc", (p.del + p.piked));
-                    cv.put("total_attempts", (p.ofd + p.ofp));
-                    cv.put("total_complete", (p.del + p.piked));
+                    
+                    int dnpTotal = p.ofd + p.ofp;       // DNP = Total Delivery + Pickup
+                    int dnpcTotal = p.del + p.piked;    // DNPC = Total Complete
+                    cv.put("dnp", dnpTotal);
+                    cv.put("dnpc", dnpcTotal);
+                    cv.put("total_attempts", dnpTotal);
+                    cv.put("total_complete", dnpcTotal);
                     cv.put("entry_date", p.date);
                     db.insert("agent_performance", null, cv);
                 }
@@ -169,10 +173,10 @@ public class MainActivity extends Activity {
                 cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
             }
 
-            String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnpa), SUM(dnpc), SUM(total_attempts), SUM(total_complete) " +
+            String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) " +
                     "FROM agent_performance " + cond +
                     "GROUP BY name, mobile " +
-                    "ORDER BY SUM(total_complete) DESC";
+                    "ORDER BY SUM(dnpc) DESC";
 
             Cursor c = db.rawQuery(query, null);
             try {
@@ -185,21 +189,17 @@ public class MainActivity extends Activity {
                         int del = c.getInt(3);
                         int ofp = c.getInt(4);
                         int piked = c.getInt(5);
-                        int dnpa = c.getInt(6);
+                        int dnp = c.getInt(6);
                         int dnpc = c.getInt(7);
-                        int totAtt = c.getInt(8);
-                        int totDone = c.getInt(9);
 
                         o.put("ofd", ofd);
                         o.put("del", del);
                         o.put("ofp", ofp);
                         o.put("piked", piked);
-                        o.put("dnpa", dnpa);
+                        o.put("dnp", dnp);
                         o.put("dnpc", dnpc);
-                        o.put("total", totAtt);
-                        o.put("totalComplete", totDone);
 
-                        double r = totAtt > 0 ? ((double) totDone / totAtt) * 100.0 : 0.0;
+                        double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
                         o.put("conversionRate", String.format(Locale.US, "%.1f%%", r));
                         o.put("conversionNum", r);
                         arr.put(o);
@@ -217,7 +217,7 @@ public class MainActivity extends Activity {
         public String getAgentHistory(String name, String mobile) {
             SQLiteDatabase db = dbHelper.getReadableDatabase();
             JSONArray arr = new JSONArray();
-            String query = "SELECT entry_date, ofd, del, ofp, piked, dnpa, dnpc, total_attempts, total_complete " +
+            String query = "SELECT entry_date, ofd, del, ofp, piked, dnp, dnpc " +
                     "FROM agent_performance WHERE name = ? AND mobile = ? " +
                     "ORDER BY entry_date DESC LIMIT 30";
             Cursor c = db.rawQuery(query, new String[]{name, mobile});
@@ -230,12 +230,11 @@ public class MainActivity extends Activity {
                         o.put("del", c.getInt(2));
                         o.put("ofp", c.getInt(3));
                         o.put("piked", c.getInt(4));
-                        o.put("dnpa", c.getInt(5));
-                        o.put("dnpc", c.getInt(6));
-                        int tot = c.getInt(7);
-                        int comp = c.getInt(8);
-                        o.put("total", tot);
-                        double r = tot > 0 ? ((double) comp / tot) * 100.0 : 0.0;
+                        int dnp = c.getInt(5);
+                        int dnpc = c.getInt(6);
+                        o.put("dnp", dnp);
+                        o.put("dnpc", dnpc);
+                        double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
                         o.put("conv", String.format(Locale.US, "%.1f%%", r));
                         arr.put(o);
                     } while (c.moveToNext());
@@ -322,7 +321,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 5;
+        private static final int DATABASE_VERSION = 7;
 
         public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
@@ -330,7 +329,7 @@ public class MainActivity extends Activity {
         public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, tracking_id TEXT, order_id TEXT);");
             db.execSQL("CREATE INDEX idx_tracking_id ON orders(tracking_id);");
-            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, del INTEGER, ofp INTEGER, piked INTEGER, dnpa INTEGER, dnpc INTEGER, total_attempts INTEGER, total_complete INTEGER, entry_date TEXT);");
+            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, del INTEGER, ofp INTEGER, piked INTEGER, dnp INTEGER, dnpc INTEGER, total_attempts INTEGER, total_complete INTEGER, entry_date TEXT);");
         }
 
         @Override
