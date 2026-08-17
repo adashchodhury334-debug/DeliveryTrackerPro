@@ -10,6 +10,7 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -37,10 +38,16 @@ public class MainActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
         
+        // Prevent WebView from locking touch and script execution
+        webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
+        
         webView.loadUrl("file:///android_asset/index.html");
         setContentView(webView);
     }
@@ -128,8 +135,8 @@ public class MainActivity extends Activity {
                     cv.put("ofp", p.ofp);
                     cv.put("piked", p.piked);
                     
-                    int dnpTotal = p.ofd + p.ofp;       // DNP = Total Delivery + Pickup
-                    int dnpcTotal = p.del + p.piked;    // DNPC = Total Complete
+                    int dnpTotal = p.ofd + p.ofp;
+                    int dnpcTotal = p.del + p.piked;
                     cv.put("dnp", dnpTotal);
                     cv.put("dnpc", dnpcTotal);
                     cv.put("total_attempts", dnpTotal);
@@ -173,10 +180,11 @@ public class MainActivity extends Activity {
                 cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
             }
 
+            // Low Conversion % ऊपर और High Conversion % नीचे (ASC order)
             String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) " +
                     "FROM agent_performance " + cond +
                     "GROUP BY name, mobile " +
-                    "ORDER BY SUM(dnpc) DESC";
+                    "ORDER BY ((SUM(dnpc) * 1.0) / CASE WHEN SUM(dnp) = 0 THEN 1 ELSE SUM(dnp) END) ASC";
 
             Cursor c = db.rawQuery(query, null);
             try {
@@ -321,7 +329,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 7;
+        private static final int DATABASE_VERSION = 9;
 
         public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
@@ -339,4 +347,4 @@ public class MainActivity extends Activity {
             onCreate(db);
         }
     }
-}
+                      }
