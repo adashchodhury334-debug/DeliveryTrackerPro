@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Delivery Tracker Pro</title>
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; user-select: none; }
         body { background-color: #0d1117; color: #e6edf3; padding: 12px; min-height: 100vh; padding-bottom: 70px; }
         
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -20,7 +20,7 @@
         .card { background: #161b22; padding: 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; }
         .card-title { font-size: 13px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
-        input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; outline: none; margin-bottom: 8px; }
+        input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; outline: none; margin-bottom: 8px; user-select: text; }
         .btn-add { background: #00E676; color: #000; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 8px; }
         .btn-sync { background: #0284c7; color: #fff; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 8px; }
         .btn-danger { background: #da3633; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 12px; }
@@ -80,35 +80,39 @@
     <div class="top-bar">
         <div>
             <div class="app-title">⚡ Delivery Tracker Pro</div>
-            <div class="sync-badge" id="sync-time">Last Sync: Never</div>
+            <div class="sync-badge" id="sync-time">Last Sync: Checking...</div>
         </div>
-        <button class="btn-lock" id="lock-btn" onclick="handleAdminClick()">🔒 Admin</button>
+        <button class="btn-lock" id="lock-btn" onclick="toggleAdmin()">🔒 Admin</button>
     </div>
 
+    <!-- MAIN TABS -->
     <div class="main-nav">
-        <button class="nav-btn active" id="btn-view-track" onclick="switchView('track')">🔍 Tracker</button>
-        <button class="nav-btn" id="btn-view-perf" onclick="switchView('perf')">📊 Performance</button>
+        <button class="nav-btn active" id="btn-view-track" onclick="showTab('track')">🔍 Tracker</button>
+        <button class="nav-btn" id="btn-view-perf" onclick="showTab('perf')">📊 Performance</button>
     </div>
 
+    <!-- ADMIN PIN -->
     <div class="card" id="pass-box">
         <div class="card-title">🔐 Admin PIN</div>
         <input type="password" id="pin-input" placeholder="Enter PIN..." />
-        <button class="btn-add" onclick="verifyPin()">Login</button>
+        <button class="btn-add" onclick="submitPin()">Login</button>
     </div>
 
+    <!-- ADMIN PANEL -->
     <div class="card" id="admin-panel">
         <div class="card-title">🔄 Google Sheet Sync</div>
-        <button class="btn-sync" onclick="syncGoogleSheet()">🔄 Live Sync Now</button>
+        <button class="btn-sync" onclick="doSync()">🔄 Live Sync Now</button>
         <div class="card-title" style="margin-top:10px;">📋 Manual Bulk Import</div>
         <textarea id="bulk-input" placeholder="Paste data from Sheet..."></textarea>
-        <button class="btn-add" onclick="bulkImport()">⚡ Import Orders</button>
-        <button class="btn-danger" onclick="clearAllOrders()">⚠️ Clear All Data</button>
+        <button class="btn-add" onclick="doBulkImport()">⚡ Import Orders</button>
+        <button class="btn-danger" onclick="doClearAll()">⚠️ Clear All Data</button>
     </div>
 
+    <!-- TAB 1: TRACKER -->
     <div id="view-track">
         <div class="card">
             <div class="card-title">🔍 Quick Search</div>
-            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." oninput="searchOrders()" style="margin-bottom:0;">
+            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." oninput="doSearch()" style="margin-bottom:0;">
         </div>
 
         <div class="card">
@@ -117,12 +121,13 @@
         </div>
     </div>
 
+    <!-- TAB 2: PERFORMANCE -->
     <div id="view-perf">
         <div class="card">
             <div class="filter-tabs">
-                <button class="tab-btn active" id="tab-daily" onclick="changeMode('daily')">📅 Daily</button>
-                <button class="tab-btn" id="tab-weekly" onclick="changeMode('weekly')">📆 Weekly</button>
-                <button class="tab-btn" id="tab-monthly" onclick="changeMode('monthly')">🗓️ Monthly</button>
+                <button class="tab-btn active" id="tab-daily" onclick="setMode('daily')">📅 Daily</button>
+                <button class="tab-btn" id="tab-weekly" onclick="setMode('weekly')">📆 Weekly</button>
+                <button class="tab-btn" id="tab-monthly" onclick="setMode('monthly')">🗓️ Monthly</button>
             </div>
 
             <div class="hl-grid" id="leaderboard-section"></div>
@@ -130,6 +135,7 @@
         </div>
     </div>
 
+    <!-- 30-DAY DETAIL MODAL -->
     <div class="modal" id="agentModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -137,7 +143,7 @@
                     <div class="modal-title" id="modalAgentName">Agent Name</div>
                     <div style="font-size:11px; color:#8b949e;" id="modalAgentPhone">📞 Mobile</div>
                 </div>
-                <button class="btn-close" onclick="closeModal()">✕ Close</button>
+                <button class="btn-close" onclick="closeDetailModal()">✕ Close</button>
             </div>
             <div class="modal-body" id="modalAgentHistory"></div>
         </div>
@@ -148,13 +154,13 @@
         var ADMIN_PIN = '9547927698';
         var currentMode = 'daily';
 
-        function switchView(view) {
+        function showTab(tabName) {
             var trackDiv = document.getElementById('view-track');
             var perfDiv = document.getElementById('view-perf');
             var trackBtn = document.getElementById('btn-view-track');
             var perfBtn = document.getElementById('btn-view-perf');
 
-            if(view === 'track') {
+            if (tabName === 'track') {
                 trackDiv.style.display = 'block';
                 perfDiv.style.display = 'none';
                 trackBtn.className = 'nav-btn active';
@@ -164,11 +170,11 @@
                 perfDiv.style.display = 'block';
                 trackBtn.className = 'nav-btn';
                 perfBtn.className = 'nav-btn active';
-                loadPerformance();
+                renderPerformance();
             }
         }
 
-        function updateStatus() {
+        function refreshAppStatus() {
             var total = 0;
             var syncTime = "Never";
             if (window.AndroidNative) {
@@ -181,41 +187,41 @@
             document.getElementById('sync-time').innerText = 'Last Sync: ' + syncTime;
         }
 
-        function handleAdminClick() {
-            if(isAdmin) {
+        function toggleAdmin() {
+            if (isAdmin) {
                 isAdmin = false;
                 document.getElementById('admin-panel').style.display = 'none';
                 document.getElementById('lock-btn').innerText = '🔒 Admin';
             } else {
                 var box = document.getElementById('pass-box');
-                box.style.display = box.style.display === 'block' ? 'none' : 'block';
+                box.style.display = (box.style.display === 'block') ? 'none' : 'block';
             }
         }
 
-        function verifyPin() {
-            var inputPin = document.getElementById('pin-input').value.trim();
-            if(inputPin === ADMIN_PIN) {
+        function submitPin() {
+            var val = document.getElementById('pin-input').value.trim();
+            if (val === ADMIN_PIN) {
                 isAdmin = true;
                 document.getElementById('pin-input').value = '';
                 document.getElementById('pass-box').style.display = 'none';
                 document.getElementById('admin-panel').style.display = 'block';
                 document.getElementById('lock-btn').innerText = '🔓 Logout';
                 alert('Admin Mode Activated!');
-            } else { 
-                alert('Wrong PIN!'); 
+            } else {
+                alert('Wrong PIN!');
             }
         }
 
-        function syncGoogleSheet() {
-            alert('गूगल शीट से लाइव डाटा सिंक हो रहा है...');
+        function doSync() {
+            alert('गूगल शीट से सिंक हो रहा है...');
             setTimeout(function() {
-                if(window.AndroidNative) {
+                if (window.AndroidNative) {
                     var added = window.AndroidNative.syncFromSheet();
-                    if(added >= 0) {
+                    if (added >= 0) {
                         alert('सफलतापूर्वक ' + added + ' ऑर्डर्स सिंक हो गए!');
-                        updateStatus();
-                        if(document.getElementById('view-perf').style.display === 'block') {
-                            loadPerformance();
+                        refreshAppStatus();
+                        if (document.getElementById('view-perf').style.display === 'block') {
+                            renderPerformance();
                         }
                     } else {
                         alert('❌ सिंक फ़ेल हुआ! इंटरनेट कनेक्शन चेक करें।');
@@ -224,73 +230,72 @@
             }, 100);
         }
 
-        function changeMode(mode) {
+        function setMode(mode) {
             currentMode = mode;
             document.getElementById('tab-daily').className = 'tab-btn';
             document.getElementById('tab-weekly').className = 'tab-btn';
             document.getElementById('tab-monthly').className = 'tab-btn';
             document.getElementById('tab-' + mode).className = 'tab-btn active';
-            loadPerformance();
+            renderPerformance();
         }
 
-        function loadPerformance() {
+        function renderPerformance() {
             var list = document.getElementById('perf-list');
             var leaderboard = document.getElementById('leaderboard-section');
             var json = "[]";
+
             if (window.AndroidNative) {
                 try {
                     json = window.AndroidNative.getPerformanceJson(currentMode);
                 } catch(e){}
             }
 
-            if(!json || json === '[]') {
+            if (!json || json === '[]') {
                 leaderboard.innerHTML = '';
-                list.innerHTML = '<div class="no-result">कोई डेटा उपलब्ध नहीं है (पहले सिंक करें)</div>';
+                list.innerHTML = '<div class="no-result">कोई डेटा उपलब्ध नहीं है (पहले Admin में जाकर Sync करें)</div>';
                 return;
             }
 
             var data = JSON.parse(json);
-            var topConversionAgent = null;
-            var topDnpcAgent = null;
-            var maxConv = -1;
-            var maxDnpc = -1;
+            var topConv = null, topDnpc = null;
+            var maxConv = -1, maxDnpc = -1;
 
             data.forEach(function(item) {
-                if(item.conversionNum > maxConv && item.dnp > 0) {
+                if (item.conversionNum > maxConv && item.dnp > 0) {
                     maxConv = item.conversionNum;
-                    topConversionAgent = item;
+                    topConv = item;
                 }
-                if(item.dnpc > maxDnpc) {
+                if (item.dnpc > maxDnpc) {
                     maxDnpc = item.dnpc;
-                    topDnpcAgent = item;
+                    topDnpc = item;
                 }
             });
 
             leaderboard.innerHTML = 
                 '<div class="hl-box green">' +
                     '<div class="hl-title">🏆 Top Conv %</div>' +
-                    '<div class="hl-name">' + (topConversionAgent ? topConversionAgent.name : 'N/A') + '</div>' +
-                    '<div class="hl-stat c-del">' + (topConversionAgent ? topConversionAgent.conversionRate : '0%') + '</div>' +
+                    '<div class="hl-name">' + (topConv ? topConv.name : 'N/A') + '</div>' +
+                    '<div class="hl-stat c-del">' + (topConv ? topConv.conversionRate : '0%') + '</div>' +
                 '</div>' +
                 '<div class="hl-box blue">' +
-                    '<div class="hl-title">⚡ Top DNPC (Complete)</div>' +
-                    '<div class="hl-name">' + (topDnpcAgent ? topDnpcAgent.name : 'N/A') + '</div>' +
-                    '<div class="hl-stat c-dnpc">' + (topDnpcAgent ? topDnpcAgent.dnpc + ' Done' : '0') + '</div>' +
+                    '<div class="hl-title">⚡ Top DNPC (Done)</div>' +
+                    '<div class="hl-name">' + (topDnpc ? topDnpc.name : 'N/A') + '</div>' +
+                    '<div class="hl-stat c-dnpc">' + (topDnpc ? topDnpc.dnpc + ' Done' : '0') + '</div>' +
                 '</div>';
 
             list.innerHTML = '';
             data.forEach(function(item, index) {
-                var badge = index === 0 ? '<span class="badge">🥇 #1</span>' : '';
-                var phoneHtml = item.mobile ? '<div class="perf-phone">📞 ' + item.mobile + '</div>' : '';
+                var badge = (index === 0) ? '<span class="badge">🥇 #1</span>' : '';
+                var phone = item.mobile ? '<div class="perf-phone">📞 ' + item.mobile + '</div>' : '';
                 
                 var card = document.createElement('div');
                 card.className = 'perf-card';
-                card.onclick = function() { openAgentDetails(item.name, item.mobile); };
+                card.onclick = function() { showHistory(item.name, item.mobile); };
                 card.innerHTML = 
                     '<div class="perf-header">' +
                         '<div style="overflow:hidden;">' +
                             '<div class="perf-name">👤 ' + item.name + '</div>' +
-                            phoneHtml +
+                            phone +
                         '</div>' +
                         badge +
                     '</div>' +
@@ -299,15 +304,15 @@
                         '<div class="perf-item"><span>DEL</span><b class="c-del">' + item.del + '</b></div>' +
                         '<div class="perf-item"><span>OFP</span><b class="c-ofp">' + item.ofp + '</b></div>' +
                         '<div class="perf-item"><span>PIKED</span><b class="c-piked">' + item.piked + '</b></div>' +
-                        '<div class="perf-item"><span>DNP (Total)</span><b class="c-dnp">' + item.dnp + '</b></div>' +
-                        '<div class="perf-item"><span>DNPC (Done)</span><b class="c-dnpc">' + item.dnpc + '</b></div>' +
+                        '<div class="perf-item"><span>DNP</span><b class="c-dnp">' + item.dnp + '</b></div>' +
+                        '<div class="perf-item"><span>DNPC</span><b class="c-dnpc">' + item.dnpc + '</b></div>' +
                         '<div class="perf-item" style="grid-column: span 3;"><span>CONVERSATION %</span><b class="c-rate">' + item.conversionRate + '</b></div>' +
                     '</div>';
                 list.appendChild(card);
             });
         }
 
-        function openAgentDetails(name, mobile) {
+        function showHistory(name, mobile) {
             document.getElementById('modalAgentName').innerText = '👤 ' + name;
             document.getElementById('modalAgentPhone').innerText = mobile ? '📞 ' + mobile : '';
             var histList = document.getElementById('modalAgentHistory');
@@ -315,13 +320,13 @@
             document.getElementById('agentModal').style.display = 'flex';
 
             var json = "[]";
-            if(window.AndroidNative) {
+            if (window.AndroidNative) {
                 try {
                     json = window.AndroidNative.getAgentHistory(name, mobile);
                 } catch(e){}
             }
 
-            if(!json || json === '[]') {
+            if (!json || json === '[]') {
                 histList.innerHTML = '<div class="no-result">कोई 30 दिन का इतिहास नहीं मिला</div>';
                 return;
             }
@@ -345,13 +350,13 @@
             });
         }
 
-        function closeModal() {
+        function closeDetailModal() {
             document.getElementById('agentModal').style.display = 'none';
         }
 
-        function searchOrders() {
+        function doSearch() {
             var list = document.getElementById('orders-list');
             var search = document.getElementById('search-input').value.trim();
             list.innerHTML = '';
-            if(search === '') {
-                list.innerHTML = '<div class="no-result">ऑर्डर खोजने क
+            if (search === '') {
+                list.innerHTML = '<div cla
