@@ -1,14 +1,14 @@
 package com.deliverytracker.pro;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.view.WindowManager;
+import android.view.MotionEvent;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -22,27 +22,20 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
     
     private WebView webView;
     private DatabaseHelper dbHelper;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static final String GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
 
+    @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // Prevent keyboard from breaking layout/touch
-        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         
         dbHelper = new DatabaseHelper(this);
         webView = new WebView(this);
@@ -53,13 +46,20 @@ public class MainActivity extends Activity {
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        settings.setUseWideViewPort(false);
+        settings.setLoadWithOverviewMode(false);
         
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
+        
+        // Force Touch Dispatch to HTML Layer
+        webView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return false; // Never consume event, pass directly to HTML
+            }
+        });
         
         setContentView(webView);
         webView.loadUrl("file:///android_asset/index.html");
@@ -70,7 +70,6 @@ public class MainActivity extends Activity {
         int hour = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
 
-        // Before 9:00:59 AM count as Previous Day
         if (hour < 9 || (hour == 9 && minute == 0)) {
             cal.add(Calendar.DAY_OF_YEAR, -1);
         }
@@ -80,22 +79,7 @@ public class MainActivity extends Activity {
     public class WebAppInterface {
 
         @JavascriptInterface
-        public void startSync() {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    final int count = executeSheetSync();
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            webView.evaluateJavascript("if(window.onSyncFinished) window.onSyncFinished(" + count + ");", null);
-                        }
-                    });
-                }
-            });
-        }
-
-        private int executeSheetSync() {
+        public int syncFromSheet() {
             int count = 0;
             String cycleDate = getShiftCycleDate();
             SQLiteDatabase db = null;
@@ -244,7 +228,6 @@ public class MainActivity extends Activity {
                     hubObj.put("dnpc", hDnpc);
                     double hRate = hDnp > 0 ? ((double) hDnpc / hDnp) * 100.0 : 0.0;
                     hubObj.put("conversionRate", String.format(Locale.US, "%.1f%%", hRate));
-                    hubObj.put("conversionNum", hRate);
                 } else {
                     hubObj.put("ofd", 0);
                     hubObj.put("del", 0);
@@ -253,7 +236,6 @@ public class MainActivity extends Activity {
                     hubObj.put("dnp", 0);
                     hubObj.put("dnpc", 0);
                     hubObj.put("conversionRate", "0.0%");
-                    hubObj.put("conversionNum", 0.0);
                 }
                 response.put("hub", hubObj);
 
@@ -422,7 +404,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 15;
+        private static final int DATABASE_VERSION = 16;
 
         public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
