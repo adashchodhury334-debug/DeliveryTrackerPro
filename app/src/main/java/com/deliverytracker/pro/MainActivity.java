@@ -1,370 +1,385 @@
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Delivery Tracker Pro</title>
-    <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { background-color: #0d1117; color: #e6edf3; padding: 12px; min-height: 100vh; padding-bottom: 70px; }
+package com.deliverytracker.pro;
+
+import android.app.Activity;
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class MainActivity extends Activity {
+    
+    private WebView webView;
+    private DatabaseHelper dbHelper;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private static final String GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .app-title { font-size: 17px; font-weight: 800; color: #00E676; letter-spacing: 0.5px; }
-        .sync-badge { font-size: 10px; color: #8b949e; margin-top: 2px; }
-        .btn-lock { background: #161b22; color: #00E676; border: 1px solid #30363d; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        dbHelper = new DatabaseHelper(this);
+        
+        FrameLayout rootLayout = new FrameLayout(this);
+        rootLayout.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        .main-nav { display: flex; gap: 8px; margin-bottom: 14px; background: #161b22; padding: 4px; border-radius: 10px; border: 1px solid #30363d; }
-        .nav-btn { flex: 1; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 8px; background: transparent; color: #8b949e; border: none; cursor: pointer; text-align: center; }
-        .nav-btn.active { background: #00E676; color: #000; }
+        webView = new WebView(this);
+        webView.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        
+        webView.setClickable(true);
+        webView.setFocusable(true);
+        webView.setFocusableInTouchMode(true);
 
-        .card { background: #161b22; padding: 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; }
-        .card-title { font-size: 13px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        webView.setWebViewClient(new WebViewClient());
+        webView.setWebChromeClient(new WebChromeClient());
+        webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
+        
+        rootLayout.addView(webView);
+        setContentView(rootLayout);
 
-        input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; outline: none; margin-bottom: 8px; }
-        .btn-add { background: #00E676; color: #000; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 8px; }
-        .btn-sync { background: #0284c7; color: #fff; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 8px; }
-        .btn-danger { background: #da3633; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 12px; }
+        webView.loadUrl("file:///android_asset/index.html");
+    }
 
-        .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-        .tab-btn { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
-        .tab-btn.active { background: #238636; color: #fff; border-color: #2ea043; }
+    public class WebAppInterface {
 
-        .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; overflow: hidden; }
-        .hl-box.green { border-left: 3px solid #00E676; }
-        .hl-box.blue { border-left: 3px solid #38bdf8; }
-        .hl-title { font-size: 10px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
-        .hl-name { font-size: 13px; font-weight: 700; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .hl-stat { font-size: 13px; font-weight: 800; margin-top: 2px; }
-
-        .perf-card { background: #21262d; border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid #30363d; border-left: 4px solid #00E676; cursor: pointer; }
-        .perf-card:active { background: #292e36; }
-        .perf-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-        .perf-name { font-size: 14px; font-weight: 700; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
-        .perf-phone { font-size: 11px; color: #8b949e; margin-top: 1px; }
-        .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #382c00; color: #d29922; border: 1px solid #bb8009; }
-
-        .perf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 11px; }
-        .perf-item { background: #161b22; padding: 6px; border-radius: 5px; border: 1px solid #30363d; text-align: center; }
-        .perf-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 1px; font-weight: 600; }
-        .perf-item b { font-size: 12px; font-weight: 700; }
-
-        .c-ofd { color: #58a6ff; }
-        .c-del { color: #3fb950; }
-        .c-ofp { color: #d29922; }
-        .c-piked { color: #bc8cff; }
-        .c-dnp { color: #38bdf8; }
-        .c-dnpc { color: #22c55e; }
-        .c-rate { color: #f43f5e; }
-
-        .order-item { background: #21262d; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #00E676; display: flex; justify-content: space-between; align-items: center; }
-        .track-id { font-size: 11px; color: #8b949e; }
-        .order-id { font-size: 14px; font-weight: 700; color: #3fb950; margin-top: 2px; }
-        .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
-        .btn-delete { background: #da3633; color: #fff; border: none; padding: 5px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: 5px; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: flex-end; }
-        .modal-content { background: #161b22; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; padding: 16px; border-top: 2px solid #00E676; display: flex; flex-direction: column; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .modal-title { font-size: 16px; font-weight: 800; color: #00E676; }
-        .btn-close { background: #30363d; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .modal-body { overflow-y: auto; flex: 1; }
-        .day-row { background: #21262d; border-radius: 8px; padding: 10px; margin-bottom: 8px; border: 1px solid #30363d; font-size: 11px; }
-        .day-date { font-weight: 700; color: #58a6ff; margin-bottom: 6px; display: flex; justify-content: space-between; }
-
-        .no-result { text-align: center; color: #8b949e; padding: 16px 0; font-size: 12px; }
-        #admin-panel, #pass-box, #view-perf { display: none; }
-    </style>
-</head>
-<body>
-    <div class="top-bar">
-        <div>
-            <div class="app-title">⚡ Delivery Tracker Pro</div>
-            <div class="sync-badge" id="sync-time">Last Sync: Never</div>
-        </div>
-        <button class="btn-lock" id="lock-btn">🔒 Admin</button>
-    </div>
-
-    <!-- MAIN TABS -->
-    <div class="main-nav">
-        <button class="nav-btn active" id="btn-view-track">🔍 Tracker</button>
-        <button class="nav-btn" id="btn-view-perf">📊 Performance</button>
-    </div>
-
-    <!-- ADMIN PIN -->
-    <div class="card" id="pass-box">
-        <div class="card-title">🔐 Admin PIN</div>
-        <input type="password" id="pin-input" placeholder="Enter PIN..." />
-        <button class="btn-add" id="btn-submit-pin">Login</button>
-    </div>
-
-    <!-- ADMIN PANEL -->
-    <div class="card" id="admin-panel">
-        <div class="card-title">🔄 Google Sheet Sync</div>
-        <button class="btn-sync" id="btn-do-sync">🔄 Live Sync Now</button>
-        <div class="card-title" style="margin-top:10px;">📋 Manual Bulk Import</div>
-        <textarea id="bulk-input" placeholder="Paste data from Sheet..."></textarea>
-        <button class="btn-add" id="btn-do-import">⚡ Import Orders</button>
-        <button class="btn-danger" id="btn-do-clear">⚠️ Clear All Data</button>
-    </div>
-
-    <!-- TAB 1: TRACKER -->
-    <div id="view-track">
-        <div class="card">
-            <div class="card-title">🔍 Quick Search</div>
-            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." style="margin-bottom:0;">
-        </div>
-
-        <div class="card">
-            <div class="card-title">📦 Order Results <span id="status-text" style="color:#3fb950; font-size:11px;"></span></div>
-            <div id="orders-list"><div class="no-result">ऑर्डर खोजने के लिए Tracking ID दर्ज करें</div></div>
-        </div>
-    </div>
-
-    <!-- TAB 2: PERFORMANCE -->
-    <div id="view-perf">
-        <div class="card">
-            <div class="filter-tabs">
-                <button class="tab-btn active" id="tab-daily">📅 Daily</button>
-                <button class="tab-btn" id="tab-weekly">📆 Weekly</button>
-                <button class="tab-btn" id="tab-monthly">🗓️ Monthly</button>
-            </div>
-
-            <div class="hl-grid" id="leaderboard-section"></div>
-            <div id="perf-list"></div>
-        </div>
-    </div>
-
-    <!-- 30-DAY DETAIL MODAL -->
-    <div class="modal" id="agentModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div>
-                    <div class="modal-title" id="modalAgentName">Agent Name</div>
-                    <div style="font-size:11px; color:#8b949e;" id="modalAgentPhone">📞 Mobile</div>
-                </div>
-                <button class="btn-close" id="btn-close-modal">✕ Close</button>
-            </div>
-            <div class="modal-body" id="modalAgentHistory"></div>
-        </div>
-    </div>
-
-    <script>
-        var isAdmin = false;
-        var ADMIN_PIN = '9547927698';
-        var currentMode = 'daily';
-
-        function showTab(tabName) {
-            var trackDiv = document.getElementById('view-track');
-            var perfDiv = document.getElementById('view-perf');
-            var trackBtn = document.getElementById('btn-view-track');
-            var perfBtn = document.getElementById('btn-view-perf');
-
-            if (tabName === 'track') {
-                trackDiv.style.display = 'block';
-                perfDiv.style.display = 'none';
-                trackBtn.className = 'nav-btn active';
-                perfBtn.className = 'nav-btn';
-            } else {
-                trackDiv.style.display = 'none';
-                perfDiv.style.display = 'block';
-                trackBtn.className = 'nav-btn';
-                perfBtn.className = 'nav-btn active';
-                renderPerformance();
-            }
-        }
-
-        function refreshAppStatus() {
-            var total = 0;
-            var syncTime = "Never";
-            if (window.AndroidNative) {
-                try {
-                    total = window.AndroidNative.getTotalCount();
-                    syncTime = window.AndroidNative.getLastSyncTime();
-                } catch(e){}
-            }
-            document.getElementById('status-text').innerText = 'Active: ' + total;
-            document.getElementById('sync-time').innerText = 'Last Sync: ' + syncTime;
-        }
-
-        function toggleAdmin() {
-            if (isAdmin) {
-                isAdmin = false;
-                document.getElementById('admin-panel').style.display = 'none';
-                document.getElementById('lock-btn').innerText = '🔒 Admin';
-            } else {
-                var box = document.getElementById('pass-box');
-                box.style.display = (box.style.display === 'block') ? 'none' : 'block';
-            }
-        }
-
-        function submitPin() {
-            var val = document.getElementById('pin-input').value.trim();
-            if (val === ADMIN_PIN) {
-                isAdmin = true;
-                document.getElementById('pin-input').value = '';
-                document.getElementById('pass-box').style.display = 'none';
-                document.getElementById('admin-panel').style.display = 'block';
-                document.getElementById('lock-btn').innerText = '🔓 Logout';
-                alert('Admin Mode Activated!');
-            } else {
-                alert('Wrong PIN!');
-            }
-        }
-
-        function doSync() {
-            alert('गूगल शीट से लाइव डाटा सिंक शुरू हो रहा है...');
-            if (window.AndroidNative) {
-                window.AndroidNative.startSync();
-            }
-        }
-
-        function onSyncFinished(count) {
-            if (count >= 0) {
-                alert('सफलतापूर्वक ' + count + ' ऑर्डर्स सिंक हो गए!');
-                refreshAppStatus();
-                if (document.getElementById('view-perf').style.display === 'block') {
-                    renderPerformance();
-                }
-            } else {
-                alert('❌ सिंक फ़ेल हुआ! इंटरनेट कनेक्शन चेक करें।');
-            }
-        }
-
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('tab-daily').className = 'tab-btn';
-            document.getElementById('tab-weekly').className = 'tab-btn';
-            document.getElementById('tab-monthly').className = 'tab-btn';
-            document.getElementById('tab-' + mode).className = 'tab-btn active';
-            renderPerformance();
-        }
-
-        function renderPerformance() {
-            var list = document.getElementById('perf-list');
-            var leaderboard = document.getElementById('leaderboard-section');
-            var json = "[]";
-
-            if (window.AndroidNative) {
-                try {
-                    json = window.AndroidNative.getPerformanceJson(currentMode);
-                } catch(e){}
-            }
-
-            if (!json || json === '[]') {
-                leaderboard.innerHTML = '';
-                list.innerHTML = '<div class="no-result">कोई डेटा उपलब्ध नहीं है (पहले Admin में जाकर Sync करें)</div>';
-                return;
-            }
-
-            var data = JSON.parse(json);
-            var topConv = null, topDnpc = null;
-            var maxConv = -1, maxDnpc = -1;
-
-            data.forEach(function(item) {
-                if (item.conversionNum > maxConv && item.dnp > 0) {
-                    maxConv = item.conversionNum;
-                    topConv = item;
-                }
-                if (item.dnpc > maxDnpc) {
-                    maxDnpc = item.dnpc;
-                    topDnpc = item;
+        @JavascriptInterface
+        public void startSync() {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    final int count = executeSheetSync();
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            webView.evaluateJavascript("onSyncFinished(" + count + ");", null);
+                        }
+                    });
                 }
             });
+        }
 
-            leaderboard.innerHTML = 
-                '<div class="hl-box green">' +
-                    '<div class="hl-title">🏆 Top Conv %</div>' +
-                    '<div class="hl-name">' + (topConv ? topConv.name : 'N/A') + '</div>' +
-                    '<div class="hl-stat c-del">' + (topConv ? topConv.conversionRate : '0%') + '</div>' +
-                '</div>' +
-                '<div class="hl-box blue">' +
-                    '<div class="hl-title">⚡ Top DNPC (Done)</div>' +
-                    '<div class="hl-name">' + (topDnpc ? topDnpc.name : 'N/A') + '</div>' +
-                    '<div class="hl-stat c-dnpc">' + (topDnpc ? topDnpc.dnpc + ' Done' : '0') + '</div>' +
-                '</div>';
-
-            list.innerHTML = '';
-            data.forEach(function(item, index) {
-                var badge = (index === 0) ? '<span class="badge">🥇 #1</span>' : '';
-                var phone = item.mobile ? '<div class="perf-phone">📞 ' + item.mobile + '</div>' : '';
+        private int executeSheetSync() {
+            int count = 0;
+            String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            SQLiteDatabase db = null;
+            BufferedReader reader = null;
+            try {
+                URL url = new URL(GOOGLE_SHEET_CSV_URL);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(15000);
+                reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                db = dbHelper.getWritableDatabase();
+                db.beginTransaction();
                 
-                var card = document.createElement('div');
-                card.className = 'perf-card';
-                card.onclick = function() { showHistory(item.name, item.mobile); };
-                card.innerHTML = 
-                    '<div class="perf-header">' +
-                        '<div style="overflow:hidden;">' +
-                            '<div class="perf-name">👤 ' + item.name + '</div>' +
-                            phone +
-                        '</div>' +
-                        badge +
-                    '</div>' +
-                    '<div class="perf-grid">' +
-                        '<div class="perf-item"><span>OFD</span><b class="c-ofd">' + item.ofd + '</b></div>' +
-                        '<div class="perf-item"><span>DEL</span><b class="c-del">' + item.del + '</b></div>' +
-                        '<div class="perf-item"><span>OFP</span><b class="c-ofp">' + item.ofp + '</b></div>' +
-                        '<div class="perf-item"><span>PIKED</span><b class="c-piked">' + item.piked + '</b></div>' +
-                        '<div class="perf-item"><span>DNP</span><b class="c-dnp">' + item.dnp + '</b></div>' +
-                        '<div class="perf-item"><span>DNPC</span><b class="c-dnpc">' + item.dnpc + '</b></div>' +
-                        '<div class="perf-item" style="grid-column: span 3;"><span>CONVERSATION %</span><b class="c-rate">' + item.conversionRate + '</b></div>' +
-                    '</div>';
-                list.appendChild(card);
-            });
+                db.delete("orders", null, null);
+
+                HashSet<String> seenTrackingIds = new HashSet<>();
+                LinkedHashMap<String, PerformanceData> agentMap = new LinkedHashMap<>();
+                HashSet<String> datesInSheet = new HashSet<>();
+
+                String line;
+                boolean isHeader = true;
+                while ((line = reader.readLine()) != null) {
+                    if (isHeader) { isHeader = false; continue; }
+                    String[] parts = line.split(",", -1);
+                    if (parts.length < 3) continue;
+
+                    String rawDate = parts[0].replace("\"", "").trim();
+                    String tId = parts[1].replace("\"", "").trim();
+                    String oId = parts[2].replace("\"", "").trim();
+                    
+                    if (rawDate.isEmpty() || rawDate.toUpperCase().contains("DATE")) {
+                        rawDate = todayDate;
+                    }
+                    datesInSheet.add(rawDate);
+
+                    if (!tId.isEmpty() && !seenTrackingIds.contains(tId) && !tId.toUpperCase().contains("TRACKING")) {
+                        seenTrackingIds.add(tId);
+                        if (!oId.isEmpty()) {
+                            ContentValues cv = new ContentValues();
+                            cv.put("tracking_id", tId);
+                            cv.put("order_id", oId);
+                            db.insert("orders", null, cv);
+                            count++;
+                        }
+                    }
+
+                    String name = parts.length > 3 ? parts[3].replace("\"", "").trim() : "";
+                    String mobile = parts.length > 4 ? parts[4].replace("\"", "").trim() : "";
+
+                    if (!name.isEmpty()) {
+                        int ofd = parts.length > 5 ? parseSafeInt(parts[5]) : 0;
+                        int del = parts.length > 6 ? parseSafeInt(parts[6]) : 0;
+                        int ofp = parts.length > 7 ? parseSafeInt(parts[7]) : 0;
+                        int piked = parts.length > 8 ? parseSafeInt(parts[8]) : 0;
+
+                        String key = rawDate + "_" + name + "_" + mobile;
+                        PerformanceData p = agentMap.get(key);
+                        if (p == null) {
+                            p = new PerformanceData(name, mobile, rawDate);
+                            agentMap.put(key, p);
+                        }
+                        p.ofd += ofd;
+                        p.del += del;
+                        p.ofp += ofp;
+                        p.piked += piked;
+                    }
+                }
+
+                for (String d : datesInSheet) {
+                    db.delete("agent_performance", "entry_date = ?", new String[]{d});
+                }
+
+                for (PerformanceData p : agentMap.values()) {
+                    ContentValues cv = new ContentValues();
+                    cv.put("name", p.name);
+                    cv.put("mobile", p.mobile);
+                    cv.put("ofd", p.ofd);
+                    cv.put("del", p.del);
+                    cv.put("ofp", p.ofp);
+                    cv.put("piked", p.piked);
+                    
+                    int dnpTotal = p.ofd + p.ofp;
+                    int dnpcTotal = p.del + p.piked;
+                    cv.put("dnp", dnpTotal);
+                    cv.put("dnpc", dnpcTotal);
+                    cv.put("total_attempts", dnpTotal);
+                    cv.put("total_complete", dnpcTotal);
+                    cv.put("entry_date", p.date);
+                    db.insert("agent_performance", null, cv);
+                }
+
+                db.setTransactionSuccessful();
+                String syncTime = new SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(new Date());
+                getSharedPreferences("SyncPrefs", MODE_PRIVATE).edit().putString("last_sync", syncTime).apply();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return -1;
+            } finally {
+                if (db != null) db.endTransaction();
+                if (reader != null) { try { reader.close(); } catch (Exception ignored) {} }
+            }
+            return count;
         }
 
-        function showHistory(name, mobile) {
-            document.getElementById('modalAgentName').innerText = '👤 ' + name;
-            document.getElementById('modalAgentPhone').innerText = mobile ? '📞 ' + mobile : '';
-            var histList = document.getElementById('modalAgentHistory');
-            histList.innerHTML = '<div class="no-result">लोड हो रहा है...</div>';
-            document.getElementById('agentModal').style.display = 'flex';
-
-            var json = "[]";
-            if (window.AndroidNative) {
-                try {
-                    json = window.AndroidNative.getAgentHistory(name, mobile);
-                } catch(e){}
-            }
-
-            if (!json || json === '[]') {
-                histList.innerHTML = '<div class="no-result">कोई 30 दिन का इतिहास नहीं मिला</div>';
-                return;
-            }
-
-            var data = JSON.parse(json);
-            histList.innerHTML = '';
-            data.forEach(function(d) {
-                var row = 
-                    '<div class="day-row">' +
-                        '<div class="day-date"><span>📅 ' + d.date + '</span><span style="color:#f43f5e; font-weight:800;">Conv: ' + d.conv + '</span></div>' +
-                        '<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; text-align:center;">' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">OFD: <b class="c-ofd">' + d.ofd + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DEL: <b class="c-del">' + d.del + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">OFP: <b class="c-ofp">' + d.ofp + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">PIK: <b class="c-piked">' + d.piked + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DNP: <b class="c-dnp">' + d.dnp + '</b></div>' +
-                            '<div style="background:#161b22; padding:4px; border-radius:4px;">DNPC: <b class="c-dnpc">' + d.dnpc + '</b></div>' +
-                        '</div>' +
-                    '</div>';
-                histList.innerHTML += row;
-            });
+        private int parseSafeInt(String str) {
+            try { return Integer.parseInt(str.replace("\"", "").trim()); } catch (Exception e) { return 0; }
         }
 
-        function closeDetailModal() {
-            document.getElementById('agentModal').style.display = 'none';
+        @JavascriptInterface
+        public String getLastSyncTime() {
+            return getSharedPreferences("SyncPrefs", MODE_PRIVATE).getString("last_sync", "Never");
         }
 
-        function doSearch() {
-            var list = document.getElementById('orders-list');
-            var search = document.getElementById('search-input').value.trim();
-            list.innerHTML = '';
-            if (search === '') {
-                list.innerHTML = '<div class="no-result">ऑर्डर खोजने के लिए Tracking ID दर्ज करें</div>';
-                return;
+        @JavascriptInterface
+        public String getPerformanceJson(String filterMode) {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            JSONArray arr = new JSONArray();
+            String cond = "";
+            if ("daily".equalsIgnoreCase(filterMode)) {
+                cond = " WHERE entry_date = (SELECT MAX(entry_date) FROM agent_performance) ";
+            } else if ("weekly".equalsIgnoreCase(filterMode)) {
+                cond = " WHERE entry_date >= date('now', 'localtime', '-7 days') ";
+            } else if ("monthly".equalsIgnoreCase(filterMode)) {
+                cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
             }
-            var results = [];
-            if (window.AndroidNative) {
-                try {
-                    results = JSON.parse(window.AndroidNative.searchByTrackingId(search));
-            
+
+            String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) " +
+                    "FROM agent_performance " + cond +
+                    "GROUP BY name, mobile " +
+                    "ORDER BY ((SUM(dnpc) * 1.0) / CASE WHEN SUM(dnp) = 0 THEN 1 ELSE SUM(dnp) END) ASC";
+
+            Cursor c = db.rawQuery(query, null);
+            try {
+                if (c.moveToFirst()) {
+                    do {
+                        JSONObject o = new JSONObject();
+                        o.put("name", c.getString(0));
+                        o.put("mobile", c.getString(1));
+                        int ofd = c.getInt(2);
+                        int del = c.getInt(3);
+                        int ofp = c.getInt(4);
+                        int piked = c.getInt(5);
+                        int dnp = c.getInt(6);
+                        int dnpc = c.getInt(7);
+
+                        o.put("ofd", ofd);
+                        o.put("del", del);
+                        o.put("ofp", ofp);
+                        o.put("piked", piked);
+                        o.put("dnp", dnp);
+                        o.put("dnpc", dnpc);
+
+                        double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
+                        o.put("conversionRate", String.format(Locale.US, "%.1f%%", r));
+                        o.put("conversionNum", r);
+                        arr.put(o);
+                    } while (c.moveToNext());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                c.close();
+            }
+            return arr.toString();
+        }
+
+        @JavascriptInterface
+        public String getAgentHistory(String name, String mobile) {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            JSONArray arr = new JSONArray();
+            String query = "SELECT entry_date, ofd, del, ofp, piked, dnp, dnpc " +
+                    "FROM agent_performance WHERE name = ? AND mobile = ? " +
+                    "ORDER BY entry_date DESC LIMIT 30";
+            Cursor c = db.rawQuery(query, new String[]{name, mobile});
+            try {
+                if (c.moveToFirst()) {
+                    do {
+                        JSONObject o = new JSONObject();
+                        o.put("date", c.getString(0));
+                        o.put("ofd", c.getInt(1));
+                        o.put("del", c.getInt(2));
+                        o.put("ofp", c.getInt(3));
+                        o.put("piked", c.getInt(4));
+                        int dnp = c.getInt(5);
+                        int dnpc = c.getInt(6);
+                        o.put("dnp", dnp);
+                        o.put("dnpc", dnpc);
+                        double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
+                        o.put("conv", String.format(Locale.US, "%.1f%%", r));
+                        arr.put(o);
+                    } while (c.moveToNext());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                c.close();
+            }
+            return arr.toString();
+        }
+
+        @JavascriptInterface
+        public int insertBulk(String jsonStr) {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            int count = 0;
+            try {
+                db.beginTransaction();
+                JSONArray arr = new JSONArray(jsonStr);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.getJSONObject(i);
+                    ContentValues cv = new ContentValues();
+                    cv.put("tracking_id", obj.getString("t"));
+                    cv.put("order_id", obj.getString("o"));
+                    db.insert("orders", null, cv);
+                    count++;
+                }
+                db.setTransactionSuccessful();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                db.endTransaction();
+            }
+            return count;
+        }
+
+        @JavascriptInterface
+        public String searchByTrackingId(String trackingQuery) {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            JSONArray arr = new JSONArray();
+            Cursor cursor = db.rawQuery("SELECT id, tracking_id, order_id FROM orders WHERE tracking_id LIKE ? LIMIT 30", 
+                    new String[]{"%" + trackingQuery + "%"});
+            try {
+                if (cursor.moveToFirst()) {
+                    do {
+                        JSONObject obj = new JSONObject();
+                        obj.put("id", cursor.getInt(0));
+                        obj.put("t", cursor.getString(1));
+                        obj.put("o", cursor.getString(2));
+                        arr.put(obj);
+                    } while (cursor.moveToNext());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                cursor.close();
+            }
+            return arr.toString();
+        }
+
+        @JavascriptInterface public void deleteOrder(int id) {
+            try { dbHelper.getWritableDatabase().delete("orders", "id = ?", new String[]{String.valueOf(id)}); } catch (Exception ignored) {}
+        }
+        @JavascriptInterface public void deleteAll() {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            db.delete("orders", null, null);
+            db.delete("agent_performance", null, null);
+        }
+        @JavascriptInterface public int getTotalCount() {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM orders", null);
+            int count = 0;
+            if (cursor.moveToFirst()) count = cursor.getInt(0);
+            cursor.close();
+            return count;
+        }
+    }
+
+    private static class PerformanceData {
+        String name, mobile, date;
+        int ofd = 0, del = 0, ofp = 0, piked = 0;
+        PerformanceData(String n, String m, String d) { name = n; mobile = m; date = d; }
+    }
+
+    private static class DatabaseHelper extends SQLiteOpenHelper {
+        private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
+        private static final int DATABASE_VERSION = 10;
+
+        public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
+
+        @Override
+        public void onCreate(SQLiteDatabase db) {
+            db.execSQL("CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, tracking_id TEXT, order_id TEXT);");
+            db.execSQL("CREATE INDEX idx_tracking_id ON orders(tracking_id);");
+            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, del INTEGER, ofp INTEGER, piked INTEGER, dnp INTEGER, dnpc INTEGER, total_attempts INTEGER, total_complete INTEGER, entry_date TEXT);");
+        }
+
+        @Override
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            db.execSQL("DROP TABLE IF EXISTS orders");
+            db.execSQL("DROP TABLE IF EXISTS agent_performance");
+            onCreate(db);
+        }
+    }
+}
+
