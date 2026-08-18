@@ -24,7 +24,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.android.material.tabs.TabLayout;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -37,7 +36,7 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    private TabLayout tabLayout;
+    private Button tabTracker, tabPerformance;
     private LinearLayout secTracker, secPerformance, agentsContainer;
     private EditText searchEditText;
     private ListView ordersListView;
@@ -53,12 +52,14 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         dbHelper = new DatabaseHelper(this);
 
-        tabLayout = findViewById(R.id.tabLayout);
+        tabTracker = findViewById(R.id.tabTracker);
+        tabPerformance = findViewById(R.id.tabPerformance);
         secTracker = findViewById(R.id.secTracker);
         secPerformance = findViewById(R.id.secPerformance);
         agentsContainer = findViewById(R.id.agentsContainer);
@@ -75,21 +76,24 @@ public class MainActivity extends AppCompatActivity {
         ordersAdapter = new OrdersAdapter(this, ordersList);
         ordersListView.setAdapter(ordersAdapter);
 
-        // Tab Switching
-        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                if (tab.getPosition() == 0) {
-                    secTracker.setVisibility(View.VISIBLE);
-                    secPerformance.setVisibility(View.GONE);
-                } else {
-                    secTracker.setVisibility(View.GONE);
-                    secPerformance.setVisibility(View.VISIBLE);
-                    loadPerformanceData();
-                }
-            }
-            @Override public void onTabUnselected(TabLayout.Tab tab) {}
-            @Override public void onTabReselected(TabLayout.Tab tab) {}
+        // Solid Native Tab Switching
+        tabTracker.setOnClickListener(v -> {
+            secTracker.setVisibility(View.VISIBLE);
+            secPerformance.setVisibility(View.GONE);
+            tabTracker.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF00E676));
+            tabTracker.setTextColor(0xFF000000);
+            tabPerformance.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF21262d));
+            tabPerformance.setTextColor(0xFF8b949e);
+        });
+
+        tabPerformance.setOnClickListener(v -> {
+            secTracker.setVisibility(View.GONE);
+            secPerformance.setVisibility(View.VISIBLE);
+            tabPerformance.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF00E676));
+            tabPerformance.setTextColor(0xFF000000);
+            tabTracker.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF21262d));
+            tabTracker.setTextColor(0xFF8b949e);
+            loadPerformanceData();
         });
 
         // Search Input
@@ -348,4 +352,4 @@ public class MainActivity extends AppCompatActivity {
         }
         @Override public void onUpgrade(SQLiteDatabase db, int old, int newV) {}
     }
-            }
+}
