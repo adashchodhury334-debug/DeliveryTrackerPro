@@ -1,8 +1,6 @@
 package com.deliverytracker.pro;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -24,6 +22,8 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.tabs.TabLayout;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -35,7 +35,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Locale;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
 
     private TabLayout tabLayout;
     private LinearLayout secTracker, secPerformance, agentsContainer;
@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
         ordersAdapter = new OrdersAdapter(this, ordersList);
         ordersListView.setAdapter(ordersAdapter);
 
-        // Tab Switching Fix
+        // Tab Switching
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -348,4 +348,4 @@ public class MainActivity extends Activity {
         }
         @Override public void onUpgrade(SQLiteDatabase db, int old, int newV) {}
     }
-                    }
+            }
