@@ -31,24 +31,35 @@
             android:textSize="12sp" />
     </RelativeLayout>
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:background="#161b22"
-        app:tabTextColor="#8b949e"
-        app:tabSelectedTextColor="#00E676"
-        app:tabIndicatorColor="#00E676"
-        app:tabMode="fixed">
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔍 Tracker" />
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📊 Performance" />
-    </com.google.android.material.tabs.TabLayout>
+        android:orientation="horizontal"
+        android:weightSum="2"
+        android:padding="4dp">
+        <Button
+            android:id="@+id/tabTracker"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="🔍 Tracker"
+            android:backgroundTint="#00E676"
+            android:textColor="#000000"
+            android:textStyle="bold"
+            android:textSize="13sp" />
+        <Button
+            android:id="@+id/tabPerformance"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="📊 Performance"
+            android:backgroundTint="#21262d"
+            android:textColor="#8b949e"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
 
     <FrameLayout
         android:id="@+id/fragmentContainer"
