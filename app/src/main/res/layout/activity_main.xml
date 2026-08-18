@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0d1117">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:paddingHorizontal="16dp"
+        android:background="#161b22">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="⚡ Delivery Tracker Pro"
+            android:textColor="#00E676"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+        <Button
+            android:id="@+id/btnAdmin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:text="🔒 Admin"
+            android:backgroundTint="#21262d"
+            android:textColor="#00E676"
+            android:textSize="12sp" />
+    </RelativeLayout>
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#161b22"
+        app:tabTextColor="#8b949e"
+        app:tabSelectedTextColor="#00E676"
+        app:tabIndicatorColor="#00E676"
+        app:tabMode="fixed">
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔍 Tracker" />
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📊 Performance" />
+    </com.google.android.material.tabs.TabLayout>
+
+    <FrameLayout
+        android:id="@+id/fragmentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:id="@+id/secTracker"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="visible">
+            <EditText
+                android:id="@+id/searchEditText"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@android:drawable/edit_text"
+                android:backgroundTint="#161b22"
+                android:hint="Enter Tracking ID (FMPC...)..."
+                android:textColor="#ffffff"
+                android:textColorHint="#8b949e"
+                android:padding="12dp"
+                android:inputType="text" />
+            <TextView
+                android:id="@+id/txtActiveCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Order Results"
+                android:textColor="#8b949e"
+                android:textStyle="bold"
+                android:layout_marginVertical="10dp"/>
+            <ListView
+                android:id="@+id/ordersListView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="#30363d"
+                android:dividerHeight="1dp" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/secPerformance"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:weightSum="3"
+                    android:layout_marginBottom="12dp">
+                    <Button android:id="@+id/btnDaily" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="📅 Daily" android:backgroundTint="#238636" android:textSize="11sp"/>
+                    <Button android:id="@+id/btnWeekly" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="📆 Weekly" android:backgroundTint="#21262d" android:textSize="11sp" android:layout_marginHorizontal="4dp"/>
+                    <Button android:id="@+id/btnMonthly" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="🗓️ Monthly" android:backgroundTint="#21262d" android:textSize="11sp"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#1c2331"
+                    android:orientation="vertical"
+                    android:padding="14dp"
+                    android:layout_marginBottom="12dp">
+                    <TextView android:id="@+id/txtHubName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏢 MALBAZARHUB_NJP" android:textColor="#00E676" android:textStyle="bold" android:textSize="16sp"/>
+                    <TextView android:id="@+id/txtHubStats" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#ffffff" android:layout_marginTop="8dp" android:textSize="13sp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="👥 Delivery Agents Report (Low to High)"
+                    android:textColor="#8b949e"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <LinearLayout
+                    android:id="@+id/agentsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
+</LinearLayout>
