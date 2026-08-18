@@ -8,13 +8,13 @@
     <application
         android:allowBackup="true"
         android:label="Delivery Tracker Pro"
+        android:theme="@android:style/Theme.Black.NoTitleBar"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@android:style/Theme.Black.NoTitleBar"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
