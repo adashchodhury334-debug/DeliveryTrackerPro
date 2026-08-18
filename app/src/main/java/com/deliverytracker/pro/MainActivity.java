@@ -46,15 +46,15 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b); requestWindowFeature(Window.FEATURE_NO_TITLE);
         try {
-            db = openOrCreateDatabase("TrackerV4.db", MODE_PRIVATE, null);
-            db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT, d TEXT);");
+            db = openOrCreateDatabase("TrackerV5.db", MODE_PRIVATE, null);
+            db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
         } catch (Exception ignored) {}
 
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#0F1015"));
 
-        // Exact Middle Splash
+        // Exact Middle Splash Screen
         LinearLayout splash = new LinearLayout(this);
         splash.setOrientation(1); splash.setGravity(Gravity.CENTER);
         splash.setBackgroundColor(Color.parseColor("#0F1015"));
@@ -86,25 +86,33 @@ public class MainActivity extends Activity {
 
         FrameLayout body = new FrameLayout(this); body.setPadding(16, 6, 16, 10); main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
+        // Tracker View (With Bigger Search Bar)
         vTrk = new LinearLayout(this); vTrk.setOrientation(1); vTrk.setVisibility(View.GONE);
-        EditText s = new EditText(this); s.setHint("Search Tracking ID / Order ID..."); s.setHintTextColor(Color.parseColor("#636779")); s.setTextColor(Color.WHITE); s.setBackground(box(Color.parseColor("#181920"), 12, Color.parseColor("#2A2D3D"), 1)); s.setPadding(18, 14, 18, 14);
+        EditText s = new EditText(this);
+        s.setHint("🔍 Search full or last 4-5 digits...");
+        s.setHintTextColor(Color.parseColor("#717688"));
+        s.setTextColor(Color.WHITE);
+        s.setTextSize(16f);
+        s.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#00E676"), 1));
+        s.setPadding(22, 18, 22, 18);
         s.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence c, int i, int i1, int i2) {}
             public void onTextChanged(CharSequence c, int i, int i1, int i2) { qry(c.toString().trim()); }
             public void afterTextChanged(Editable e) {}
         });
         vTrk.addView(s);
-        tCnt = new TextView(this); tCnt.setTextColor(Color.parseColor("#00E676")); tCnt.setPadding(4, 8, 4, 6); vTrk.addView(tCnt);
+
+        tCnt = new TextView(this); tCnt.setTextColor(Color.parseColor("#00E676")); tCnt.setPadding(6, 10, 6, 8); tCnt.setTextSize(13f); tCnt.setTypeface(Typeface.DEFAULT_BOLD); vTrk.addView(tCnt);
         ListView lv = new ListView(this); lv.setDivider(null); lv.setDividerHeight(10);
         adp = new BaseAdapter() {
             public int getCount() { return ords.size(); }
             public Object getItem(int i) { return ords.get(i); }
             public long getItemId(int i) { return i; }
             public View getView(int i, View v, ViewGroup p) {
-                LinearLayout c = new LinearLayout(MainActivity.this); c.setOrientation(1); c.setPadding(18, 14, 18, 14); c.setBackground(box(Color.parseColor("#181920"), 12, 0, 0));
+                LinearLayout c = new LinearLayout(MainActivity.this); c.setOrientation(1); c.setPadding(20, 16, 20, 16); c.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#2A2D3D"), 1));
                 String[] it = ords.get(i);
-                TextView t1 = new TextView(MainActivity.this); t1.setText("📦 Track ID: " + it[0]); t1.setTextColor(Color.parseColor("#00E676")); t1.setTypeface(Typeface.DEFAULT_BOLD);
-                TextView t2 = new TextView(MainActivity.this); t2.setText("🛒 Order ID: " + it[1] + " (Tap to Copy)"); t2.setTextColor(Color.parseColor("#60A5FA")); t2.setPadding(0, 4, 0, 0);
+                TextView t1 = new TextView(MainActivity.this); t1.setText("📦 Track ID: " + it[0]); t1.setTextColor(Color.parseColor("#00E676")); t1.setTypeface(Typeface.DEFAULT_BOLD); t1.setTextSize(14.5f);
+                TextView t2 = new TextView(MainActivity.this); t2.setText("🛒 Order ID: " + it[1] + "  📋 (Tap to Copy)"); t2.setTextColor(Color.parseColor("#60A5FA")); t2.setTextSize(13.5f); t2.setPadding(0, 6, 0, 0);
                 c.addView(t1); c.addView(t2);
                 c.setOnClickListener(vw -> {
                     ((android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("ID", it[1]));
@@ -115,6 +123,7 @@ public class MainActivity extends Activity {
         };
         lv.setAdapter(adp); vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1)); body.addView(vTrk);
 
+        // Performance View
         vPrf = new LinearLayout(this); vPrf.setOrientation(1);
         LinearLayout fl = new LinearLayout(this);
         b1 = flt("📅 Daily", "daily"); b2 = flt("📆 Weekly", "weekly"); b3 = flt("🗓️ Monthly", "monthly");
@@ -252,7 +261,7 @@ public class MainActivity extends Activity {
     void cnt() {
         try {
             Cursor c = db.rawQuery("SELECT COUNT(*) FROM ord", null);
-            tCnt.setText("📦 Active Search Orders: " + (c.moveToFirst() ? c.getInt(0) : 0));
+            tCnt.setText("📦 Active Orders: " + (c.moveToFirst() ? c.getInt(0) : 0));
             c.close();
         } catch (Exception ignored) {}
     }
@@ -261,7 +270,9 @@ public class MainActivity extends Activity {
         try {
             ords.clear();
             if (!q.isEmpty()) {
-                Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? OR d LIKE ? LIMIT 50", new String[]{"%" + q + "%", "%" + q + "%"});
+                // Suffix / Full match priority query (Distinct prevents duplicates)
+                Cursor c = db.rawQuery("SELECT DISTINCT t, d FROM ord WHERE t LIKE ? OR t LIKE ? OR d LIKE ? ORDER BY CASE WHEN t LIKE ? THEN 1 WHEN t LIKE ? THEN 2 ELSE 3 END LIMIT 30", 
+                    new String[]{"%" + q, "%" + q + "%", "%" + q + "%", q, "%" + q});
                 while (c.moveToNext()) ords.add(new String[]{c.getString(0), c.getString(1)});
                 c.close();
             }
@@ -298,6 +309,7 @@ public class MainActivity extends Activity {
             BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             db.beginTransaction();
             int count = 0;
+            HashSet<String> seenOrd = new HashSet<>();
             try {
                 db.delete("ord", null, null); db.delete("prf", "dt = ?", new String[]{curDt});
                 String l; boolean hd = true;
@@ -306,12 +318,22 @@ public class MainActivity extends Activity {
                     String[] p = l.split(",", -1);
                     if (p.length < 2) continue;
                     String c1 = p[0].replace("\"", "").trim(), c2 = p[1].replace("\"", "").trim();
-                    String t = c1.toUpperCase().startsWith("FMP") ? c1 : c2;
-                    String o = c1.toUpperCase().startsWith("OD") ? c1 : c2;
+                    
+                    // Regex: First 4 alphabets + 10 digits => Tracking ID
+                    String t, o;
+                    if (c1.toUpperCase().matches("^[A-Z]{4}\\d{10}$") || c1.toUpperCase().startsWith("FMP")) {
+                        t = c1; o = c2;
+                    } else if (c2.toUpperCase().matches("^[A-Z]{4}\\d{10}$") || c2.toUpperCase().startsWith("FMP")) {
+                        t = c2; o = c1;
+                    } else {
+                        t = c1; o = c2;
+                    }
+
                     String name = p.length > 2 ? p[2].replace("\"", "").trim() : "";
-                    if (!t.isEmpty() && !o.isEmpty()) {
+                    if (!t.isEmpty() && !o.isEmpty() && seenOrd.add(t)) {
                         ContentValues cv = new ContentValues(); cv.put("t", t); cv.put("d", o);
-                        db.insert("ord", null, cv); count++;
+                        db.insertWithOnConflict("ord", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+                        count++;
                     }
                     if (!name.isEmpty() && !name.equalsIgnoreCase("NAME")) {
                         ContentValues cv = new ContentValues();
@@ -327,7 +349,7 @@ public class MainActivity extends Activity {
             } finally { db.endTransaction(); }
             final int fin = count;
             runOnUiThread(() -> {
-                Toast.makeText(this, "Synced " + fin + " orders!", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Synced " + fin + " unique orders!", Toast.LENGTH_LONG).show();
                 cnt(); load();
             });
         } catch (Exception e) {
@@ -338,5 +360,4 @@ public class MainActivity extends Activity {
     int pInt(String s) {
         try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
     }
-        }
-                                                       
+}
