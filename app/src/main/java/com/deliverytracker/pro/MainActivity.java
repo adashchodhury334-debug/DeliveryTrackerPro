@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         try {
-            db = openOrCreateDatabase("TrackerV7.db", MODE_PRIVATE, null);
+            db = openOrCreateDatabase("TrackerV8.db", MODE_PRIVATE, null);
             db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
         } catch (Exception ignored) {}
@@ -275,7 +275,8 @@ public class MainActivity extends Activity {
 
         root.addView(main);
         load();
-        cnt();    LinearLayout makeSummaryCard(String title, int bgCol, int accent, boolean isConv) {
+        cnt();
+            }    LinearLayout makeSummaryCard(String title, int bgCol, int accent, boolean isConv) {
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackground(box(bgCol, 14, Color.parseColor("#2A2D3D"), 1));
@@ -629,7 +630,6 @@ public class MainActivity extends Activity {
     int pInt(String s) {
         try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
     }
-            }
-    
-    }
+                                                        }
+
     
