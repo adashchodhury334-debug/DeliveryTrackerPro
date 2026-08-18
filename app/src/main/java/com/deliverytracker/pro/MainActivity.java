@@ -45,11 +45,18 @@ public class MainActivity extends Activity {
     private ArrayList<OrderModel> ordersList;
     private OrdersAdapter ordersAdapter;
 
-    private LinearLayout secTracker, secPerformance, agentsContainer;
-    private Button btnTabTracker, btnTabPerf;
-    private TextView txtActiveCount, txtHubStats;
+    private LinearLayout secTracker;
+    private ScrollView scrollPerf;
+    private LinearLayout secPerformance;
+    private LinearLayout agentsContainer;
+    private Button btnTabTracker;
+    private Button btnTabPerf;
+    private TextView txtActiveCount;
+    private TextView txtHubStats;
     private EditText searchInput;
-    private Button btnDaily, btnWeekly, btnMonthly;
+    private Button btnDaily;
+    private Button btnWeekly;
+    private Button btnMonthly;
     private String currentFilter = "daily";
 
     private static final String CSV_URL = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
@@ -83,8 +90,8 @@ public class MainActivity extends Activity {
         TextView title = new TextView(this);
         title.setText("⚡ Delivery Tracker Pro");
         title.setTextColor(Color.parseColor("#00E676"));
-        title.setTextSize(18);
-        title.setTypeface(null, Typeface.BOLD);
+        title.setTextSize(18f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams lpTitle = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
         header.addView(title, lpTitle);
 
@@ -111,7 +118,7 @@ public class MainActivity extends Activity {
         btnTabTracker.setText("🔍 Tracker");
         btnTabTracker.setTextColor(Color.BLACK);
         btnTabTracker.setBackgroundColor(Color.parseColor("#00E676"));
-        btnTabTracker.setTypeface(null, Typeface.BOLD);
+        btnTabTracker.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams lpTab1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
         lpTab1.setMargins(6, 0, 6, 0);
 
@@ -119,7 +126,7 @@ public class MainActivity extends Activity {
         btnTabPerf.setText("📊 Performance");
         btnTabPerf.setTextColor(Color.parseColor("#8b949e"));
         btnTabPerf.setBackgroundColor(Color.parseColor("#21262d"));
-        btnTabPerf.setTypeface(null, Typeface.BOLD);
+        btnTabPerf.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams lpTab2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
         lpTab2.setMargins(6, 0, 6, 0);
 
@@ -156,7 +163,7 @@ public class MainActivity extends Activity {
         txtActiveCount.setText("📦 Orders List (Active: 0)");
         txtActiveCount.setTextColor(Color.parseColor("#8b949e"));
         txtActiveCount.setPadding(0, 20, 0, 16);
-        txtActiveCount.setTypeface(null, Typeface.BOLD);
+        txtActiveCount.setTypeface(Typeface.DEFAULT_BOLD);
         secTracker.addView(txtActiveCount);
 
         ListView listView = new ListView(this);
@@ -167,14 +174,14 @@ public class MainActivity extends Activity {
         container.addView(secTracker);
 
         // Performance Section
-        final ScrollView scrollPerf = new ScrollView(this);
+        scrollPerf = new ScrollView(this);
         secPerformance = new LinearLayout(this);
         secPerformance.setOrientation(LinearLayout.VERTICAL);
         scrollPerf.addView(secPerformance);
         scrollPerf.setVisibility(View.GONE);
         container.addView(scrollPerf);
 
-        // Filter Buttons
+        // Filters
         LinearLayout filters = new LinearLayout(this);
         filters.setOrientation(LinearLayout.HORIZONTAL);
         filters.setPadding(0, 0, 0, 16);
@@ -233,13 +240,13 @@ public class MainActivity extends Activity {
         TextView hubTitle = new TextView(this);
         hubTitle.setText("🏢 MALBAZARHUB_NJP  |  🎯 Target: 92.0%");
         hubTitle.setTextColor(Color.parseColor("#00E676"));
-        hubTitle.setTypeface(null, Typeface.BOLD);
-        hubTitle.setTextSize(15);
+        hubTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        hubTitle.setTextSize(15f);
         hubBox.addView(hubTitle);
 
         txtHubStats = new TextView(this);
         txtHubStats.setTextColor(Color.WHITE);
-        txtHubStats.setTextSize(13);
+        txtHubStats.setTextSize(13f);
         txtHubStats.setPadding(0, 12, 0, 0);
         hubBox.addView(txtHubStats);
         secPerformance.addView(hubBox);
@@ -248,14 +255,14 @@ public class MainActivity extends Activity {
         agentTitle.setText("👥 Delivery Agents Report (Low to High)");
         agentTitle.setTextColor(Color.parseColor("#8b949e"));
         agentTitle.setPadding(0, 24, 0, 12);
-        agentTitle.setTypeface(null, Typeface.BOLD);
+        agentTitle.setTypeface(Typeface.DEFAULT_BOLD);
         secPerformance.addView(agentTitle);
 
         agentsContainer = new LinearLayout(this);
         agentsContainer.setOrientation(LinearLayout.VERTICAL);
         secPerformance.addView(agentsContainer);
 
-        // Tab click handlers
+        // Tab click listeners
         btnTabTracker.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -355,7 +362,7 @@ public class MainActivity extends Activity {
             }
             hc.close();
 
-            Cursor ac = db.rawQuery("SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked) FROM agent_performance" + cond + "GROUP BY name, mobile", null);
+            Cursor ac = db.rawQuery("SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked) FROM agent_performance " + cond + " GROUP BY name, mobile", null);
             ArrayList<AgentModel> list = new ArrayList<AgentModel>();
             while (ac.moveToNext()) {
                 list.add(new AgentModel(ac.getString(0), ac.getString(1), ac.getInt(2), ac.getInt(3), ac.getInt(4), ac.getInt(5)));
@@ -381,15 +388,15 @@ public class MainActivity extends Activity {
                 TextView name = new TextView(this);
                 name.setText("👤 " + agent.name + " (" + agent.mobile + ")");
                 name.setTextColor(Color.parseColor("#00E676"));
-                name.setTypeface(null, Typeface.BOLD);
-                name.setTextSize(14);
+                name.setTypeface(Typeface.DEFAULT_BOLD);
+                name.setTextSize(14f);
                 card.addView(name);
 
                 TextView stats = new TextView(this);
                 stats.setText(String.format(Locale.US, "OFD: %d | DEL: %d | OFP: %d | PIK: %d\nDNP: %d | DNPC: %d | Conv: %.1f%%", 
                         agent.ofd, agent.del, agent.ofp, agent.piked, agent.dnp, agent.dnpc, agent.getRate()));
                 stats.setTextColor(Color.WHITE);
-                stats.setTextSize(12);
+                stats.setTextSize(12f);
                 stats.setPadding(0, 6, 0, 0);
                 card.addView(stats);
 
@@ -457,6 +464,4 @@ public class MainActivity extends Activity {
                 URL url = new URL(CSV_URL);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setConnectTimeout(15000);
-                BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                SQLiteDatabase db = dbHelper.getWritableDatabase();
-                db.beginTrans
+                BufferedReader r = ne
