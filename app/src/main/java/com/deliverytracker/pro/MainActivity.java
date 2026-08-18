@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
         super.onCreate(b); requestWindowFeature(Window.FEATURE_NO_TITLE);
         db = openOrCreateDatabase("D.db", MODE_PRIVATE, null);
         db.execSQL("CREATE TABLE IF NOT EXISTS o (t TEXT, d TEXT);");
-        db.execSQL("CREATE TABLE IF NOT EXISTS p (n TEXT, m TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
+        db.execSQL("CREATE TABLE IF NOT EXISTS p (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
         build(); cnt();
     }
 
@@ -165,27 +165,27 @@ public class MainActivity extends Activity {
         } else { tH.setText("No data synced yet."); }
         hc.close();
 
-        Cursor ac = db.rawQuery("SELECT n, m, SUM(o), SUM(l), SUM(p), SUM(k) FROM p " + w + " GROUP BY n, m", null);
+        Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM p " + w + " GROUP BY n", null);
         ArrayList<String[]> list = new ArrayList<>();
         while (ac.moveToNext()) {
-            int o = ac.getInt(2), d = ac.getInt(3), op = ac.getInt(4), p = ac.getInt(5);
+            int o = ac.getInt(1), d = ac.getInt(2), op = ac.getInt(3), p = ac.getInt(4);
             int dnp = o + op, dnpc = d + p;
             double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-            list.add(new String[]{ac.getString(0), ac.getString(1), String.valueOf(o), String.valueOf(d), String.valueOf(op), String.valueOf(p), String.valueOf(dnp), String.valueOf(dnpc), String.format(Locale.US, "%.1f", r), String.valueOf(r)});
+            list.add(new String[]{ac.getString(0), String.valueOf(o), String.valueOf(d), String.valueOf(op), String.valueOf(p), String.valueOf(dnp), String.valueOf(dnpc), String.format(Locale.US, "%.1f", r), String.valueOf(r)});
         }
         ac.close();
 
-        Collections.sort(list, (a, b) -> top ? Double.compare(Double.parseDouble(b[9]), Double.parseDouble(a[9])) : Double.compare(Double.parseDouble(a[9]), Double.parseDouble(b[9])));
+        Collections.sort(list, (a, b) -> top ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
 
         int rank = 1;
         for (String[] ag : list) {
-            double rate = Double.parseDouble(ag[9]);
+            double rate = Double.parseDouble(ag[8]);
             int col = (rate >= 92.0) ? Color.parseColor("#00E676") : ((rate >= 85.0) ? Color.parseColor("#FFB300") : Color.parseColor("#FF5252"));
             LinearLayout c = new LinearLayout(this); c.setOrientation(1); c.setPadding(18, 12, 18, 12); c.setBackground(bg(Color.parseColor("#141d2d"), col));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2); lp.setMargins(0, 0, 0, 10); c.setLayoutParams(lp);
             String m = (top && rank == 1) ? "👑 🥇 #" + rank + " " : ((top && rank == 2) ? "🥈 #" + rank + " " : ((top && rank == 3) ? "🥉 #" + rank + " " : "👤 "));
-            TextView n = new TextView(this); n.setText(m + ag[0] + " (" + ag[1] + ")"); n.setTextColor(col); n.setTypeface(Typeface.DEFAULT_BOLD); c.addView(n);
-            TextView s = new TextView(this); s.setText("OFD: " + ag[2] + " | DEL: " + ag[3] + " | OFP: " + ag[4] + " | PIK: " + ag[5] + "\nDNP: " + ag[6] + " | DNPC: " + ag[7] + " | Conv: " + ag[8] + "%");
+            TextView n = new TextView(this); n.setText(m + ag[0]); n.setTextColor(col); n.setTypeface(Typeface.DEFAULT_BOLD); c.addView(n);
+            TextView s = new TextView(this); s.setText("OFD: " + ag[1] + " | DEL: " + ag[2] + " | OFP: " + ag[3] + " | PIK: " + ag[4] + "\nDNP: " + ag[5] + " | DNPC: " + ag[6] + " | Conv: " + ag[7] + "%");
             s.setTextColor(Color.WHITE); s.setTextSize(11f); s.setPadding(0, 4, 0, 0); c.addView(s);
             vCrd.addView(c); rank++;
         }
@@ -229,17 +229,17 @@ public class MainActivity extends Activity {
                     String t = c1.toUpperCase().startsWith("FMP") ? c1 : c2;
                     String o = c1.toUpperCase().startsWith("OD") ? c1 : c2;
                     String name = p.length > 2 ? p[2].replace("\"", "").trim() : "";
-                    String mob = p.length > 3 ? p[3].replace("\"", "").trim() : "";
                     if (!t.isEmpty() && !o.isEmpty()) {
                         ContentValues cv = new ContentValues(); cv.put("t", t); cv.put("d", o);
                         db.insert("o", null, cv); count++;
                     }
                     if (!name.isEmpty() && !name.equalsIgnoreCase("NAME")) {
-                        ContentValues cv = new ContentValues(); cv.put("n", name); cv.put("m", mob);
-                        cv.put("o", p.length > 4 ? pInt(p[4]) : 0);
-                        cv.put("l", p.length > 5 ? pInt(p[5]) : 0);
-                        cv.put("p", p.length > 6 ? pInt(p[6]) : 0);
-                        cv.put("k", p.length > 7 ? pInt(p[7]) : 0);
+                        ContentValues cv = new ContentValues();
+                        cv.put("n", name);
+                        cv.put("o", p.length > 3 ? pInt(p[3]) : 0);
+                        cv.put("l", p.length > 4 ? pInt(p[4]) : 0);
+                        cv.put("p", p.length > 5 ? pInt(p[5]) : 0);
+                        cv.put("k", p.length > 6 ? pInt(p[6]) : 0);
                         cv.put("dt", curDt); db.insert("p", null, cv);
                     }
                 }
@@ -258,5 +258,4 @@ public class MainActivity extends Activity {
     int pInt(String s) {
         try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
     }
-                                                                                                                                                                                                                                                                }
-            
+                }
