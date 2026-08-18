@@ -6,6 +6,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -35,12 +36,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
 
     private DatabaseHelper dbHelper;
-    private final ArrayList<OrderModel> ordersList = new ArrayList<>();
+    private ArrayList<OrderModel> ordersList;
     private OrdersAdapter ordersAdapter;
 
     private LinearLayout secTracker, secPerformance, agentsContainer;
@@ -55,14 +57,14 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
         try {
+            ordersList = new ArrayList<OrderModel>();
             dbHelper = new DatabaseHelper(this);
             buildDynamicUI();
             refreshTotalCount();
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "App Launch Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Init Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -71,7 +73,7 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.parseColor("#0d1117"));
 
-        // 1. Top Header
+        // Header
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setBackgroundColor(Color.parseColor("#161b22"));
@@ -90,11 +92,16 @@ public class MainActivity extends Activity {
         btnAdmin.setText("🔒 Admin");
         btnAdmin.setTextColor(Color.parseColor("#00E676"));
         btnAdmin.setBackgroundColor(Color.parseColor("#21262d"));
-        btnAdmin.setOnClickListener(v -> showAdminDialog());
+        btnAdmin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAdminDialog();
+            }
+        });
         header.addView(btnAdmin);
         root.addView(header);
 
-        // 2. Dual Tabs
+        // Tabs
         LinearLayout tabs = new LinearLayout(this);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
         tabs.setBackgroundColor(Color.parseColor("#161b22"));
@@ -105,25 +112,27 @@ public class MainActivity extends Activity {
         btnTabTracker.setTextColor(Color.BLACK);
         btnTabTracker.setBackgroundColor(Color.parseColor("#00E676"));
         btnTabTracker.setTypeface(null, Typeface.BOLD);
-        LinearLayout.LayoutParams lpTab = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-        lpTab.setMargins(6, 0, 6, 0);
+        LinearLayout.LayoutParams lpTab1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        lpTab1.setMargins(6, 0, 6, 0);
 
         btnTabPerf = new Button(this);
         btnTabPerf.setText("📊 Performance");
         btnTabPerf.setTextColor(Color.parseColor("#8b949e"));
         btnTabPerf.setBackgroundColor(Color.parseColor("#21262d"));
         btnTabPerf.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams lpTab2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        lpTab2.setMargins(6, 0, 6, 0);
 
-        tabs.addView(btnTabTracker, lpTab);
-        tabs.addView(btnTabPerf, lpTab);
+        tabs.addView(btnTabTracker, lpTab1);
+        tabs.addView(btnTabPerf, lpTab2);
         root.addView(tabs);
 
-        // 3. Container
+        // Container
         FrameLayout container = new FrameLayout(this);
         container.setPadding(20, 20, 20, 20);
         root.addView(container, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // --- Tracker Section ---
+        // Tracker Section
         secTracker = new LinearLayout(this);
         secTracker.setOrientation(LinearLayout.VERTICAL);
         secTracker.setVisibility(View.VISIBLE);
@@ -157,8 +166,8 @@ public class MainActivity extends Activity {
         secTracker.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         container.addView(secTracker);
 
-        // --- Performance Section ---
-        ScrollView scrollPerf = new ScrollView(this);
+        // Performance Section
+        final ScrollView scrollPerf = new ScrollView(this);
         secPerformance = new LinearLayout(this);
         secPerformance.setOrientation(LinearLayout.VERTICAL);
         scrollPerf.addView(secPerformance);
@@ -174,28 +183,48 @@ public class MainActivity extends Activity {
         btnDaily.setText("📅 Daily");
         btnDaily.setTextColor(Color.WHITE);
         btnDaily.setBackgroundColor(Color.parseColor("#238636"));
-        btnDaily.setOnClickListener(v -> setFilter("daily"));
+        btnDaily.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setFilter("daily");
+            }
+        });
 
         btnWeekly = new Button(this);
         btnWeekly.setText("📆 Weekly");
         btnWeekly.setTextColor(Color.parseColor("#8b949e"));
         btnWeekly.setBackgroundColor(Color.parseColor("#21262d"));
-        btnWeekly.setOnClickListener(v -> setFilter("weekly"));
+        btnWeekly.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setFilter("weekly");
+            }
+        });
 
         btnMonthly = new Button(this);
         btnMonthly.setText("🗓️ Monthly");
         btnMonthly.setTextColor(Color.parseColor("#8b949e"));
         btnMonthly.setBackgroundColor(Color.parseColor("#21262d"));
-        btnMonthly.setOnClickListener(v -> setFilter("monthly"));
+        btnMonthly.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setFilter("monthly");
+            }
+        });
 
-        LinearLayout.LayoutParams lpF = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-        lpF.setMargins(4, 0, 4, 0);
-        filters.addView(btnDaily, lpF);
-        filters.addView(btnWeekly, lpF);
-        filters.addView(btnMonthly, lpF);
+        LinearLayout.LayoutParams lpF1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        lpF1.setMargins(4, 0, 4, 0);
+        LinearLayout.LayoutParams lpF2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        lpF2.setMargins(4, 0, 4, 0);
+        LinearLayout.LayoutParams lpF3 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        lpF3.setMargins(4, 0, 4, 0);
+
+        filters.addView(btnDaily, lpF1);
+        filters.addView(btnWeekly, lpF2);
+        filters.addView(btnMonthly, lpF3);
         secPerformance.addView(filters);
 
-        // Hub Summary Box
+        // Hub Box
         LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackgroundColor(Color.parseColor("#1c2331"));
@@ -226,24 +255,30 @@ public class MainActivity extends Activity {
         agentsContainer.setOrientation(LinearLayout.VERTICAL);
         secPerformance.addView(agentsContainer);
 
-        // Tab Listeners
-        btnTabTracker.setOnClickListener(v -> {
-            secTracker.setVisibility(View.VISIBLE);
-            scrollPerf.setVisibility(View.GONE);
-            btnTabTracker.setBackgroundColor(Color.parseColor("#00E676"));
-            btnTabTracker.setTextColor(Color.BLACK);
-            btnTabPerf.setBackgroundColor(Color.parseColor("#21262d"));
-            btnTabPerf.setTextColor(Color.parseColor("#8b949e"));
+        // Tab click handlers
+        btnTabTracker.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                secTracker.setVisibility(View.VISIBLE);
+                scrollPerf.setVisibility(View.GONE);
+                btnTabTracker.setBackgroundColor(Color.parseColor("#00E676"));
+                btnTabTracker.setTextColor(Color.BLACK);
+                btnTabPerf.setBackgroundColor(Color.parseColor("#21262d"));
+                btnTabPerf.setTextColor(Color.parseColor("#8b949e"));
+            }
         });
 
-        btnTabPerf.setOnClickListener(v -> {
-            secTracker.setVisibility(View.GONE);
-            scrollPerf.setVisibility(View.VISIBLE);
-            btnTabPerf.setBackgroundColor(Color.parseColor("#00E676"));
-            btnTabPerf.setTextColor(Color.BLACK);
-            btnTabTracker.setBackgroundColor(Color.parseColor("#21262d"));
-            btnTabTracker.setTextColor(Color.parseColor("#8b949e"));
-            loadPerformance();
+        btnTabPerf.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                secTracker.setVisibility(View.GONE);
+                scrollPerf.setVisibility(View.VISIBLE);
+                btnTabPerf.setBackgroundColor(Color.parseColor("#00E676"));
+                btnTabPerf.setTextColor(Color.BLACK);
+                btnTabTracker.setBackgroundColor(Color.parseColor("#21262d"));
+                btnTabTracker.setTextColor(Color.parseColor("#8b949e"));
+                loadPerformance();
+            }
         });
 
         setContentView(root);
@@ -321,13 +356,18 @@ public class MainActivity extends Activity {
             hc.close();
 
             Cursor ac = db.rawQuery("SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked) FROM agent_performance" + cond + "GROUP BY name, mobile", null);
-            ArrayList<AgentModel> list = new ArrayList<>();
+            ArrayList<AgentModel> list = new ArrayList<AgentModel>();
             while (ac.moveToNext()) {
                 list.add(new AgentModel(ac.getString(0), ac.getString(1), ac.getInt(2), ac.getInt(3), ac.getInt(4), ac.getInt(5)));
             }
             ac.close();
 
-            Collections.sort(list, (a, b) -> Double.compare(a.getRate(), b.getRate()));
+            Collections.sort(list, new Comparator<AgentModel>() {
+                @Override
+                public int compare(AgentModel a, AgentModel b) {
+                    return Double.compare(a.getRate(), b.getRate());
+                }
+            });
 
             for (AgentModel agent : list) {
                 LinearLayout card = new LinearLayout(this);
@@ -363,35 +403,52 @@ public class MainActivity extends Activity {
         input.setHint("Enter Admin PIN...");
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         
-        new AlertDialog.Builder(this)
-            .setTitle("🔐 Admin Login")
-            .setView(input)
-            .setPositiveButton("Verify", (d, w) -> {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("🔐 Admin Login");
+        builder.setView(input);
+        builder.setPositiveButton("Verify", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
                 if ("9547927698".equals(input.getText().toString().trim())) {
                     openSyncOptions();
                 } else {
-                    Toast.makeText(this, "Wrong PIN!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Wrong PIN!", Toast.LENGTH_SHORT).show();
                 }
-            }).show();
+            }
+        });
+        builder.show();
     }
 
     private void openSyncOptions() {
-        new AlertDialog.Builder(this)
-            .setTitle("⚡ Sheet Sync")
-            .setMessage("Sync Google Sheet data live?")
-            .setPositiveButton("Sync Now", (d, w) -> new SyncTask().execute())
-            .setNegativeButton("Clear Data", (d, w) -> {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("⚡ Sheet Sync");
+        builder.setMessage("Sync Google Sheet data live?");
+        builder.setPositiveButton("Sync Now", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                new SyncTask().execute();
+            }
+        });
+        builder.setNegativeButton("Clear Data", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
                 SQLiteDatabase db = dbHelper.getWritableDatabase();
                 db.delete("orders", null, null);
                 db.delete("agent_performance", null, null);
                 refreshTotalCount();
                 executeSearch("");
-                Toast.makeText(this, "All Data Cleared!", Toast.LENGTH_SHORT).show();
-            }).show();
+                Toast.makeText(MainActivity.this, "All Data Cleared!", Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.show();
     }
 
     private class SyncTask extends AsyncTask<Void, Void, Integer> {
-        @Override protected void onPreExecute() { Toast.makeText(MainActivity.this, "Syncing Google Sheet...", Toast.LENGTH_SHORT).show(); }
+        @Override
+        protected void onPreExecute() {
+            Toast.makeText(MainActivity.this, "Syncing Google Sheet...", Toast.LENGTH_SHORT).show();
+        }
+
         @Override
         protected Integer doInBackground(Void... voids) {
             int count = 0;
@@ -402,46 +459,4 @@ public class MainActivity extends Activity {
                 conn.setConnectTimeout(15000);
                 BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 SQLiteDatabase db = dbHelper.getWritableDatabase();
-                db.beginTransaction();
-                
-                db.delete("orders", null, null);
-                db.delete("agent_performance", "entry_date = ?", new String[]{cycleDate});
-
-                String line; boolean isHeader = true;
-                while ((line = r.readLine()) != null) {
-                    if (isHeader) { isHeader = false; continue; }
-                    String[] p = line.split(",", -1);
-                    if (p.length < 2) continue;
-
-                    String oId = p[0].replace("\"", "").trim();
-                    String tId = p[1].replace("\"", "").trim();
-                    String name = p.length > 2 ? p[2].replace("\"", "").trim() : "";
-                    String mob = p.length > 3 ? p[3].replace("\"", "").trim() : "";
-
-                    if (!tId.isEmpty()) {
-                        ContentValues cv = new ContentValues();
-                        cv.put("tracking_id", tId);
-                        cv.put("order_id", oId);
-                        db.insert("orders", null, cv);
-                        count++;
-                    }
-
-                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME")) {
-                        ContentValues cv = new ContentValues();
-                        cv.put("name", name); cv.put("mobile", mob);
-                        cv.put("ofd", p.length > 4 ? parseIntSafe(p[4]) : 0);
-                        cv.put("del", p.length > 5 ? parseIntSafe(p[5]) : 0);
-                        cv.put("ofp", p.length > 6 ? parseIntSafe(p[6]) : 0);
-                        cv.put("piked", p.length > 7 ? parseIntSafe(p[7]) : 0);
-                        cv.put("entry_date", cycleDate);
-                        db.insert("agent_performance", null, cv);
-                    }
-                }
-                db.setTransactionSuccessful();
-                db.endTransaction();
-            } catch(Exception e) { e.printStackTrace(); return -1; }
-            return count;
-        }
-        @Override protected void onPostExecute(Integer res) {
-            if(res >= 0) {
-                Toast.makeText(MainActivity.this,
+                db.beginTrans
