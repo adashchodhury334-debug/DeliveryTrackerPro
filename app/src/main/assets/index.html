@@ -5,50 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Delivery Tracker Pro</title>
     <style>
-        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { background-color: #0d1117; color: #e6edf3; padding: 12px; min-height: 100vh; padding-bottom: 70px; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .title { font-size: 18px; font-weight: bold; color: #00E676; }
-        .admin-btn { background: #161b22; color: #00E676; border: 1px solid #30363d; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; display: inline-block; }
+        .title { font-size: 18px; font-weight: 800; color: #00E676; letter-spacing: 0.5px; }
+        .admin-btn { background: #161b22; color: #00E676; border: 1px solid #30363d; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
         .tabs { display: flex; gap: 8px; margin-bottom: 14px; background: #161b22; padding: 4px; border-radius: 10px; border: 1px solid #30363d; }
-        .tab-btn { flex: 1; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 8px; background: transparent; color: #8b949e; border: none; text-align: center; cursor: pointer; }
+        .tab-btn { flex: 1; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; background: transparent; color: #8b949e; border: none; text-align: center; cursor: pointer; }
         .tab-btn.active { background: #00E676; color: #000; }
 
         .box { background: #161b22; padding: 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #30363d; }
-        .box-title { font-size: 13px; font-weight: bold; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; }
+        .box-title { font-size: 13px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
-        input, textarea { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; margin-bottom: 8px; outline: none; }
-        .btn-green { background: #00E676; color: #000; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; font-size: 14px; margin-bottom: 8px; cursor: pointer; text-align: center; }
-        .btn-blue { background: #0284c7; color: #fff; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; font-size: 14px; margin-bottom: 8px; cursor: pointer; text-align: center; }
+        input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 14px; outline: none; margin-bottom: 8px; }
+        .btn-green { background: #00E676; color: #000; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; font-size: 13px; margin-bottom: 8px; cursor: pointer; text-align: center; }
+        .btn-blue { background: #0284c7; color: #fff; border: none; font-weight: bold; padding: 12px; width: 100%; border-radius: 8px; font-size: 13px; margin-bottom: 8px; cursor: pointer; text-align: center; }
         .btn-red { background: #da3633; color: #fff; border: none; font-weight: bold; padding: 10px; width: 100%; border-radius: 8px; font-size: 12px; cursor: pointer; text-align: center; }
 
         .filter-row { display: flex; gap: 6px; margin-bottom: 12px; }
-        .f-btn { flex: 1; padding: 10px; font-size: 12px; font-weight: bold; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
+        .f-btn { flex: 1; padding: 10px; font-size: 12px; font-weight: 700; border-radius: 6px; background: #21262d; color: #8b949e; border: 1px solid #30363d; cursor: pointer; text-align: center; }
         .f-btn.active { background: #238636; color: #fff; border-color: #2ea043; }
 
         .hub-box { background: #1c2331; border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 2px solid #00E676; }
         .hub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         
         .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; }
+        .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; overflow: hidden; }
         .hl-box.green { border-left: 3px solid #00E676; }
         .hl-box.blue { border-left: 3px solid #38bdf8; }
-        .hl-title { font-size: 10px; font-weight: bold; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
-        .hl-name { font-size: 13px; font-weight: bold; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .hl-stat { font-size: 13px; font-weight: bold; margin-top: 2px; }
+        .hl-title { font-size: 10px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
+        .hl-name { font-size: 13px; font-weight: 700; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hl-stat { font-size: 13px; font-weight: 800; margin-top: 2px; }
 
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 11px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 11px; }
         .grid-item { background: #161b22; padding: 6px; border-radius: 5px; text-align: center; border: 1px solid #30363d; }
-        .grid-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 2px; font-weight: bold; }
-        .grid-item b { font-size: 12px; font-weight: bold; }
+        .grid-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 1px; font-weight: 600; }
+        .grid-item b { font-size: 12px; font-weight: 700; }
 
-        .perf-card { background: #21262d; border-radius: 10px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #00E676; border-top: 1px solid #30363d; border-right: 1px solid #30363d; border-bottom: 1px solid #30363d; cursor: pointer; }
+        .perf-card { background: #21262d; border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid #30363d; border-left: 4px solid #00E676; cursor: pointer; }
         .perf-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
 
         .order-item { background: #21262d; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #00E676; display: flex; justify-content: space-between; align-items: center; }
-        .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .btn-copy { background: #30363d; color: #fff; border: 1px solid #484f58; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
         #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; justify-content: center; align-items: flex-end; }
         #modal-content { background: #161b22; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; padding: 16px; border-top: 2px solid #00E676; box-sizing: border-box; overflow-y: auto; }
@@ -61,34 +61,36 @@
 
     <div class="header">
         <div class="title">⚡ Delivery Tracker Pro</div>
-        <div class="admin-btn" id="lock-btn">🔒 Admin</div>
+        <div class="admin-btn" id="lock-btn" onclick="openAdminPanel()">🔒 Admin</div>
     </div>
 
     <div class="tabs">
-        <div class="tab-btn active" id="tab-t">🔍 Tracker</div>
-        <div class="tab-btn" id="tab-p">📊 Performance</div>
+        <div class="tab-btn active" id="tab-t" onclick="switchView('t')">🔍 Tracker</div>
+        <div class="tab-btn" id="tab-p" onclick="switchView('p')">📊 Performance</div>
     </div>
 
+    <!-- Admin Panel -->
     <div id="admin-sec" style="display:none;" class="box">
         <div id="pin-box">
             <div class="box-title">🔐 Admin PIN</div>
             <input type="password" id="pin-input" placeholder="Enter PIN..." />
-            <div class="btn-green" id="btn-submit-pin">Login</div>
+            <div class="btn-green" onclick="verifyAdminPin()">Login</div>
         </div>
         <div id="panel-box" style="display:none;">
             <div class="box-title">🔄 Sheet Sync</div>
-            <div class="btn-blue" id="btn-sync-now">🔄 Live Sync Google Sheet</div>
+            <div class="btn-blue" onclick="performSheetSync()">🔄 Live Sync Google Sheet</div>
             <div class="box-title" style="margin-top:10px;">📋 Manual Bulk Import</div>
             <textarea id="bulk-input" placeholder="Paste data..."></textarea>
-            <div class="btn-green" id="btn-import-bulk">⚡ Import</div>
-            <div class="btn-red" id="btn-clear-data">⚠️ Clear All Data</div>
+            <div class="btn-green" onclick="importManualBulk()">⚡ Import</div>
+            <div class="btn-red" onclick="clearAllAppData()">⚠️ Clear All Data</div>
         </div>
     </div>
 
+    <!-- TRACKER TAB -->
     <div id="sec-t">
         <div class="box">
             <div class="box-title">🔍 Quick Search</div>
-            <input type="text" id="search-input" placeholder="Enter Tracking ID (FMPC...)..." />
+            <input type="text" id="search-input" placeholder="Enter Tracking ID (FMPC...)..." oninput="executeSearch()" />
         </div>
         <div class="box">
             <div class="box-title">📦 Order Results <span id="active-txt" style="color:#00E676;"></span></div>
@@ -96,12 +98,13 @@
         </div>
     </div>
 
+    <!-- PERFORMANCE TAB -->
     <div id="sec-p" style="display:none;">
         <div class="box">
             <div class="filter-row">
-                <div class="f-btn active" id="fb-daily">📅 Daily</div>
-                <div class="f-btn" id="fb-weekly">📆 Weekly</div>
-                <div class="f-btn" id="fb-monthly">🗓️ Monthly</div>
+                <div class="f-btn active" id="fb-daily" onclick="changePerformanceFilter('daily')">📅 Daily</div>
+                <div class="f-btn" id="fb-weekly" onclick="changePerformanceFilter('weekly')">📆 Weekly</div>
+                <div class="f-btn" id="fb-monthly" onclick="changePerformanceFilter('monthly')">🗓️ Monthly</div>
             </div>
             
             <div id="hub-card-box"></div>
@@ -112,6 +115,7 @@
         </div>
     </div>
 
+    <!-- 30 Days History Modal -->
     <div id="modal">
         <div id="modal-content">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -119,218 +123,213 @@
                     <div id="m-name" style="font-size:16px; font-weight:bold; color:#00E676;">Agent</div>
                     <div id="m-phone" style="font-size:11px; color:#8b949e;"></div>
                 </div>
-                <div class="btn-copy" id="btn-close-modal">✕ Close</div>
+                <div class="btn-copy" onclick="closeAgentModal()">✕ Close</div>
             </div>
             <div id="m-body"></div>
         </div>
     </div>
 
     <script>
-        var isAdmin = false;
         var currentFilter = 'daily';
         var toastTimer = null;
 
-        function showMsg(text, isErr) {
-            var t = document.getElementById('toast');
-            if(!t) return;
-            t.innerText = text;
-            t.style.background = isErr ? '#da3633' : '#238636';
-            t.style.display = 'block';
-            if (toastTimer) clearTimeout(toastTimer);
-            toastTimer = setTimeout(function() { t.style.display = 'none'; }, 2200);
+        function showNotification(text, isErr) {
+            try {
+                var t = document.getElementById('toast');
+                if(!t) return;
+                t.innerText = text;
+                t.style.background = isErr ? '#da3633' : '#238636';
+                t.style.display = 'block';
+                if (toastTimer) clearTimeout(toastTimer);
+                toastTimer = setTimeout(function() { t.style.display = 'none'; }, 2200);
+            } catch(e){}
         }
 
-        window.switchTab = function(t) {
-            if (document.activeElement) document.activeElement.blur();
-            document.getElementById('sec-t').style.display = (t === 't') ? 'block' : 'none';
-            document.getElementById('sec-p').style.display = (t === 'p') ? 'block' : 'none';
-            document.getElementById('tab-t').className = (t === 't') ? 'tab-btn active' : 'tab-btn';
-            document.getElementById('tab-p').className = (t === 'p') ? 'tab-btn active' : 'tab-btn';
-            if (t === 'p') window.loadPerf();
-        };
-
-        window.openAdmin = function() {
-            if (document.activeElement) document.activeElement.blur();
-            var sec = document.getElementById('admin-sec');
-            sec.style.display = (sec.style.display === 'block') ? 'none' : 'block';
-        };
-
-        window.checkPin = function() {
-            var val = document.getElementById('pin-input').value.trim();
-            if (val === '9547927698') {
-                isAdmin = true;
-                document.getElementById('pin-box').style.display = 'none';
-                document.getElementById('panel-box').style.display = 'block';
-                document.getElementById('lock-btn').innerText = '🔓 Logout';
-                showMsg('Admin Logged In!');
-            } else {
-                showMsg('Wrong PIN!', true);
+        function switchView(tabKey) {
+            try {
+                if (document.activeElement) document.activeElement.blur();
+                document.getElementById('sec-t').style.display = (tabKey === 't') ? 'block' : 'none';
+                document.getElementById('sec-p').style.display = (tabKey === 'p') ? 'block' : 'none';
+                document.getElementById('tab-t').className = (tabKey === 't') ? 'tab-btn active' : 'tab-btn';
+                document.getElementById('tab-p').className = (tabKey === 'p') ? 'tab-btn active' : 'tab-btn';
+                if (tabKey === 'p') {
+                    renderPerformanceData();
+                }
+            } catch(e) {
+                console.error(e);
             }
-        };
+        }
 
-        window.syncNow = function() {
-            showMsg('Syncing Google Sheet...');
+        function openAdminPanel() {
+            try {
+                if (document.activeElement) document.activeElement.blur();
+                var sec = document.getElementById('admin-sec');
+                sec.style.display = (sec.style.display === 'block') ? 'none' : 'block';
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function verifyAdminPin() {
+            try {
+                var input = document.getElementById('pin-input');
+                var val = input ? input.value.trim() : '';
+                if (val === '9547927698') {
+                    if (input) input.value = '';
+                    document.getElementById('pin-box').style.display = 'none';
+                    document.getElementById('panel-box').style.display = 'block';
+                    document.getElementById('lock-btn').innerText = '🔓 Logout';
+                    showNotification('Admin Logged In!');
+                } else {
+                    showNotification('Wrong PIN!', true);
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function performSheetSync() {
+            showNotification('Syncing Google Sheet...');
             setTimeout(function() {
                 try {
                     if (window.AndroidNative && typeof window.AndroidNative.syncFromSheet === 'function') {
                         var added = window.AndroidNative.syncFromSheet();
                         if (added >= 0) {
-                            showMsg('सफलतापूर्वक ' + added + ' ऑर्डर्स सिंक हो गए!');
-                            window.refreshCount();
-                            if (document.getElementById('sec-p').style.display === 'block') window.loadPerf();
+                            showNotification('सफलतापूर्वक ' + added + ' ऑर्डर्स सिंक हो गए!');
+                            updateActiveCount();
+                            if (document.getElementById('sec-p').style.display === 'block') {
+                                renderPerformanceData();
+                            }
                         } else {
-                            showMsg('❌ Sync Failed! इंटरनेट चेक करें।', true);
+                            showNotification('❌ Sync Failed! इंटरनेट चेक करें।', true);
                         }
                     }
                 } catch(e) {
-                    showMsg('Sync Error: ' + e, true);
+                    showNotification('Sync Error: ' + e, true);
                 }
             }, 100);
-        };
+        }
 
-        window.filterData = function(mode) {
-            currentFilter = mode;
-            document.getElementById('fb-daily').className = 'f-btn';
-            document.getElementById('fb-weekly').className = 'f-btn';
-            document.getElementById('fb-monthly').className = 'f-btn';
-            document.getElementById('fb-' + mode).className = 'f-btn active';
-            window.loadPerf();
-        };
-
-        window.loadPerf = function() {
-            var jsonStr = "{}";
+        function changePerformanceFilter(mode) {
             try {
+                currentFilter = mode;
+                document.getElementById('fb-daily').className = 'f-btn';
+                document.getElementById('fb-weekly').className = 'f-btn';
+                document.getElementById('fb-monthly').className = 'f-btn';
+                document.getElementById('fb-' + mode).className = 'f-btn active';
+                renderPerformanceData();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function renderPerformanceData() {
+            try {
+                var jsonStr = "{}";
                 if (window.AndroidNative && typeof window.AndroidNative.getPerformanceJson === 'function') {
                     jsonStr = window.AndroidNative.getPerformanceJson(currentFilter);
                 }
-            } catch(e){}
-            
-            var res = JSON.parse(jsonStr || "{}");
-            var hub = res.hub;
-            var agents = res.agents || [];
+                
+                var res = JSON.parse(jsonStr || "{}");
+                var hub = res.hub;
+                var agents = res.agents || [];
 
-            if (hub) {
-                document.getElementById('hub-card-box').innerHTML = 
-                    '<div class="hub-box">' +
-                        '<div class="hub-header">' +
-                            '<div style="font-weight:bold; color:#00E676; font-size:15px;">🏢 ' + hub.hubName + '</div>' +
-                            '<div style="font-size:11px; background:#382c00; color:#ffca28; padding:3px 6px; border-radius:4px; font-weight:bold;">🎯 Target: ' + hub.target + '</div>' +
-                        '</div>' +
-                        '<div class="grid-3">' +
-                            '<div class="grid-item"><span>TOTAL OFD</span><b style="color:#58a6ff;">' + hub.ofd + '</b></div>' +
-                            '<div class="grid-item"><span>TOTAL DEL</span><b style="color:#3fb950;">' + hub.del + '</b></div>' +
-                            '<div class="grid-item"><span>TOTAL OFP</span><b style="color:#d29922;">' + hub.ofp + '</b></div>' +
-                            '<div class="grid-item"><span>TOTAL PIKED</span><b style="color:#bc8cff;">' + hub.piked + '</b></div>' +
-                            '<div class="grid-item"><span>TOTAL DNP</span><b style="color:#38bdf8;">' + hub.dnp + '</b></div>' +
-                            '<div class="grid-item"><span>TOTAL DNPC</span><b style="color:#22c55e;">' + hub.dnpc + '</b></div>' +
-                            '<div class="grid-item" style="grid-column: span 3; background:#0d1117; border-color:#00E676;">' +
-                                '<span>HUB ACTUAL CONVERSION %</span>' +
-                                '<b style="color:#f43f5e; font-size:14px;">' + hub.conversionRate + '</b>' +
+                if (hub) {
+                    document.getElementById('hub-card-box').innerHTML = 
+                        '<div class="hub-box">' +
+                            '<div class="hub-header">' +
+                                '<div style="font-weight:bold; color:#00E676; font-size:15px;">🏢 ' + hub.hubName + '</div>' +
+                                '<div style="font-size:11px; background:#382c00; color:#ffca28; padding:3px 6px; border-radius:4px; font-weight:bold;">🎯 Target: ' + hub.target + '</div>' +
                             '</div>' +
-                        '</div>' +
-                    '</div>';
-            }
-
-            var topConv = null, topDnpc = null;
-            var maxConv = -1, maxDnpc = -1;
-
-            agents.forEach(function(item) {
-                if (item.conversionNum > maxConv && item.dnp > 0) {
-                    maxConv = item.conversionNum;
-                    topConv = item;
+                            '<div class="grid-3">' +
+                                '<div class="grid-item"><span>TOTAL OFD</span><b style="color:#58a6ff;">' + hub.ofd + '</b></div>' +
+                                '<div class="grid-item"><span>TOTAL DEL</span><b style="color:#3fb950;">' + hub.del + '</b></div>' +
+                                '<div class="grid-item"><span>TOTAL OFP</span><b style="color:#d29922;">' + hub.ofp + '</b></div>' +
+                                '<div class="grid-item"><span>TOTAL PIKED</span><b style="color:#bc8cff;">' + hub.piked + '</b></div>' +
+                                '<div class="grid-item"><span>TOTAL DNP</span><b style="color:#38bdf8;">' + hub.dnp + '</b></div>' +
+                                '<div class="grid-item"><span>TOTAL DNPC</span><b style="color:#22c55e;">' + hub.dnpc + '</b></div>' +
+                                '<div class="grid-item" style="grid-column: span 3; background:#0d1117; border-color:#00E676;">' +
+                                    '<span>HUB ACTUAL CONVERSION %</span>' +
+                                    '<b style="color:#f43f5e; font-size:14px;">' + hub.conversionRate + '</b>' +
+                                </div>' +
+                            '</div>' +
+                        '</div>';
                 }
-                if (item.dnpc > maxDnpc) {
-                    maxDnpc = item.dnpc;
-                    topDnpc = item;
-                }
-            });
 
-            if (topConv || topDnpc) {
-                document.getElementById('leaderboard-box').innerHTML = 
-                    '<div class="hl-box green">' +
-                        '<div class="hl-title">🏆 Top Conv %</div>' +
-                        '<div class="hl-name">' + topConv.name + '</div>' +
-                        '<div class="hl-stat" style="color:#3fb950;">' + topConv.conversionRate + '</div>' +
-                    '</div>' +
-                    '<div class="hl-box blue">' +
-                        '<div class="hl-title">⚡ Top DNPC (Done)</div>' +
-                        '<div class="hl-name">' + topDnpc.name + '</div>' +
-                        '<div class="hl-stat" style="color:#38bdf8;">' + topDnpc.dnpc + ' Done' + '</div>' +
-                    '</div>';
-            } else {
-                document.getElementById('leaderboard-box').innerHTML = '';
-            }
+                var topConv = null, topDnpc = null;
+                var maxConv = -1, maxDnpc = -1;
 
-            var html = '';
-            if (agents.length === 0) {
-                html = '<div style="text-align:center; color:#8b949e; padding:12px 0;">कोई एजेंट डेटा उपलब्ध नहीं है</div>';
-            } else {
                 agents.forEach(function(item) {
-                    var phone = item.mobile ? '<div style="font-size:11px; color:#8b949e;">📞 ' + item.mobile + '</div>' : '';
-                    html += 
-                        '<div class="perf-card" onclick="window.openAgentHistory(\'' + item.name + '\', \'' + item.mobile + '\')">' +
-                            '<div class="perf-header">' +
-                                '<div><div style="font-weight:bold; font-size:14px; color:#f0f6fc;">👤 ' + item.name + '</div>' + phone + '</div>' +
-                            '</div>' +
-                            '<div class="grid-3">' +
-                                '<div class="grid-item"><span>OFD</span><b style="color:#58a6ff;">' + item.ofd + '</b></div>' +
-                                '<div class="grid-item"><span>DEL</span><b style="color:#3fb950;">' + item.del + '</b></div>' +
-                                '<div class="grid-item"><span>OFP</span><b style="color:#d29922;">' + item.ofp + '</b></div>' +
-                                '<div class="grid-item"><span>PIKED</span><b style="color:#bc8cff;">' + item.piked + '</b></div>' +
-                                '<div class="grid-item"><span>DNP</span><b style="color:#38bdf8;">' + item.dnp + '</b></div>' +
-                                '<div class="grid-item"><span>DNPC</span><b style="color:#22c55e;">' + item.dnpc + '</b></div>' +
-                                '<div class="grid-item" style="grid-column: span 3;">' +
-                                    '<span>CONVERSATION %</span><b style="color:#f43f5e;">' + item.conversionRate + '</b>' +
+                    if (item.conversionNum > maxConv && item.dnp > 0) {
+                        maxConv = item.conversionNum;
+                        topConv = item;
+                    }
+                    if (item.dnpc > maxDnpc) {
+                        maxDnpc = item.dnpc;
+                        topDnpc = item;
+                    }
+                });
+
+                if (topConv || topDnpc) {
+                    document.getElementById('leaderboard-box').innerHTML = 
+                        '<div class="hl-box green">' +
+                            '<div class="hl-title">🏆 Top Conv %</div>' +
+                            '<div class="hl-name">' + (topConv ? topConv.name : 'N/A') + '</div>' +
+                            '<div class="hl-stat" style="color:#3fb950;">' + (topConv ? topConv.conversionRate : '0%') + '</div>' +
+                        '</div>' +
+                        '<div class="hl-box blue">' +
+                            '<div class="hl-title">⚡ Top DNPC (Done)</div>' +
+                            '<div class="hl-name">' + (topDnpc ? topDnpc.name : 'N/A') + '</div>' +
+                            '<div class="hl-stat" style="color:#38bdf8;">' + (topDnpc ? topDnpc.dnpc + ' Done' : '0') + '</div>' +
+                        '</div>';
+                } else {
+                    document.getElementById('leaderboard-box').innerHTML = '';
+                }
+
+                var html = '';
+                if (agents.length === 0) {
+                    html = '<div style="text-align:center; color:#8b949e; padding:12px 0;">कोई एजेंट डेटा उपलब्ध नहीं है</div>';
+                } else {
+                    agents.forEach(function(item) {
+                        var phone = item.mobile ? '<div style="font-size:11px; color:#8b949e;">📞 ' + item.mobile + '</div>' : '';
+                        html += 
+                            '<div class="perf-card" onclick="displayAgentModal(\'' + item.name + '\', \'' + item.mobile + '\')">' +
+                                '<div class="perf-header">' +
+                                    '<div><div style="font-weight:bold; font-size:14px; color:#f0f6fc;">👤 ' + item.name + '</div>' + phone + '</div>' +
                                 '</div>' +
-                            '</div>' +
-                        '</div>';
-                });
+                                '<div class="grid-3">' +
+                                    '<div class="grid-item"><span>OFD</span><b style="color:#58a6ff;">' + item.ofd + '</b></div>' +
+                                    '<div class="grid-item"><span>DEL</span><b style="color:#3fb950;">' + item.del + '</b></div>' +
+                                    '<div class="grid-item"><span>OFP</span><b style="color:#d29922;">' + item.ofp + '</b></div>' +
+                                    '<div class="grid-item"><span>PIKED</span><b style="color:#bc8cff;">' + item.piked + '</b></div>' +
+                                    '<div class="grid-item"><span>DNP</span><b style="color:#38bdf8;">' + item.dnp + '</b></div>' +
+                                    '<div class="grid-item"><span>DNPC</span><b style="color:#22c55e;">' + item.dnpc + '</b></div>' +
+                                    '<div class="grid-item" style="grid-column: span 3;">' +
+                                        '<span>CONVERSATION %</span><b style="color:#f43f5e;">' + item.conversionRate + '</b>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>';
+                    });
+                }
+                document.getElementById('agent-list-box').innerHTML = html;
+            } catch(err) {
+                document.getElementById('agent-list-box').innerHTML = '<div style="text-align:center; color:#8b949e;">डेटा लोड करने में त्रुटि (Admin में जाकर Sync करें)</div>';
             }
-            document.getElementById('agent-list-box').innerHTML = html;
-        };
+        }
 
-        window.openAgentHistory = function(name, mobile) {
-            document.getElementById('m-name').innerText = '👤 ' + name;
-            document.getElementById('m-phone').innerText = mobile ? '📞 ' + mobile : '';
-            var list = [];
-            if (window.AndroidNative && typeof window.AndroidNative.getAgentHistory === 'function') {
-                list = JSON.parse(window.AndroidNative.getAgentHistory(name, mobile) || "[]");
-            }
-            var html = '';
-            if (list.length === 0) {
-                html = '<div style="text-align:center; color:#8b949e; padding:12px 0;">कोई 30 दिन का इतिहास नहीं मिला</div>';
-            } else {
-                list.forEach(function(d) {
-                    html += 
-                        '<div style="background:#21262d; border-radius:8px; padding:10px; margin-bottom:8px;">' +
-                            '<div style="display:flex; justify-content:space-between; margin-bottom:6px;">' +
-                                '<span style="color:#58a6ff; font-weight:bold;">📅 ' + d.date + '</span>' +
-                                '<span style="color:#f43f5e; font-weight:bold;">Conv: ' + d.conv + '</span>' +
-                            '</div>' +
-                            '<div class="grid-3">' +
-                                '<div class="grid-item">OFD: <b>' + d.ofd + '</b></div>' +
-                                '<div class="grid-item">DEL: <b>' + d.del + '</b></div>' +
-                                '<div class="grid-item">OFP: <b>' + d.ofp + '</b></div>' +
-                                '<div class="grid-item">PIK: <b>' + d.piked + '</b></div>' +
-                                '<div class="grid-item">DNP: <b>' + d.dnp + '</b></div>' +
-                                '<div class="grid-item">DNPC: <b>' + d.dnpc + '</b></div>' +
-                            '</div>' +
-                        '</div>';
-                });
-            }
-            document.getElementById('m-body').innerHTML = html;
-            document.getElementById('modal').style.display = 'flex';
-        };
-
-        window.doSearch = function() {
-            var q = document.getElementById('search-input').value.trim();
-            var list = document.getElementById('orders-list');
-            if (!list) return;
-            list.innerHTML = '';
-            if (!q) {
-                list.innerHTML = '<div style="text-align:center; color:#8b949e;">ऑर्डर खोजने के लिए Tracking ID (FMPC...) दर्ज करें</div>';
-                return;
-            }
-            var arr = [];
-            if (window.AndroidNative && typeof window.AndroidNative.searchByTrackingId === 'function') {
-                arr = JSON.parse(window.AndroidNative.searchByTrackingId(q) || "[
+        function displayAgentModal(name, mobile) {
+            try {
+                document.getElementById('m-name').innerText = '👤 ' + name;
+                document.getElementById('m-phone').innerText = mobile ? '📞 ' + mobile : '';
+                var list = [];
+                if (window.AndroidNative && typeof window.AndroidNative.getAgentHistory === 'function') {
+                    list = JSON.parse(window.AndroidNative.getAgentHistory(name, mobile) || "[]");
+                }
+                var html = '';
+                if (list.length === 0) {
+                    html = '<div style="text-align:center; color:#8b949e; padding:12px 0;">कोई 30 दिन का इतिहास नहीं मिला</div>';
+                } else {
+                    list.forEach(function(d) {
+                        html += 
+                            '<div style="background:#21262d; border-radius:8px; padding:10px; margin-bottom:8px;">' +
+                                '<div 
