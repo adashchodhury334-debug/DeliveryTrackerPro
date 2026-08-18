@@ -1,436 +1,143 @@
 package com.deliverytracker.pro;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.ContentValues;
+import android.app.AlertDialog;
+import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.view.inputmethod.InputMethodManager;
-import android.webkit.JavascriptInterface;
-import android.webkit.WebChromeClient;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
+import com.google.android.material.tabs.TabLayout;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
-    
-    private WebView webView;
-    private DatabaseHelper dbHelper;
-    private static final String GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
 
-    @SuppressLint("SetJavaScriptEnabled")
+    private TabLayout tabLayout;
+    private LinearLayout secTracker;
+    private View secPerformance;
+    private LinearLayout agentsContainer;
+    private EditText searchEditText;
+    private ListView ordersListView;
+    private TextView txtActiveCount, txtHubStats;
+    private Button btnAdmin, btnDaily, btnWeekly, btnMonthly;
+    
+    private DatabaseHelper dbHelper;
+    private String currentFilter = "daily";
+    private ArrayList<OrderModel> ordersList = new ArrayList<>();
+    private OrdersAdapter ordersAdapter;
+
+    private static final String CSV_URL = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+        setContentView(R.layout.activity_main);
+
         dbHelper = new DatabaseHelper(this);
-        webView = new WebView(this);
-        
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        
-        webView.setWebViewClient(new WebViewClient());
-        webView.setWebChromeClient(new WebChromeClient());
-        webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
-        
-        setContentView(webView);
-        webView.loadUrl("file:///android_asset/index.html");
+
+        tabLayout = findViewById(R.id.tabLayout);
+        secTracker = findViewById(R.id.secTracker);
+        secPerformance = findViewById(R.id.secPerformance);
+        agentsContainer = findViewById(R.id.agentsContainer);
+        searchEditText = findViewById(R.id.searchEditText);
+        ordersListView = findViewById(R.id.ordersListView);
+        txtActiveCount = findViewById(R.id.txtActiveCount);
+        txtHubStats = findViewById(R.id.txtHubStats);
+        btnAdmin = findViewById(R.id.btnAdmin);
+        btnDaily = findViewById(R.id.btnDaily);
+        btnWeekly = findViewById(R.id.btnWeekly);
+        btnMonthly = findViewById(R.id.btnMonthly);
+
+        ordersAdapter = new OrdersAdapter(this, ordersList);
+        ordersListView.setAdapter(ordersAdapter);
+
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                if (tab.getPosition() == 0) {
+                    secTracker.setVisibility(View.VISIBLE);
+                    secPerformance.setVisibility(View.GONE);
+                } else {
+                    secTracker.setVisibility(View.GONE);
+                    secPerformance.setVisibility(View.VISIBLE);
+                    loadPerformanceData();
+                }
+            }
+            @Override public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override public void onTabReselected(TabLayout.Tab tab) {}
+        });
+
+        searchEditText.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int count2) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                executeLocalSearch(s.toString().trim());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        btnAdmin.setOnClickListener(v -> showAdminDialog());
+        btnDaily.setOnClickListener(v -> updateFilter("daily"));
+        btnWeekly.setOnClickListener(v -> updateFilter("weekly"));
+        btnMonthly.setOnClickListener(v -> updateFilter("monthly"));
+
+        refreshTotalCount();
+    }
+
+    private void updateFilter(String filter) {
+        currentFilter = filter;
+        btnDaily.setBackgroundTintList(android.content.res.ColorStateList.valueOf(filter.equals("daily") ? 0xFF238636 : 0xFF21262d));
+        btnWeekly.setBackgroundTintList(android.content.res.ColorStateList.valueOf(filter.equals("weekly") ? 0xFF238636 : 0xFF21262d));
+        btnMonthly.setBackgroundTintList(android.content.res.ColorStateList.valueOf(filter.equals("monthly") ? 0xFF238636 : 0xFF21262d));
+        loadPerformanceData();
     }
 
     public static String getShiftCycleDate() {
         Calendar cal = Calendar.getInstance();
         int hour = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
-
-        // Subah 9:00 AM tak pichla din count hoga
         if (hour < 9 || (hour == 9 && minute == 0)) {
             cal.add(Calendar.DAY_OF_YEAR, -1);
         }
         return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.getTime());
     }
 
-    public class WebAppInterface {
-
-        @JavascriptInterface
-        public void hideKeyboard() {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        if (getCurrentFocus() != null) {
-                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                            if (imm != null) {
-                                imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
-                            }
-                        }
-                        webView.clearFocus();
-                    } catch (Exception ignored) {}
-                }
-            });
-        }
-
-        @JavascriptInterface
-        public int syncFromSheet() {
-            int count = 0;
-            String cycleDate = getShiftCycleDate();
-            SQLiteDatabase db = null;
-            BufferedReader reader = null;
-            try {
-                URL url = new URL(GOOGLE_SHEET_CSV_URL);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(15000);
-                reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                db = dbHelper.getWritableDatabase();
-                db.beginTransaction();
-                
-                db.delete("orders", null, null);
-                db.delete("agent_performance", "entry_date = ?", new String[]{cycleDate});
-
-                HashSet<String> seenTrackingIds = new HashSet<>();
-                LinkedHashMap<String, PerformanceData> agentMap = new LinkedHashMap<>();
-
-                String line;
-                boolean isHeader = true;
-                while ((line = reader.readLine()) != null) {
-                    if (isHeader) { isHeader = false; continue; }
-                    String[] parts = line.split(",", -1);
-                    if (parts.length < 2) continue;
-
-                    String col0 = parts[0].replace("\"", "").trim();
-                    String col1 = parts.length > 1 ? parts[1].replace("\"", "").trim() : "";
-
-                    String tId = "";
-                    String oId = "";
-
-                    if (col0.toUpperCase().startsWith("FMPC") || col1.toUpperCase().startsWith("OD")) {
-                        tId = col0;
-                        oId = col1;
-                    } else if (col1.toUpperCase().startsWith("FMPC") || col0.toUpperCase().startsWith("OD")) {
-                        tId = col1;
-                        oId = col0;
-                    } else {
-                        tId = col1.isEmpty() ? col0 : col1;
-                        oId = col0;
-                    }
-
-                    if (!tId.isEmpty() && !seenTrackingIds.contains(tId) && !tId.toUpperCase().contains("TRACKING")) {
-                        seenTrackingIds.add(tId);
-                        ContentValues cv = new ContentValues();
-                        cv.put("tracking_id", tId);
-                        cv.put("order_id", oId);
-                        db.insert("orders", null, cv);
-                        count++;
-                    }
-
-                    String name = parts.length > 2 ? parts[2].replace("\"", "").trim() : "";
-                    String mobile = parts.length > 3 ? parts[3].replace("\"", "").trim() : "";
-
-                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("AGENT NAME")) {
-                        int ofd = parts.length > 4 ? parseSafeInt(parts[4]) : 0;
-                        int del = parts.length > 5 ? parseSafeInt(parts[5]) : 0;
-                        int ofp = parts.length > 6 ? parseSafeInt(parts[6]) : 0;
-                        int piked = parts.length > 7 ? parseSafeInt(parts[7]) : 0;
-
-                        String key = name + "_" + mobile;
-                        PerformanceData p = agentMap.get(key);
-                        if (p == null) {
-                            p = new PerformanceData(name, mobile, cycleDate);
-                            agentMap.put(key, p);
-                        }
-                        p.ofd += ofd;
-                        p.del += del;
-                        p.ofp += ofp;
-                        p.piked += piked;
-                    }
-                }
-
-                for (PerformanceData p : agentMap.values()) {
-                    ContentValues cv = new ContentValues();
-                    cv.put("name", p.name);
-                    cv.put("mobile", p.mobile);
-                    cv.put("ofd", p.ofd);
-                    cv.put("del", p.del);
-                    cv.put("ofp", p.ofp);
-                    cv.put("piked", p.piked);
-                    
-                    int dnpTotal = p.ofd + p.ofp;
-                    int dnpcTotal = p.del + p.piked;
-                    cv.put("dnp", dnpTotal);
-                    cv.put("dnpc", dnpcTotal);
-                    cv.put("total_attempts", dnpTotal);
-                    cv.put("total_complete", dnpcTotal);
-                    cv.put("entry_date", p.date);
-                    db.insert("agent_performance", null, cv);
-                }
-
-                db.setTransactionSuccessful();
-            } catch (Exception e) {
-                e.printStackTrace();
-                return -1;
-            } finally {
-                if (db != null) {
-                    try { db.endTransaction(); } catch (Exception ignored) {}
-                }
-                if (reader != null) { 
-                    try { reader.close(); } catch (Exception ignored) {} 
-                }
-            }
-            return count;
-        }
-
-        private int parseSafeInt(String str) {
-            try { return Integer.parseInt(str.replace("\"", "").trim()); } catch (Exception e) { return 0; }
-        }
-
-        @JavascriptInterface
-        public String getPerformanceJson(String filterMode) {
-            JSONObject response = new JSONObject();
-            JSONArray arr = new JSONArray();
-            Cursor c = null;
-            Cursor hubCursor = null;
-            try {
-                SQLiteDatabase db = dbHelper.getReadableDatabase();
-                String cond = "";
-                if ("daily".equalsIgnoreCase(filterMode)) {
-                    cond = " WHERE entry_date = (SELECT MAX(entry_date) FROM agent_performance) ";
-                } else if ("weekly".equalsIgnoreCase(filterMode)) {
-                    cond = " WHERE entry_date >= date('now', 'localtime', '-7 days') ";
-                } else if ("monthly".equalsIgnoreCase(filterMode)) {
-                    cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
-                }
-
-                String hubQuery = "SELECT SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) FROM agent_performance " + cond;
-                hubCursor = db.rawQuery(hubQuery, null);
-                JSONObject hubObj = new JSONObject();
-                hubObj.put("hubName", "MALBAZARHUB_NJP");
-                hubObj.put("target", "92.0%");
-
-                if (hubCursor != null && hubCursor.moveToFirst()) {
-                    int hOfd = hubCursor.getInt(0);
-                    int hDel = hubCursor.getInt(1);
-                    int hOfp = hubCursor.getInt(2);
-                    int hPik = hubCursor.getInt(3);
-                    int hDnp = hubCursor.getInt(4);
-                    int hDnpc = hubCursor.getInt(5);
-
-                    hubObj.put("ofd", hOfd);
-                    hubObj.put("del", hDel);
-                    hubObj.put("ofp", hOfp);
-                    hubObj.put("piked", hPik);
-                    hubObj.put("dnp", hDnp);
-                    hubObj.put("dnpc", hDnpc);
-                    double hRate = hDnp > 0 ? ((double) hDnpc / hDnp) * 100.0 : 0.0;
-                    hubObj.put("conversionRate", String.format(Locale.US, "%.1f%%", hRate));
-                } else {
-                    hubObj.put("ofd", 0);
-                    hubObj.put("del", 0);
-                    hubObj.put("ofp", 0);
-                    hubObj.put("piked", 0);
-                    hubObj.put("dnp", 0);
-                    hubObj.put("dnpc", 0);
-                    hubObj.put("conversionRate", "0.0%");
-                }
-                response.put("hub", hubObj);
-
-                String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) " +
-                        "FROM agent_performance " + cond +
-                        "GROUP BY name, mobile " +
-                        "ORDER BY ((SUM(dnpc) * 1.0) / CASE WHEN SUM(dnp) = 0 THEN 1 ELSE SUM(dnp) END) ASC";
-
-                c = db.rawQuery(query, null);
-                if (c != null && c.moveToFirst()) {
-                    do {
-                        JSONObject o = new JSONObject();
-                        o.put("name", c.getString(0));
-                        o.put("mobile", c.getString(1));
-                        int ofd = c.getInt(2);
-                        int del = c.getInt(3);
-                        int ofp = c.getInt(4);
-                        int piked = c.getInt(5);
-                        int dnp = c.getInt(6);
-                        int dnpc = c.getInt(7);
-
-                        o.put("ofd", ofd);
-                        o.put("del", del);
-                        o.put("ofp", ofp);
-                        o.put("piked", piked);
-                        o.put("dnp", dnp);
-                        o.put("dnpc", dnpc);
-
-                        double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-                        o.put("conversionRate", String.format(Locale.US, "%.1f%%", r));
-                        o.put("conversionNum", r);
-                        arr.put(o);
-                    } while (c.moveToNext());
-                }
-                response.put("agents", arr);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (hubCursor != null) { try { hubCursor.close(); } catch (Exception ignored) {} }
-                if (c != null) { try { c.close(); } catch (Exception ignored) {} }
-            }
-            return response.toString();
-        }
-
-        @JavascriptInterface
-        public String getAgentHistory(String name, String mobile) {
-            JSONArray arr = new JSONArray();
-            Cursor c = null;
-            try {
-                SQLiteDatabase db = dbHelper.getReadableDatabase();
-                String query = "SELECT entry_date, ofd, del, ofp, piked, dnp, dnpc " +
-                        "FROM agent_performance WHERE name = ? AND mobile = ? " +
-                        "ORDER BY entry_date DESC LIMIT 30";
-                c = db.rawQuery(query, new String[]{name, mobile});
-                if (c != null && c.moveToFirst()) {
-                    do {
-                        JSONObject o = new JSONObject();
-                        o.put("date", c.getString(0));
-                        o.put("ofd", c.getInt(1));
-                        o.put("del", c.getInt(2));
-                        o.put("ofp", c.getInt(3));
-                        o.put("piked", c.getInt(4));
-                        int dnp = c.getInt(5);
-                        int dnpc = c.getInt(6);
-                        o.put("dnp", dnp);
-                        o.put("dnpc", dnpc);
-                        double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-                        o.put("conv", String.format(Locale.US, "%.1f%%", r));
-                        arr.put(o);
-                    } while (c.moveToNext());
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (c != null) { try { c.close(); } catch (Exception ignored) {} }
-            }
-            return arr.toString();
-        }
-
-        @JavascriptInterface
-        public int insertBulk(String jsonStr) {
-            SQLiteDatabase db = null;
-            int count = 0;
-            try {
-                db = dbHelper.getWritableDatabase();
-                db.beginTransaction();
-                JSONArray arr = new JSONArray(jsonStr);
-                for (int i = 0; i < arr.length(); i++) {
-                    JSONObject obj = arr.getJSONObject(i);
-                    ContentValues cv = new ContentValues();
-                    cv.put("tracking_id", obj.getString("t"));
-                    cv.put("order_id", obj.getString("o"));
-                    db.insert("orders", null, cv);
-                    count++;
-                }
-                db.setTransactionSuccessful();
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (db != null) { try { db.endTransaction(); } catch (Exception ignored) {} }
-            }
-            return count;
-        }
-
-        @JavascriptInterface
-        public String searchByTrackingId(String trackingQuery) {
-            JSONArray arr = new JSONArray();
-            Cursor cursor = null;
-            try {
-                SQLiteDatabase db = dbHelper.getReadableDatabase();
-                cursor = db.rawQuery("SELECT id, tracking_id, order_id FROM orders WHERE tracking_id LIKE ? LIMIT 30", 
-                        new String[]{"%" + trackingQuery + "%"});
-                if (cursor != null && cursor.moveToFirst()) {
-                    do {
-                        JSONObject obj = new JSONObject();
-                        obj.put("id", cursor.getInt(0));
-                        obj.put("t", cursor.getString(1));
-                        obj.put("o", cursor.getString(2));
-                        arr.put(obj);
-                    } while (cursor.moveToNext());
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (cursor != null) { try { cursor.close(); } catch (Exception ignored) {} }
-            }
-            return arr.toString();
-        }
-
-        @JavascriptInterface 
-        public void deleteOrder(int id) {
-            try { dbHelper.getWritableDatabase().delete("orders", "id = ?", new String[]{String.valueOf(id)}); } catch (Exception ignored) {}
-        }
-
-        @JavascriptInterface 
-        public void deleteAll() {
-            try {
-                SQLiteDatabase db = dbHelper.getWritableDatabase();
-                db.delete("orders", null, null);
-                db.delete("agent_performance", null, null);
-            } catch (Exception ignored) {}
-        }
-
-        @JavascriptInterface 
-        public int getTotalCount() {
-            Cursor cursor = null;
-            int count = 0;
-            try {
-                SQLiteDatabase db = dbHelper.getReadableDatabase();
-                cursor = db.rawQuery("SELECT COUNT(*) FROM orders", null);
-                if (cursor != null && cursor.moveToFirst()) count = cursor.getInt(0);
-            } catch (Exception ignored) {
-            } finally {
-                if (cursor != null) { try { cursor.close(); } catch (Exception ignored) {} }
-            }
-            return count;
-        }
+    private void refreshTotalCount() {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM orders", null);
+        int count = 0;
+        if (cursor.moveToFirst()) count = cursor.getInt(0);
+        cursor.close();
+        txtActiveCount.setText("📦 Order Results (Active: " + count + ")");
     }
 
-    private static class PerformanceData {
-        String name, mobile, date;
-        int ofd = 0, del = 0, ofp = 0, piked = 0;
-        PerformanceData(String n, String m, String d) { name = n; mobile = m; date = d; }
-    }
-
-    private static class DatabaseHelper extends SQLiteOpenHelper {
-        private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 20;
-
-        public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
-
-        @Override
-        public void onCreate(SQLiteDatabase db) {
-            db.execSQL("CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, tracking_id TEXT, order_id TEXT);");
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_tracking_id ON orders(tracking_id);");
-            db.execSQL("CREATE TABLE IF NOT EXISTS agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, del INTEGER, ofp INTEGER, piked INTEGER, dnp INTEGER, dnpc INTEGER, total_attempts INTEGER, total_complete INTEGER, entry_date TEXT);");
+    private void executeLocalSearch(String query) {
+        ordersList.clear();
+        if (query.isEmpty()) {
+            ordersAdapter.notifyDataSetChanged();
+            return;
         }
-
-        @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            db.execSQL("DROP TABLE IF EXISTS orders");
-            db.execSQL("DROP TABLE IF EXISTS agent_performance");
-            onCreate(db);
-        }
-    }
-            }
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor c = db.
