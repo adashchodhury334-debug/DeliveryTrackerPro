@@ -3,10 +3,12 @@ package com.deliverytracker.pro;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Bundle;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -58,6 +60,7 @@ public class MainActivity extends Activity {
         int hour = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
 
+        // Subah 9:00 AM tak pichla din count hoga
         if (hour < 9 || (hour == 9 && minute == 0)) {
             cal.add(Calendar.DAY_OF_YEAR, -1);
         }
@@ -65,6 +68,24 @@ public class MainActivity extends Activity {
     }
 
     public class WebAppInterface {
+
+        @JavascriptInterface
+        public void hideKeyboard() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (getCurrentFocus() != null) {
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            if (imm != null) {
+                                imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+                            }
+                        }
+                        webView.clearFocus();
+                    } catch (Exception ignored) {}
+                }
+            });
+        }
 
         @JavascriptInterface
         public int syncFromSheet() {
@@ -394,7 +415,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 19;
+        private static final int DATABASE_VERSION = 20;
 
         public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
@@ -412,4 +433,4 @@ public class MainActivity extends Activity {
             onCreate(db);
         }
     }
-                          }
+            }
