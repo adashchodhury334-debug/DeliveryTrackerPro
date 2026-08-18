@@ -30,6 +30,14 @@
         .hub-box { background: #1c2331; border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 2px solid #00E676; }
         .hub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         
+        .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .hl-box { background: #21262d; padding: 10px; border-radius: 8px; border: 1px solid #30363d; }
+        .hl-box.green { border-left: 3px solid #00E676; }
+        .hl-box.blue { border-left: 3px solid #38bdf8; }
+        .hl-title { font-size: 10px; font-weight: bold; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
+        .hl-name { font-size: 13px; font-weight: bold; color: #f0f6fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hl-stat { font-size: 13px; font-weight: bold; margin-top: 2px; }
+
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 11px; }
         .grid-item { background: #161b22; padding: 6px; border-radius: 6px; text-align: center; border: 1px solid #30363d; }
         .grid-item span { color: #8b949e; display: block; font-size: 9px; margin-bottom: 2px; }
@@ -60,7 +68,6 @@
         <button type="button" class="tab-btn" id="tab-p" onclick="switchTab('p')">📊 Performance</button>
     </div>
 
-    <!-- Admin Panel -->
     <div id="admin-sec" style="display:none;" class="box">
         <div id="pin-box">
             <div class="box-title">🔐 Admin PIN</div>
@@ -77,19 +84,17 @@
         </div>
     </div>
 
-    <!-- TRACKER TAB -->
     <div id="sec-t">
         <div class="box">
             <div class="box-title">🔍 Quick Search</div>
-            <input type="text" id="search-input" placeholder="Enter Tracking ID (4-5 digits)..." oninput="doSearch()" />
+            <input type="text" id="search-input" placeholder="Enter Tracking ID (FMPC...)..." oninput="doSearch()" />
         </div>
         <div class="box">
             <div class="box-title">📦 Order Results <span id="active-txt" style="color:#00E676;"></span></div>
-            <div id="orders-list"><div style="text-align:center; color:#8b949e;">ऑर्डर खोजने के लिए Tracking ID दर्ज करें</div></div>
+            <div id="orders-list"><div style="text-align:center; color:#8b949e;">ऑर्डर खोजने के लिए Tracking ID (FMPC...) दर्ज करें</div></div>
         </div>
     </div>
 
-    <!-- PERFORMANCE TAB -->
     <div id="sec-p" style="display:none;">
         <div class="box">
             <div class="filter-row">
@@ -99,13 +104,13 @@
             </div>
             
             <div id="hub-card-box"></div>
+            <div class="hl-grid" id="leaderboard-box"></div>
             
             <div class="box-title" style="margin-top:10px;">👥 Delivery Agents Report</div>
             <div id="agent-list-box"><div style="text-align:center; color:#8b949e;">कोई डेटा नहीं मिला (Admin में जाकर Sync करें)</div></div>
         </div>
     </div>
 
-    <!-- 30 Days History Modal -->
     <div id="modal">
         <div id="modal-content">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -185,7 +190,7 @@
             var hub = res.hub;
             var agents = res.agents || [];
 
-            // Hub Render
+            // 1. Hub Summary Card
             if (hub) {
                 document.getElementById('hub-card-box').innerHTML = 
                     '<div class="hub-box">' +
@@ -208,7 +213,38 @@
                     '</div>';
             }
 
-            // Agents Render
+            // 2. Top Performers Calculation
+            var topConv = null, topDnpc = null;
+            var maxConv = -1, maxDnpc = -1;
+
+            agents.forEach(function(item) {
+                if (item.conversionNum > maxConv && item.dnp > 0) {
+                    maxConv = item.conversionNum;
+                    topConv = item;
+                }
+                if (item.dnpc > maxDnpc) {
+                    maxDnpc = item.dnpc;
+                    topDnpc = item;
+                }
+            });
+
+            if (topConv || topDnpc) {
+                document.getElementById('leaderboard-box').innerHTML = 
+                    '<div class="hl-box green">' +
+                        '<div class="hl-title">🏆 Top Conv %</div>' +
+                        '<div class="hl-name">' + (topConv ? topConv.name : 'N/A') + '</div>' +
+                        '<div class="hl-stat" style="color:#3fb950;">' + (topConv ? topConv.conversionRate : '0%') + '</div>' +
+                    '</div>' +
+                    '<div class="hl-box blue">' +
+                        '<div class="hl-title">⚡ Top DNPC (Done)</div>' +
+                        '<div class="hl-name">' + (topDnpc ? topDnpc.name : 'N/A') + '</div>' +
+                        '<div class="hl-stat" style="color:#38bdf8;">' + (topDnpc ? topDnpc.dnpc + ' Done' : '0') + '</div>' +
+                    '</div>';
+            } else {
+                document.getElementById('leaderboard-box').innerHTML = '';
+            }
+
+            // 3. Agents Report List
             var html = '';
             if (agents.length === 0) {
                 html = '<div style="text-align:center; color:#8b949e;">कोई एजेंट डेटा उपलब्ध नहीं है</div>';
@@ -218,7 +254,7 @@
                     html += 
                         '<div class="perf-card" onclick="openAgentHistory(\'' + item.name + '\', \'' + item.mobile + '\')">' +
                             '<div class="perf-header">' +
-                                '<div><div style="font-weight:bold;">👤 ' + item.name + '</div>' + phone + '</div>' +
+                                '<div><div style="font-weight:bold; font-size:14px; color:#f0f6fc;">👤 ' + item.name + '</div>' + phone + '</div>' +
                             '</div>' +
                             '<div class="grid-3">' +
                                 '<div class="grid-item"><span>OFD</span><b style="color:#58a6ff;">' + item.ofd + '</b></div>' +
@@ -267,7 +303,7 @@
             var q = document.getElementById('search-input').value.trim();
             var list = document.getElementById('orders-list');
             if (!q) {
-                list.innerHTML = '<div style="text-align:center; color:#8b949e;">ऑर्डर खोजने के लिए Tracking ID दर्ज करें</div>';
+                list.innerHTML = '<div style="text-align:center; color:#8b949e;">ऑर्डर खोजने के लिए Tracking ID (FMPC...) दर्ज करें</div>';
                 return;
             }
             var arr = JSON.parse(window.AndroidNative.searchByTrackingId(q));
@@ -307,24 +343,4 @@
             var lines = txt.split(/\r?\n/);
             var items = [];
             for (var i = 0; i < lines.length; i++) {
-                var p = lines[i].split(/[\t,]/).map(function(s){ return s.trim(); });
-                if (p.length >= 2 && p[0] && p[1] && !p[0].toUpperCase().includes('TRACKING')) {
-                    items.push({ t: p[0], o: p[1] });
-                }
-            }
-            var c = window.AndroidNative.insertBulk(JSON.stringify(items));
-            document.getElementById('bulk-input').value = '';
-            showMsg(c + ' Orders Imported!');
-            refreshCount();
-            doSearch();
-        }
-
-        function refreshCount() {
-            var n = window.AndroidNative.getTotalCount();
-            document.getElementById('active-txt').innerText = '(Active: ' + n + ')';
-        }
-
-        refreshCount();
-    </script>
-</body>
-</html>
+                var p = lines[i].split(/[\t,]/).map(function(s){ return s.trim
