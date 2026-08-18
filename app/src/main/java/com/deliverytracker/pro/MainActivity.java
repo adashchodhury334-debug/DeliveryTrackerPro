@@ -14,7 +14,6 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.Editable;
-import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
@@ -64,7 +63,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         try {
-            db = openOrCreateDatabase("TrackerV8.db", MODE_PRIVATE, null);
+            db = openOrCreateDatabase("TrackerV10.db", MODE_PRIVATE, null);
             db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
         } catch (Exception ignored) {}
@@ -72,6 +71,7 @@ public class MainActivity extends Activity {
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#0F1015"));
 
+        // Exact Middle Splash Screen
         LinearLayout splash = new LinearLayout(this);
         splash.setOrientation(LinearLayout.VERTICAL);
         splash.setGravity(Gravity.CENTER);
@@ -103,6 +103,10 @@ public class MainActivity extends Activity {
 
         root.addView(splash);
         setContentView(root);
+
+        // Auto Sync on fresh open / new install
+        new Thread(() -> doSync(true)).start();
+
         new Handler().postDelayed(() -> {
             try {
                 root.removeView(splash);
@@ -111,13 +115,21 @@ public class MainActivity extends Activity {
         }, 1800);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Auto Sync whenever app is reopened from background
+        new Thread(() -> doSync(true)).start();
+    }
+
     void buildUI() {
         LinearLayout main = new LinearLayout(this);
         main.setOrientation(LinearLayout.VERTICAL);
 
+        // Header: Title + One-Click Public Sync (No Password)
         LinearLayout h = new LinearLayout(this);
         h.setBackgroundColor(Color.parseColor("#181920"));
-        h.setPadding(24, 16, 24, 16);
+        h.setPadding(20, 16, 20, 16);
         h.setGravity(Gravity.CENTER_VERTICAL);
         TextView t = new TextView(this);
         t.setText("📊 Performance & Leaderboard");
@@ -126,15 +138,17 @@ public class MainActivity extends Activity {
         t.setTypeface(Typeface.DEFAULT_BOLD);
         h.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        Button adm = new Button(this);
-        adm.setText("🔒 Admin");
-        adm.setTextSize(11f);
-        adm.setTextColor(Color.parseColor("#00E676"));
-        adm.setBackground(box(Color.parseColor("#232634"), 10, Color.parseColor("#00E676"), 1));
-        adm.setOnClickListener(v -> auth());
-        h.addView(adm);
+        Button bRef = new Button(this);
+        bRef.setText("🔄 Sync");
+        bRef.setTextSize(12f);
+        bRef.setTextColor(Color.BLACK);
+        bRef.setTypeface(Typeface.DEFAULT_BOLD);
+        bRef.setBackground(box(Color.parseColor("#00E676"), 10, 0, 0));
+        bRef.setOnClickListener(v -> new Thread(() -> doSync(false)).start());
+        h.addView(bRef);
         main.addView(h);
 
+        // Tabs
         LinearLayout tb = new LinearLayout(this);
         tb.setPadding(16, 8, 16, 4);
         bT = new Button(this);
@@ -158,6 +172,7 @@ public class MainActivity extends Activity {
         body.setPadding(16, 6, 16, 10);
         main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
+        // Tracker Tab (Blue Track ID & Green Order ID)
         vTrk = new LinearLayout(this);
         vTrk.setOrientation(LinearLayout.VERTICAL);
         vTrk.setVisibility(View.GONE);
@@ -199,13 +214,13 @@ public class MainActivity extends Activity {
 
                 TextView t1 = new TextView(MainActivity.this);
                 t1.setText("📦 Track ID: " + it[0]);
-                t1.setTextColor(Color.parseColor("#38BDF8"));
+                t1.setTextColor(Color.parseColor("#38BDF8")); // Blue
                 t1.setTypeface(Typeface.DEFAULT_BOLD);
                 t1.setTextSize(14.5f);
 
                 TextView t2 = new TextView(MainActivity.this);
                 t2.setText("🛒 Order ID: " + it[1] + "  📋 (Tap to Copy)");
-                t2.setTextColor(Color.parseColor("#00E676"));
+                t2.setTextColor(Color.parseColor("#00E676")); // Green
                 t2.setTextSize(13.5f);
                 t2.setPadding(0, 6, 0, 0);
 
@@ -276,7 +291,8 @@ public class MainActivity extends Activity {
         root.addView(main);
         load();
         cnt();
-            }    LinearLayout makeSummaryCard(String title, int bgCol, int accent, boolean isConv) {
+                            }
+    LinearLayout makeSummaryCard(String title, int bgCol, int accent, boolean isConv) {
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackground(box(bgCol, 14, Color.parseColor("#2A2D3D"), 1));
@@ -432,11 +448,10 @@ public class MainActivity extends Activity {
                 rank++;
             }
         } catch (Exception ignored) {}
-    }
-
-    void showAgent30Days(String agentName) {
+                                 }
+        void showAgent30Days(String agentName) {
         Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= date('now','localtime','-30 days') ORDER BY dt DESC", new String[]{agentName});
-        int totO = 0, totL = 0, totP = 0, totK = 0, activeDays = 0;
+        int totO = 0, totL = 0, totP = 0, totK = 0;
         LinearLayout listLay = new LinearLayout(this);
         listLay.setOrientation(LinearLayout.VERTICAL);
         listLay.setPadding(12, 10, 12, 10);
@@ -447,7 +462,6 @@ public class MainActivity extends Activity {
             int dnp = o + p, dnpc = l + k;
             double cr = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
             totO += o; totL += l; totP += p; totK += k;
-            if (dnp > 0) activeDays++;
 
             TextView item = new TextView(this);
             item.setText("📅 " + d + "  |  Conv: " + String.format(Locale.US, "%.1f%%", cr) + "\nOFD: " + o + " | DEL: " + l + " | OFP: " + p + " | PIK: " + k);
@@ -463,7 +477,6 @@ public class MainActivity extends Activity {
 
         int totDnp = totO + totP, totDnpc = totL + totK;
         double overallConv = totDnp > 0 ? ((double) totDnpc / totDnp) * 100.0 : 0.0;
-        int inactiveDays = Math.max(0, 30 - activeDays);
 
         ScrollView sv = new ScrollView(this);
         LinearLayout pop = new LinearLayout(this);
@@ -474,22 +487,15 @@ public class MainActivity extends Activity {
         TextView h = new TextView(this);
         h.setText("👤 " + agentName + " (Last 30 Days)");
         h.setTextColor(Color.parseColor("#00E676"));
-        h.setTextSize(15f);
+        h.setTextSize(16f);
         h.setTypeface(Typeface.DEFAULT_BOLD);
+        h.setPadding(0, 0, 0, 10);
         pop.addView(h);
 
-        TextView act = new TextView(this);
-        act.setText("🟢 Active: " + activeDays + " Days  |  🔴 Inactive: " + inactiveDays + " Days");
-        act.setTextColor(Color.parseColor("#FBBF24"));
-        act.setTextSize(12.5f);
-        act.setTypeface(Typeface.DEFAULT_BOLD);
-        act.setPadding(0, 6, 0, 10);
-        pop.addView(act);
-
         TextView sum = new TextView(this);
-        sum.setText("📊 30-Day Totals:\nOFD: " + totO + " | DEL: " + totL + "\nOFP: " + totP + " | PIKED: " + totK + "\nDNP: " + totDnp + " | DNPC: " + totDnpc + "\n⚡ OVERALL CONV: " + String.format(Locale.US, "%.1f%%", overallConv));
+        sum.setText("📊 30-Day Total Performance:\nOFD: " + totO + " | DEL: " + totL + "\nOFP: " + totP + " | PIKED: " + totK + "\nDNP: " + totDnp + " | DNPC: " + totDnpc + "\n⚡ OVERALL CONV: " + String.format(Locale.US, "%.1f%%", overallConv));
         sum.setTextColor(Color.WHITE);
-        sum.setTextSize(12f);
+        sum.setTextSize(12.5f);
         sum.setBackground(box(Color.parseColor("#181920"), 10, Color.parseColor("#00E676"), 1));
         sum.setPadding(14, 12, 14, 12);
         pop.addView(sum);
@@ -535,35 +541,11 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
-    void auth() {
-        EditText in = new EditText(this);
-        in.setHint("PIN...");
-        in.setInputType(InputType.TYPE_CLASS_NUMBER);
-        new AlertDialog.Builder(this).setTitle("🔐 Admin").setView(in)
-            .setPositiveButton("Verify", (d, w) -> {
-                if ("9547927698".equals(in.getText().toString().trim())) syncDlg();
-                else Toast.makeText(this, "Wrong PIN!", Toast.LENGTH_SHORT).show();
-            }).show();
-    }
-
-    void syncDlg() {
-        new AlertDialog.Builder(this).setTitle("⚡ Data Control")
-            .setPositiveButton("Sync Now", (d, w) -> new Thread(this::doSync).start())
-            .setNegativeButton("Clear Tracker Orders", (d, w) -> {
-                try {
-                    db.delete("ord", null, null);
-                } catch (Exception ignored) {}
-                runOnUiThread(() -> {
-                    cnt();
-                    qry("");
-                    Toast.makeText(this, "Orders cleared! Performance history preserved.", Toast.LENGTH_SHORT).show();
-                });
-            }).show();
-    }
-
-    void doSync() {
+    void doSync(boolean isAuto) {
         try {
-            runOnUiThread(() -> Toast.makeText(this, "Syncing...", Toast.LENGTH_SHORT).show());
+            if (!isAuto) {
+                runOnUiThread(() -> Toast.makeText(this, "Syncing live sheet...", Toast.LENGTH_SHORT).show());
+            }
             String curDt = getDt();
             HttpURLConnection conn = (HttpURLConnection) new URL(CSV).openConnection();
             conn.setConnectTimeout(15000);
@@ -618,18 +600,23 @@ public class MainActivity extends Activity {
             }
             final int fin = count;
             runOnUiThread(() -> {
-                Toast.makeText(this, "Synced " + fin + " orders!", Toast.LENGTH_LONG).show();
+                if (!isAuto) {
+                    Toast.makeText(this, "Synced " + fin + " orders!", Toast.LENGTH_LONG).show();
+                }
                 cnt();
                 load();
             });
         } catch (Exception e) {
-            runOnUiThread(() -> Toast.makeText(this, "Sync Failed!", Toast.LENGTH_SHORT).show());
+            if (!isAuto) {
+                runOnUiThread(() -> Toast.makeText(this, "Sync Failed! Check internet.", Toast.LENGTH_SHORT).show());
+            }
         }
     }
 
     int pInt(String s) {
         try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
     }
-                                                        }
+}
+
 
     
