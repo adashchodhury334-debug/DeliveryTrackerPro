@@ -8,6 +8,8 @@
     <application
         android:allowBackup="true"
         android:label="Delivery Tracker Pro"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
         android:theme="@android:style/Theme.Black.NoTitleBar"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true">
@@ -22,7 +24,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
     </application>
-
 </manifest>
