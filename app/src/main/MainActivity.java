@@ -18,7 +18,7 @@ import java.util.*;
 
 public class MainActivity extends Activity {
     SQLiteDatabase db;
-    ArrayList<String[]> ords = new ArrayList<>(), prfs = new ArrayList<>();
+    ArrayList<String[]> ords = new ArrayList<String[]>();
     BaseAdapter adp;
     LinearLayout vT, vP, vC;
     ScrollView sP;
@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
         adm.setText("🔒 Admin");
         adm.setTextColor(Color.parseColor("#00E676"));
         adm.setBackground(bg(Color.parseColor("#1f2d47"), Color.parseColor("#00E676"), 10));
-        adm.setOnClickListener(v -> auth());
+        adm.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { auth(); } });
         topBar.addView(adm);
         r.addView(topBar);
 
@@ -117,7 +117,7 @@ public class MainActivity extends Activity {
                 c.setOrientation(LinearLayout.VERTICAL);
                 c.setPadding(18, 14, 18, 14);
                 c.setBackground(bg(Color.parseColor("#141d2d"), Color.parseColor("#23334d"), 12));
-                String[] it = ords.get(i);
+                final String[] it = ords.get(i);
                 TextView t1 = new TextView(MainActivity.this);
                 t1.setText("📦 Track ID: " + it[0]); t1.setTextColor(Color.parseColor("#00E676"));
                 t1.setTypeface(Typeface.DEFAULT_BOLD);
@@ -126,10 +126,12 @@ public class MainActivity extends Activity {
                 t2.setTextColor(Color.parseColor("#64B5F6"));
                 t2.setPadding(0, 4, 0, 0);
                 c.addView(t1); c.addView(t2);
-                c.setOnClickListener(vw -> {
-                    ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(ClipData.newPlainText("ID", it[1]));
-                    Toast.makeText(MainActivity.this, "Copied: " + it[1], Toast.LENGTH_SHORT).show();
+                c.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View vw) {
+                        ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        cm.setPrimaryClip(ClipData.newPlainText("ID", it[1]));
+                        Toast.makeText(MainActivity.this, "Copied: " + it[1], Toast.LENGTH_SHORT).show();
+                    }
                 });
                 return c;
             }
@@ -172,7 +174,9 @@ public class MainActivity extends Activity {
         bS = new Button(this); bS.setText("🏆 Top First"); bS.setTextSize(11f);
         bS.setTextColor(Color.parseColor("#00E676"));
         bS.setBackground(bg(Color.parseColor("#1f2d47"), Color.parseColor("#00E676"), 10));
-        bS.setOnClickListener(v -> { top = !top; bS.setText(top ? "🏆 Top First" : "⚠️ Low First"); load(); });
+        bS.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { top = !top; bS.setText(top ? "🏆 Top First" : "⚠️ Low First"); load(); }
+        });
         sb.addView(bS);
         vP.addView(sb);
 
@@ -180,35 +184,41 @@ public class MainActivity extends Activity {
         vC.setOrientation(LinearLayout.VERTICAL);
         vP.addView(vC);
 
-        bT.setOnClickListener(v -> {
-            vT.setVisibility(View.VISIBLE); sP.setVisibility(View.GONE);
-            bT.setBackground(bg(Color.parseColor("#00E676"), 0, 10)); bT.setTextColor(Color.BLACK);
-            bP.setBackground(bg(Color.parseColor("#1a2333"), 0, 10)); bP.setTextColor(Color.parseColor("#8fa0bc"));
+        bT.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                vT.setVisibility(View.VISIBLE); sP.setVisibility(View.GONE);
+                bT.setBackground(bg(Color.parseColor("#00E676"), 0, 10)); bT.setTextColor(Color.BLACK);
+                bP.setBackground(bg(Color.parseColor("#1a2333"), 0, 10)); bP.setTextColor(Color.parseColor("#8fa0bc"));
+            }
         });
-        bP.setOnClickListener(v -> {
-            vT.setVisibility(View.GONE); sP.setVisibility(View.VISIBLE);
-            bP.setBackground(bg(Color.parseColor("#00E676"), 0, 10)); bP.setTextColor(Color.BLACK);
-            bT.setBackground(bg(Color.parseColor("#1a2333"), 0, 10)); bT.setTextColor(Color.parseColor("#8fa0bc"));
-            load();
+        bP.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                vT.setVisibility(View.GONE); sP.setVisibility(View.VISIBLE);
+                bP.setBackground(bg(Color.parseColor("#00E676"), 0, 10)); bP.setTextColor(Color.BLACK);
+                bT.setBackground(bg(Color.parseColor("#1a2333"), 0, 10)); bT.setTextColor(Color.parseColor("#8fa0bc"));
+                load();
+            }
         });
 
         setContentView(r);
     }
 
-    Button flt(String txt, String m) {
+    Button flt(String txt, final String m) {
         Button b = new Button(this);
         b.setText(txt);
         b.setBackground(bg(m.equals(mode) ? Color.parseColor("#238636") : Color.parseColor("#1a2333"), 0, 10));
         b.setTextColor(m.equals(mode) ? Color.WHITE : Color.parseColor("#8fa0bc"));
-        b.setOnClickListener(v -> {
-            mode = m;
-            b1.setBackground(bg("daily".equals(m) ? Color.parseColor("#238636") : Color.parseColor("#1a2333"), 0, 10));
-            b1.setTextColor("daily".equals(m) ? Color.WHITE : Color.parseColor("#8fa0bc"));
-            b2.setBackground(bg("weekly".equals(m) ? Color.parseColor("#238636") : Color.parseColor("#1a2333"), 0, 10));
-            b2.setTextColor("weekly".equals(m) ? Color.WHITE : Color.parseColor("#8fa0bc"));
-            b3.setBackground(bg("monthly".equals(m) ? Color.parseColor("#238636") : Color.parseColor("#1a2333"), 0, 10));
-            b3.setTextColor("monthly".equals(m) ? Color.WHITE : Color.parseColor("#8fa0bc"));
-            load();
+        b.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                mode = m;
+                b1.setBackground(bg("daily".equals(m) ? Color.parseColor("#238636") : Color.parseColor("#1a2333"), 0, 10));
+                b1.setTextColor("daily".equals(m) ? Color.WHITE : Color.parseColor("#8fa0bc"));
+                b2.setBackground(bg("weekly".equals(m) ? Color.parseColor("#238636") : Color.parseColor("#1a2333"), 0, 10));
+                b2.setTextColor("weekly".equals(m) ? Color.WHITE : Color.parseColor("#8fa0bc"));
+                b3.setBackground(bg("monthly".equals(m) ? Color.parseColor("#238636") : Color.parseColor("#1a2333"), 0, 10));
+                b3.setTextColor("monthly".equals(m) ? Color.WHITE : Color.parseColor("#8fa0bc"));
+                load();
+            }
         });
         return b;
     }
@@ -248,7 +258,7 @@ public class MainActivity extends Activity {
         hc.close();
 
         Cursor ac = db.rawQuery("SELECT n, m, SUM(o), SUM(l), SUM(p), SUM(k) FROM p " + w + " GROUP BY n, m", null);
-        ArrayList<String[]> list = new ArrayList<>();
+        ArrayList<String[]> list = new ArrayList<String[]>();
         while (ac.moveToNext()) {
             int o = ac.getInt(2), d = ac.getInt(3), op = ac.getInt(4), p = ac.getInt(5);
             int dnp = o + op, dnpc = d + p;
@@ -257,7 +267,12 @@ public class MainActivity extends Activity {
         }
         ac.close();
 
-        Collections.sort(list, (a, b) -> top ? Double.compare(Double.parseDouble(b[9]), Double.parseDouble(a[9])) : Double.compare(Double.parseDouble(a[9]), Double.parseDouble(b[9])));
+        Collections.sort(list, new Comparator<String[]>() {
+            public int compare(String[] a, String[] b) {
+                double r1 = Double.parseDouble(a[9]), r2 = Double.parseDouble(b[9]);
+                return top ? Double.compare(r2, r1) : Double.compare(r1, r2);
+            }
+        });
 
         int rank = 1;
         for (String[] ag : list) {
@@ -287,27 +302,37 @@ public class MainActivity extends Activity {
     }
 
     void auth() {
-        EditText in = new EditText(this);
+        final EditText in = new EditText(this);
         in.setHint("PIN..."); in.setInputType(InputType.TYPE_CLASS_NUMBER);
         new AlertDialog.Builder(this).setTitle("🔐 Admin").setView(in)
-            .setPositiveButton("Verify", (d, w) -> {
-                if ("9547927698".equals(in.getText().toString().trim())) syncDlg();
-                else Toast.makeText(this, "Wrong PIN!", Toast.LENGTH_SHORT).show();
+            .setPositiveButton("Verify", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface d, int w) {
+                    if ("9547927698".equals(in.getText().toString().trim())) syncDlg();
+                    else Toast.makeText(MainActivity.this, "Wrong PIN!", Toast.LENGTH_SHORT).show();
+                }
             }).show();
     }
 
     void syncDlg() {
         new AlertDialog.Builder(this).setTitle("⚡ Sync Options")
-            .setPositiveButton("Sync Now", (d, w) -> new Thread(this::doSync).start())
-            .setNegativeButton("Clear Data", (d, w) -> {
-                db.delete("o", null, null); db.delete("p", null, null);
-                runOnUiThread(() -> { cnt(); qry(""); Toast.makeText(this, "Cleared!", Toast.LENGTH_SHORT).show(); });
+            .setPositiveButton("Sync Now", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface d, int w) {
+                    new Thread(new Runnable() { public void run() { doSync(); } }).start();
+                }
+            })
+            .setNegativeButton("Clear Data", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface d, int w) {
+                    db.delete("o", null, null); db.delete("p", null, null);
+                    runOnUiThread(new Runnable() {
+                        public void run() { cnt(); qry(""); Toast.makeText(MainActivity.this, "Cleared!", Toast.LENGTH_SHORT).show(); }
+                    });
+                }
             }).show();
     }
 
     void doSync() {
         try {
-            runOnUiThread(() -> Toast.makeText(this, "Syncing...", Toast.LENGTH_SHORT).show());
+            runOnUiThread(new Runnable() { public void run() { Toast.makeText(MainActivity.this, "Syncing...", Toast.LENGTH_SHORT).show(); } });
             String curDt = dt();
             HttpURLConnection conn = (HttpURLConnection) new URL(CSV).openConnection();
             conn.setConnectTimeout(15000);
@@ -346,19 +371,20 @@ public class MainActivity extends Activity {
                 }
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
-            int fin = count;
-            runOnUiThread(() -> {
-                Toast.makeText(this, "Synced " + fin + " items!", Toast.LENGTH_LONG).show();
-                cnt();
-                if (sP.getVisibility() == View.VISIBLE) load();
+            final int fin = count;
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    Toast.makeText(MainActivity.this, "Synced " + fin + " items!", Toast.LENGTH_LONG).show();
+                    cnt();
+                    if (sP.getVisibility() == View.VISIBLE) load();
+                }
             });
         } catch (Exception e) {
-            runOnUiThread(() -> Toast.makeText(this, "Sync Failed!", Toast.LENGTH_SHORT).show());
+            runOnUiThread(new Runnable() { public void run() { Toast.makeText(MainActivity.this, "Sync Failed!", Toast.LENGTH_SHORT).show(); } });
         }
     }
 
     int pInt(String s) {
         try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
     }
-                                     }
-        
+}
