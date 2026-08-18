@@ -317,7 +317,9 @@ public class MainActivity extends Activity {
             if (c.moveToFirst()) count = c.getInt(0);
             c.close();
             txtActiveCount.setText("📦 Orders List (Active: " + count + ")");
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void executeSearch(String q) {
@@ -333,7 +335,9 @@ public class MainActivity extends Activity {
                 ordersList.add(new OrderModel(c.getString(0), c.getString(1)));
             }
             c.close();
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         ordersAdapter.notifyDataSetChanged();
     }
 
@@ -352,9 +356,12 @@ public class MainActivity extends Activity {
 
             Cursor hc = db.rawQuery("SELECT SUM(ofd), SUM(del), SUM(ofp), SUM(piked) FROM agent_performance" + cond, null);
             if (hc.moveToFirst()) {
-                int tofd = hc.getInt(0); int tdel = hc.getInt(1);
-                int tofp = hc.getInt(2); int tpik = hc.getInt(3);
-                int tdnp = tofd + tofp; int tdnpc = tdel + tpik;
+                int tofd = hc.getInt(0);
+                int tdel = hc.getInt(1);
+                int tofp = hc.getInt(2);
+                int tpik = hc.getInt(3);
+                int tdnp = tofd + tofp;
+                int tdnpc = tdel + tpik;
                 double r = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
                 txtHubStats.setText("OFD: " + tofd + " | DEL: " + tdel + " | OFP: " + tofp + " | PIKED: " + tpik + "\nDNP: " + tdnp + " | DNPC: " + tdnpc + " | Actual Conv: " + String.format(Locale.US, "%.1f%%", r));
             } else {
@@ -402,7 +409,9 @@ public class MainActivity extends Activity {
 
                 agentsContainer.addView(card);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void showAdminDialog() {
@@ -439,12 +448,16 @@ public class MainActivity extends Activity {
         builder.setNegativeButton("Clear Data", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                SQLiteDatabase db = dbHelper.getWritableDatabase();
-                db.delete("orders", null, null);
-                db.delete("agent_performance", null, null);
-                refreshTotalCount();
-                executeSearch("");
-                Toast.makeText(MainActivity.this, "All Data Cleared!", Toast.LENGTH_SHORT).show();
+                try {
+                    SQLiteDatabase db = dbHelper.getWritableDatabase();
+                    db.delete("orders", null, null);
+                    db.delete("agent_performance", null, null);
+                    refreshTotalCount();
+                    executeSearch("");
+                    Toast.makeText(MainActivity.this, "All Data Cleared!", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
         builder.show();
@@ -458,10 +471,4 @@ public class MainActivity extends Activity {
 
         @Override
         protected Integer doInBackground(Void... voids) {
-            int count = 0;
-            String cycleDate = getShiftCycleDate();
-            try {
-                URL url = new URL(CSV_URL);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(15000);
-                BufferedReader r = ne
+       
