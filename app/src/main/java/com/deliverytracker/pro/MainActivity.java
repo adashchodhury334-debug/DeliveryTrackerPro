@@ -1,29 +1,32 @@
 package com.deliverytracker.pro;
 
-import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -34,180 +37,325 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
-    private Button tabTracker, tabPerformance;
-    private LinearLayout secTracker, secPerformance, agentsContainer;
-    private EditText searchEditText;
-    private ListView ordersListView;
-    private TextView txtActiveCount, txtHubName, txtHubStats;
-    private Button btnAdmin, btnDaily, btnWeekly, btnMonthly;
-    
     private DatabaseHelper dbHelper;
-    private String currentFilter = "daily";
     private final ArrayList<OrderModel> ordersList = new ArrayList<>();
     private OrdersAdapter ordersAdapter;
+
+    private LinearLayout secTracker, secPerformance, agentsContainer;
+    private Button btnTabTracker, btnTabPerf;
+    private TextView txtActiveCount, txtHubStats;
+    private EditText searchInput;
+    private Button btnDaily, btnWeekly, btnMonthly;
+    private String currentFilter = "daily";
 
     private static final String CSV_URL = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        
+        try {
+            dbHelper = new DatabaseHelper(this);
+            buildDynamicUI();
+            refreshTotalCount();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "App Launch Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
 
-        dbHelper = new DatabaseHelper(this);
+    private void buildDynamicUI() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.parseColor("#0d1117"));
 
-        tabTracker = findViewById(R.id.tabTracker);
-        tabPerformance = findViewById(R.id.tabPerformance);
-        secTracker = findViewById(R.id.secTracker);
-        secPerformance = findViewById(R.id.secPerformance);
-        agentsContainer = findViewById(R.id.agentsContainer);
-        searchEditText = findViewById(R.id.searchEditText);
-        ordersListView = findViewById(R.id.ordersListView);
-        txtActiveCount = findViewById(R.id.txtActiveCount);
-        txtHubName = findViewById(R.id.txtHubName);
-        txtHubStats = findViewById(R.id.txtHubStats);
-        btnAdmin = findViewById(R.id.btnAdmin);
-        btnDaily = findViewById(R.id.btnDaily);
-        btnWeekly = findViewById(R.id.btnWeekly);
-        btnMonthly = findViewById(R.id.btnMonthly);
+        // 1. Top Header
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setBackgroundColor(Color.parseColor("#161b22"));
+        header.setPadding(24, 20, 24, 20);
+        header.setGravity(Gravity.CENTER_VERTICAL);
 
-        ordersAdapter = new OrdersAdapter(this, ordersList);
-        ordersListView.setAdapter(ordersAdapter);
+        TextView title = new TextView(this);
+        title.setText("⚡ Delivery Tracker Pro");
+        title.setTextColor(Color.parseColor("#00E676"));
+        title.setTextSize(18);
+        title.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams lpTitle = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        header.addView(title, lpTitle);
 
-        // Solid Native Tab Switching
-        tabTracker.setOnClickListener(v -> {
-            secTracker.setVisibility(View.VISIBLE);
-            secPerformance.setVisibility(View.GONE);
-            tabTracker.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF00E676));
-            tabTracker.setTextColor(0xFF000000);
-            tabPerformance.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF21262d));
-            tabPerformance.setTextColor(0xFF8b949e);
-        });
+        Button btnAdmin = new Button(this);
+        btnAdmin.setText("🔒 Admin");
+        btnAdmin.setTextColor(Color.parseColor("#00E676"));
+        btnAdmin.setBackgroundColor(Color.parseColor("#21262d"));
+        btnAdmin.setOnClickListener(v -> showAdminDialog());
+        header.addView(btnAdmin);
+        root.addView(header);
 
-        tabPerformance.setOnClickListener(v -> {
-            secTracker.setVisibility(View.GONE);
-            secPerformance.setVisibility(View.VISIBLE);
-            tabPerformance.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF00E676));
-            tabPerformance.setTextColor(0xFF000000);
-            tabTracker.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF21262d));
-            tabTracker.setTextColor(0xFF8b949e);
-            loadPerformanceData();
-        });
+        // 2. Dual Tabs
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setBackgroundColor(Color.parseColor("#161b22"));
+        tabs.setPadding(12, 10, 12, 10);
 
-        // Search Input
-        searchEditText.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int count2) {}
+        btnTabTracker = new Button(this);
+        btnTabTracker.setText("🔍 Tracker");
+        btnTabTracker.setTextColor(Color.BLACK);
+        btnTabTracker.setBackgroundColor(Color.parseColor("#00E676"));
+        btnTabTracker.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams lpTab = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        lpTab.setMargins(6, 0, 6, 0);
+
+        btnTabPerf = new Button(this);
+        btnTabPerf.setText("📊 Performance");
+        btnTabPerf.setTextColor(Color.parseColor("#8b949e"));
+        btnTabPerf.setBackgroundColor(Color.parseColor("#21262d"));
+        btnTabPerf.setTypeface(null, Typeface.BOLD);
+
+        tabs.addView(btnTabTracker, lpTab);
+        tabs.addView(btnTabPerf, lpTab);
+        root.addView(tabs);
+
+        // 3. Container
+        FrameLayout container = new FrameLayout(this);
+        container.setPadding(20, 20, 20, 20);
+        root.addView(container, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // --- Tracker Section ---
+        secTracker = new LinearLayout(this);
+        secTracker.setOrientation(LinearLayout.VERTICAL);
+        secTracker.setVisibility(View.VISIBLE);
+
+        searchInput = new EditText(this);
+        searchInput.setHint("Enter Tracking ID (FMPC...)...");
+        searchInput.setHintTextColor(Color.parseColor("#8b949e"));
+        searchInput.setTextColor(Color.WHITE);
+        searchInput.setBackgroundColor(Color.parseColor("#161b22"));
+        searchInput.setPadding(24, 24, 24, 24);
+        searchInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                executeLocalSearch(s.toString().trim());
+                executeSearch(s.toString().trim());
             }
             @Override public void afterTextChanged(Editable s) {}
         });
+        secTracker.addView(searchInput);
 
-        // Admin Button
-        btnAdmin.setOnClickListener(v -> showAdminDialog());
+        txtActiveCount = new TextView(this);
+        txtActiveCount.setText("📦 Orders List (Active: 0)");
+        txtActiveCount.setTextColor(Color.parseColor("#8b949e"));
+        txtActiveCount.setPadding(0, 20, 0, 16);
+        txtActiveCount.setTypeface(null, Typeface.BOLD);
+        secTracker.addView(txtActiveCount);
 
-        // Time Filters
-        btnDaily.setOnClickListener(v -> updateFilter("daily"));
-        btnWeekly.setOnClickListener(v -> updateFilter("weekly"));
-        btnMonthly.setOnClickListener(v -> updateFilter("monthly"));
+        ListView listView = new ListView(this);
+        ordersAdapter = new OrdersAdapter(this, ordersList);
+        listView.setAdapter(ordersAdapter);
+        listView.setDividerHeight(1);
+        secTracker.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        container.addView(secTracker);
 
-        refreshTotalCount();
+        // --- Performance Section ---
+        ScrollView scrollPerf = new ScrollView(this);
+        secPerformance = new LinearLayout(this);
+        secPerformance.setOrientation(LinearLayout.VERTICAL);
+        scrollPerf.addView(secPerformance);
+        scrollPerf.setVisibility(View.GONE);
+        container.addView(scrollPerf);
+
+        // Filter Buttons
+        LinearLayout filters = new LinearLayout(this);
+        filters.setOrientation(LinearLayout.HORIZONTAL);
+        filters.setPadding(0, 0, 0, 16);
+
+        btnDaily = new Button(this);
+        btnDaily.setText("📅 Daily");
+        btnDaily.setTextColor(Color.WHITE);
+        btnDaily.setBackgroundColor(Color.parseColor("#238636"));
+        btnDaily.setOnClickListener(v -> setFilter("daily"));
+
+        btnWeekly = new Button(this);
+        btnWeekly.setText("📆 Weekly");
+        btnWeekly.setTextColor(Color.parseColor("#8b949e"));
+        btnWeekly.setBackgroundColor(Color.parseColor("#21262d"));
+        btnWeekly.setOnClickListener(v -> setFilter("weekly"));
+
+        btnMonthly = new Button(this);
+        btnMonthly.setText("🗓️ Monthly");
+        btnMonthly.setTextColor(Color.parseColor("#8b949e"));
+        btnMonthly.setBackgroundColor(Color.parseColor("#21262d"));
+        btnMonthly.setOnClickListener(v -> setFilter("monthly"));
+
+        LinearLayout.LayoutParams lpF = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        lpF.setMargins(4, 0, 4, 0);
+        filters.addView(btnDaily, lpF);
+        filters.addView(btnWeekly, lpF);
+        filters.addView(btnMonthly, lpF);
+        secPerformance.addView(filters);
+
+        // Hub Summary Box
+        LinearLayout hubBox = new LinearLayout(this);
+        hubBox.setOrientation(LinearLayout.VERTICAL);
+        hubBox.setBackgroundColor(Color.parseColor("#1c2331"));
+        hubBox.setPadding(24, 24, 24, 24);
+
+        TextView hubTitle = new TextView(this);
+        hubTitle.setText("🏢 MALBAZARHUB_NJP  |  🎯 Target: 92.0%");
+        hubTitle.setTextColor(Color.parseColor("#00E676"));
+        hubTitle.setTypeface(null, Typeface.BOLD);
+        hubTitle.setTextSize(15);
+        hubBox.addView(hubTitle);
+
+        txtHubStats = new TextView(this);
+        txtHubStats.setTextColor(Color.WHITE);
+        txtHubStats.setTextSize(13);
+        txtHubStats.setPadding(0, 12, 0, 0);
+        hubBox.addView(txtHubStats);
+        secPerformance.addView(hubBox);
+
+        TextView agentTitle = new TextView(this);
+        agentTitle.setText("👥 Delivery Agents Report (Low to High)");
+        agentTitle.setTextColor(Color.parseColor("#8b949e"));
+        agentTitle.setPadding(0, 24, 0, 12);
+        agentTitle.setTypeface(null, Typeface.BOLD);
+        secPerformance.addView(agentTitle);
+
+        agentsContainer = new LinearLayout(this);
+        agentsContainer.setOrientation(LinearLayout.VERTICAL);
+        secPerformance.addView(agentsContainer);
+
+        // Tab Listeners
+        btnTabTracker.setOnClickListener(v -> {
+            secTracker.setVisibility(View.VISIBLE);
+            scrollPerf.setVisibility(View.GONE);
+            btnTabTracker.setBackgroundColor(Color.parseColor("#00E676"));
+            btnTabTracker.setTextColor(Color.BLACK);
+            btnTabPerf.setBackgroundColor(Color.parseColor("#21262d"));
+            btnTabPerf.setTextColor(Color.parseColor("#8b949e"));
+        });
+
+        btnTabPerf.setOnClickListener(v -> {
+            secTracker.setVisibility(View.GONE);
+            scrollPerf.setVisibility(View.VISIBLE);
+            btnTabPerf.setBackgroundColor(Color.parseColor("#00E676"));
+            btnTabPerf.setTextColor(Color.BLACK);
+            btnTabTracker.setBackgroundColor(Color.parseColor("#21262d"));
+            btnTabTracker.setTextColor(Color.parseColor("#8b949e"));
+            loadPerformance();
+        });
+
+        setContentView(root);
     }
 
-    private void updateFilter(String filter) {
-        currentFilter = filter;
-        btnDaily.setBackgroundTintList(android.content.res.ColorStateList.valueOf(filter.equals("daily") ? 0xFF238636 : 0xFF21262d));
-        btnWeekly.setBackgroundTintList(android.content.res.ColorStateList.valueOf(filter.equals("weekly") ? 0xFF238636 : 0xFF21262d));
-        btnMonthly.setBackgroundTintList(android.content.res.ColorStateList.valueOf(filter.equals("monthly") ? 0xFF238636 : 0xFF21262d));
-        loadPerformanceData();
+    private void setFilter(String mode) {
+        currentFilter = mode;
+        btnDaily.setBackgroundColor(mode.equals("daily") ? Color.parseColor("#238636") : Color.parseColor("#21262d"));
+        btnDaily.setTextColor(mode.equals("daily") ? Color.WHITE : Color.parseColor("#8b949e"));
+        btnWeekly.setBackgroundColor(mode.equals("weekly") ? Color.parseColor("#238636") : Color.parseColor("#21262d"));
+        btnWeekly.setTextColor(mode.equals("weekly") ? Color.WHITE : Color.parseColor("#8b949e"));
+        btnMonthly.setBackgroundColor(mode.equals("monthly") ? Color.parseColor("#238636") : Color.parseColor("#21262d"));
+        btnMonthly.setTextColor(mode.equals("monthly") ? Color.WHITE : Color.parseColor("#8b949e"));
+        loadPerformance();
     }
 
     public static String getShiftCycleDate() {
         Calendar cal = Calendar.getInstance();
         int hour = cal.get(Calendar.HOUR_OF_DAY);
-        if (hour < 9) {
-            cal.add(Calendar.DAY_OF_YEAR, -1);
-        }
+        if (hour < 9) cal.add(Calendar.DAY_OF_YEAR, -1);
         return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.getTime());
     }
 
     private void refreshTotalCount() {
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM orders", null);
-        int count = 0;
-        if (cursor.moveToFirst()) count = cursor.getInt(0);
-        cursor.close();
-        txtActiveCount.setText("📦 Order Results (Active: " + count + ")");
+        try {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            Cursor c = db.rawQuery("SELECT COUNT(*) FROM orders", null);
+            int count = 0;
+            if (c.moveToFirst()) count = c.getInt(0);
+            c.close();
+            txtActiveCount.setText("📦 Orders List (Active: " + count + ")");
+        } catch (Exception ignored) {}
     }
 
-    private void executeLocalSearch(String query) {
+    private void executeSearch(String q) {
         ordersList.clear();
-        if (query.isEmpty()) {
+        if (q.isEmpty()) {
             ordersAdapter.notifyDataSetChanged();
             return;
         }
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT tracking_id, order_id FROM orders WHERE tracking_id LIKE ? LIMIT 40", new String[]{"%" + query + "%"});
-        while (c.moveToNext()) {
-            ordersList.add(new OrderModel(c.getString(0), c.getString(1)));
-        }
-        c.close();
+        try {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            Cursor c = db.rawQuery("SELECT tracking_id, order_id FROM orders WHERE tracking_id LIKE ? LIMIT 40", new String[]{"%" + q + "%"});
+            while (c.moveToNext()) {
+                ordersList.add(new OrderModel(c.getString(0), c.getString(1)));
+            }
+            c.close();
+        } catch (Exception ignored) {}
         ordersAdapter.notifyDataSetChanged();
     }
 
-    private void loadPerformanceData() {
+    private void loadPerformance() {
         agentsContainer.removeAllViews();
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        String cond = "";
-        if (currentFilter.equalsIgnoreCase("daily")) {
-            cond = " WHERE entry_date = (SELECT MAX(entry_date) FROM agent_performance) ";
-        } else if (currentFilter.equalsIgnoreCase("weekly")) {
-            cond = " WHERE entry_date >= date('now', 'localtime', '-7 days') ";
-        } else if (currentFilter.equalsIgnoreCase("monthly")) {
-            cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
-        }
+        try {
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            String cond = "";
+            if ("daily".equalsIgnoreCase(currentFilter)) {
+                cond = " WHERE entry_date = (SELECT MAX(entry_date) FROM agent_performance) ";
+            } else if ("weekly".equalsIgnoreCase(currentFilter)) {
+                cond = " WHERE entry_date >= date('now', 'localtime', '-7 days') ";
+            } else if ("monthly".equalsIgnoreCase(currentFilter)) {
+                cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
+            }
 
-        Cursor hc = db.rawQuery("SELECT SUM(ofd), SUM(del), SUM(ofp), SUM(piked) FROM agent_performance" + cond, null);
-        if (hc.moveToFirst()) {
-            int tofd = hc.getInt(0); int tdel = hc.getInt(1);
-            int tofp = hc.getInt(2); int tpik = hc.getInt(3);
-            int tdnp = tofd + tofp; int tdnpc = tdel + tpik;
-            double rate = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
+            Cursor hc = db.rawQuery("SELECT SUM(ofd), SUM(del), SUM(ofp), SUM(piked) FROM agent_performance" + cond, null);
+            if (hc.moveToFirst()) {
+                int tofd = hc.getInt(0); int tdel = hc.getInt(1);
+                int tofp = hc.getInt(2); int tpik = hc.getInt(3);
+                int tdnp = tofd + tofp; int tdnpc = tdel + tpik;
+                double r = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
+                txtHubStats.setText("OFD: " + tofd + " | DEL: " + tdel + " | OFP: " + tofp + " | PIKED: " + tpik + "\nDNP: " + tdnp + " | DNPC: " + tdnpc + " | Actual Conv: " + String.format(Locale.US, "%.1f%%", r));
+            } else {
+                txtHubStats.setText("No data synced yet. Tap Admin -> Sync Sheet.");
+            }
+            hc.close();
 
-            txtHubStats.setText(String.format(Locale.US, 
-                "Total OFD: %d  |  Total DEL: %d\nTotal OFP: %d  |  Total PIKED: %d\nTotal DNP: %d  |  Total DNPC: %d\nConversion: %.1f%%", 
-                tofd, tdel, tofp, tpik, tdnp, tdnpc, rate));
-        }
-        hc.close();
+            Cursor ac = db.rawQuery("SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked) FROM agent_performance" + cond + "GROUP BY name, mobile", null);
+            ArrayList<AgentModel> list = new ArrayList<>();
+            while (ac.moveToNext()) {
+                list.add(new AgentModel(ac.getString(0), ac.getString(1), ac.getInt(2), ac.getInt(3), ac.getInt(4), ac.getInt(5)));
+            }
+            ac.close();
 
-        Cursor ac = db.rawQuery("SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked) FROM agent_performance" + cond + "GROUP BY name, mobile", null);
-        ArrayList<AgentModel> list = new ArrayList<>();
-        while (ac.moveToNext()) {
-            String name = ac.getString(0); String mob = ac.getString(1);
-            int ofd = ac.getInt(2); int del = ac.getInt(3);
-            int ofp = ac.getInt(4); int pik = ac.getInt(5);
-            list.add(new AgentModel(name, mob, ofd, del, ofp, pik));
-        }
-        ac.close();
+            Collections.sort(list, (a, b) -> Double.compare(a.getRate(), b.getRate()));
 
-        Collections.sort(list, (a, b) -> Double.compare(a.getRate(), b.getRate()));
+            for (AgentModel agent : list) {
+                LinearLayout card = new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setBackgroundColor(Color.parseColor("#161b22"));
+                card.setPadding(20, 16, 20, 16);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, 12);
+                card.setLayoutParams(lp);
 
-        for (AgentModel agent : list) {
-            View view = LayoutInflater.from(this).inflate(android.R.layout.simple_list_item_2, null);
-            TextView text1 = view.findViewById(android.R.id.text1);
-            TextView text2 = view.findViewById(android.R.id.text2);
+                TextView name = new TextView(this);
+                name.setText("👤 " + agent.name + " (" + agent.mobile + ")");
+                name.setTextColor(Color.parseColor("#00E676"));
+                name.setTypeface(null, Typeface.BOLD);
+                name.setTextSize(14);
+                card.addView(name);
 
-            text1.setText("👤 " + agent.name + " (" + agent.mobile + ")");
-            text1.setTextColor(0xFFFFFFFF);
-            text2.setText(String.format(Locale.US, "OFD: %d | DEL: %d | OFP: %d | PIK: %d | DNP: %d | DNPC: %d | Conv: %.1f%%",
-                    agent.ofd, agent.del, agent.ofp, agent.piked, agent.dnp, agent.dnpc, agent.getRate()));
-            text2.setTextColor(0xFF8b949e);
-            
-            view.setPadding(0, 10, 0, 10);
-            agentsContainer.addView(view);
-        }
+                TextView stats = new TextView(this);
+                stats.setText(String.format(Locale.US, "OFD: %d | DEL: %d | OFP: %d | PIK: %d\nDNP: %d | DNPC: %d | Conv: %.1f%%", 
+                        agent.ofd, agent.del, agent.ofp, agent.piked, agent.dnp, agent.dnpc, agent.getRate()));
+                stats.setTextColor(Color.WHITE);
+                stats.setTextSize(12);
+                stats.setPadding(0, 6, 0, 0);
+                card.addView(stats);
+
+                agentsContainer.addView(card);
+            }
+        } catch (Exception ignored) {}
     }
 
     private void showAdminDialog() {
@@ -218,32 +366,32 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
             .setTitle("🔐 Admin Login")
             .setView(input)
-            .setPositiveButton("Verify", (dialog, which) -> {
-                if(input.getText().toString().trim().equals("9547927698")) {
-                    openSyncAction();
+            .setPositiveButton("Verify", (d, w) -> {
+                if ("9547927698".equals(input.getText().toString().trim())) {
+                    openSyncOptions();
                 } else {
-                    Toast.makeText(MainActivity.this, "Wrong PIN!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Wrong PIN!", Toast.LENGTH_SHORT).show();
                 }
             }).show();
     }
 
-    private void openSyncAction() {
+    private void openSyncOptions() {
         new AlertDialog.Builder(this)
-            .setTitle("🔄 Control Panel")
-            .setMessage("Sync data live from Google Sheet or wipe local database?")
-            .setPositiveButton("🔄 Live Sync Now", (dialog, which) -> new SyncTask().execute())
-            .setNegativeButton("⚠️ Wipe All Data", (dialog, which) -> {
+            .setTitle("⚡ Sheet Sync")
+            .setMessage("Sync Google Sheet data live?")
+            .setPositiveButton("Sync Now", (d, w) -> new SyncTask().execute())
+            .setNegativeButton("Clear Data", (d, w) -> {
                 SQLiteDatabase db = dbHelper.getWritableDatabase();
                 db.delete("orders", null, null);
                 db.delete("agent_performance", null, null);
                 refreshTotalCount();
-                Toast.makeText(MainActivity.this, "Database Cleared!", Toast.LENGTH_SHORT).show();
+                executeSearch("");
+                Toast.makeText(this, "All Data Cleared!", Toast.LENGTH_SHORT).show();
             }).show();
     }
 
-    @SuppressLint("StaticFieldLeak")
     private class SyncTask extends AsyncTask<Void, Void, Integer> {
-        @Override protected void onPreExecute() { Toast.makeText(MainActivity.this, "Connecting to sheet...", Toast.LENGTH_SHORT).show(); }
+        @Override protected void onPreExecute() { Toast.makeText(MainActivity.this, "Syncing Google Sheet...", Toast.LENGTH_SHORT).show(); }
         @Override
         protected Integer doInBackground(Void... voids) {
             int count = 0;
@@ -251,6 +399,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 URL url = new URL(CSV_URL);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(15000);
                 BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 SQLiteDatabase db = dbHelper.getWritableDatabase();
                 db.beginTransaction();
@@ -277,13 +426,13 @@ public class MainActivity extends AppCompatActivity {
                         count++;
                     }
 
-                    if (!name.isEmpty()) {
+                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME")) {
                         ContentValues cv = new ContentValues();
                         cv.put("name", name); cv.put("mobile", mob);
-                        cv.put("ofd", p.length > 4 ? parseZero(p[4]) : 0);
-                        cv.put("del", p.length > 5 ? parseZero(p[5]) : 0);
-                        cv.put("ofp", p.length > 6 ? parseZero(p[6]) : 0);
-                        cv.put("piked", p.length > 7 ? parseZero(p[7]) : 0);
+                        cv.put("ofd", p.length > 4 ? parseIntSafe(p[4]) : 0);
+                        cv.put("del", p.length > 5 ? parseIntSafe(p[5]) : 0);
+                        cv.put("ofp", p.length > 6 ? parseIntSafe(p[6]) : 0);
+                        cv.put("piked", p.length > 7 ? parseIntSafe(p[7]) : 0);
                         cv.put("entry_date", cycleDate);
                         db.insert("agent_performance", null, cv);
                     }
@@ -295,61 +444,4 @@ public class MainActivity extends AppCompatActivity {
         }
         @Override protected void onPostExecute(Integer res) {
             if(res >= 0) {
-                Toast.makeText(MainActivity.this, "Synced successfully! Count: " + res, Toast.LENGTH_LONG).show();
-                refreshTotalCount();
-            } else {
-                Toast.makeText(MainActivity.this, "❌ Sync failed! Check Internet Connection.", Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    private int parseZero(String s) { try{ return Integer.parseInt(s.replace("\"", "").trim()); }catch(Exception e){return 0;} }
-
-    private static class OrderModel { 
-        String t, o; 
-        OrderModel(String t, String o){ this.t=t; this.o=o; } 
-    }
-
-    private static class AgentModel {
-        String name, mobile; int ofd, del, ofp, piked, dnp, dnpc;
-        AgentModel(String n, String m, int o, int d, int op, int p) {
-            name=n; mobile=m; ofd=o; del=d; ofp=op; piked=p;
-            dnp = ofd + ofp; dnpc = del + piked;
-        }
-        double getRate() { return dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0; }
-    }
-
-    private static class OrdersAdapter extends BaseAdapter {
-        Context ctx; ArrayList<OrderModel> items;
-        OrdersAdapter(Context c, ArrayList<OrderModel> i){ ctx=c; items=i; }
-        @Override public int getCount() { return items.size(); }
-        @Override public Object getItem(int position) { return items.get(position); }
-        @Override public long getItemId(int position) { return position; }
-        @Override
-        public View getView(int i, View v, ViewGroup p) {
-            if (v == null) v = LayoutInflater.from(ctx).inflate(android.R.layout.simple_list_item_2, null);
-            TextView t1 = v.findViewById(android.R.id.text1);
-            TextView t2 = v.findViewById(android.R.id.text2);
-            OrderModel o = items.get(i);
-            t1.setText("Track ID: " + o.t); t1.setTextColor(0xFF8b949e);
-            t2.setText("Order ID: " + o.o + " [Tap to Copy]"); t2.setTextColor(0xFF00E676);
-            v.setOnClickListener(view -> {
-                ClipboardManager cb = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                ClipData clip = ClipData.newPlainText("Order ID", o.o);
-                cb.setPrimaryClip(clip);
-                Toast.makeText(ctx, "Copied Order ID: " + o.o, Toast.LENGTH_SHORT).show();
-            });
-            return v;
-        }
-    }
-
-    private static class DatabaseHelper extends SQLiteOpenHelper {
-        DatabaseHelper(Context c) { super(c, "TrackerProNative.db", null, 1); }
-        @Override
-        public void onCreate(SQLiteDatabase db) {
-            db.execSQL("CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, tracking_id TEXT, order_id TEXT);");
-            db.execSQL("CREATE TABLE agent_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, mobile TEXT, ofd INTEGER, del INTEGER, ofp INTEGER, piked INTEGER, entry_date TEXT);");
-        }
-        @Override public void onUpgrade(SQLiteDatabase db, int old, int newV) {}
-    }
-}
+                Toast.makeText(MainActivity.this,
