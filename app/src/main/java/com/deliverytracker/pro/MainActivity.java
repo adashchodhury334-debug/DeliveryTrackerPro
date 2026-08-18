@@ -7,8 +7,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Bundle;
-import android.view.MotionEvent;
-import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -32,7 +30,7 @@ public class MainActivity extends Activity {
     private DatabaseHelper dbHelper;
     private static final String GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
 
-    @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,13 +49,6 @@ public class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
         
-        webView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                return false;
-            }
-        });
-        
         setContentView(webView);
         webView.loadUrl("file:///android_asset/index.html");
     }
@@ -67,7 +58,6 @@ public class MainActivity extends Activity {
         int hour = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
 
-        // Subah 9:00:59 AM tak previous day count hoga
         if (hour < 9 || (hour == 9 && minute == 0)) {
             cal.add(Calendar.DAY_OF_YEAR, -1);
         }
@@ -106,7 +96,6 @@ public class MainActivity extends Activity {
                     String col0 = parts[0].replace("\"", "").trim();
                     String col1 = parts.length > 1 ? parts[1].replace("\"", "").trim() : "";
 
-                    // Identify Tracking ID (FMPC...) vs Order ID (OD...)
                     String tId = "";
                     String oId = "";
 
@@ -117,7 +106,6 @@ public class MainActivity extends Activity {
                         tId = col1;
                         oId = col0;
                     } else {
-                        // Default: col0=OD, col1=FMPC or vice versa
                         tId = col1.isEmpty() ? col0 : col1;
                         oId = col0;
                     }
@@ -153,7 +141,6 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // Calculate DNP & DNPC Automatically
                 for (PerformanceData p : agentMap.values()) {
                     ContentValues cv = new ContentValues();
                     cv.put("name", p.name);
@@ -163,8 +150,8 @@ public class MainActivity extends Activity {
                     cv.put("ofp", p.ofp);
                     cv.put("piked", p.piked);
                     
-                    int dnpTotal = p.ofd + p.ofp;       // DNP = OFD + OFP
-                    int dnpcTotal = p.del + p.piked;    // DNPC = DEL + PIKED
+                    int dnpTotal = p.ofd + p.ofp;
+                    int dnpcTotal = p.del + p.piked;
                     cv.put("dnp", dnpTotal);
                     cv.put("dnpc", dnpcTotal);
                     cv.put("total_attempts", dnpTotal);
@@ -209,7 +196,6 @@ public class MainActivity extends Activity {
                     cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
                 }
 
-                // 1. HUB Summary Calculation
                 String hubQuery = "SELECT SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) FROM agent_performance " + cond;
                 hubCursor = db.rawQuery(hubQuery, null);
                 JSONObject hubObj = new JSONObject();
@@ -243,7 +229,6 @@ public class MainActivity extends Activity {
                 }
                 response.put("hub", hubObj);
 
-                // 2. Agents List (Low Conv % on Top ASC)
                 String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) " +
                         "FROM agent_performance " + cond +
                         "GROUP BY name, mobile " +
@@ -409,7 +394,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 18;
+        private static final int DATABASE_VERSION = 19;
 
         public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
@@ -427,4 +412,4 @@ public class MainActivity extends Activity {
             onCreate(db);
         }
     }
-                        }
+                          }
