@@ -46,18 +46,15 @@ public class MainActivity extends Activity {
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        settings.setUseWideViewPort(false);
-        settings.setLoadWithOverviewMode(false);
         
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidNative");
         
-        // Force Touch Dispatch to HTML Layer
         webView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                return false; // Never consume event, pass directly to HTML
+                return false;
             }
         });
         
@@ -70,6 +67,7 @@ public class MainActivity extends Activity {
         int hour = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
 
+        // Subah 9:00:59 AM tak previous day count hoga
         if (hour < 9 || (hour == 9 && minute == 0)) {
             cal.add(Calendar.DAY_OF_YEAR, -1);
         }
@@ -93,51 +91,59 @@ public class MainActivity extends Activity {
                 db.beginTransaction();
                 
                 db.delete("orders", null, null);
+                db.delete("agent_performance", "entry_date = ?", new String[]{cycleDate});
 
                 HashSet<String> seenTrackingIds = new HashSet<>();
                 LinkedHashMap<String, PerformanceData> agentMap = new LinkedHashMap<>();
-                HashSet<String> datesInSheet = new HashSet<>();
 
                 String line;
                 boolean isHeader = true;
                 while ((line = reader.readLine()) != null) {
                     if (isHeader) { isHeader = false; continue; }
                     String[] parts = line.split(",", -1);
-                    if (parts.length < 3) continue;
+                    if (parts.length < 2) continue;
 
-                    String rawDate = parts[0].replace("\"", "").trim();
-                    String tId = parts[1].replace("\"", "").trim();
-                    String oId = parts[2].replace("\"", "").trim();
-                    
-                    if (rawDate.isEmpty() || rawDate.toUpperCase().contains("DATE")) {
-                        rawDate = cycleDate;
+                    String col0 = parts[0].replace("\"", "").trim();
+                    String col1 = parts.length > 1 ? parts[1].replace("\"", "").trim() : "";
+
+                    // Identify Tracking ID (FMPC...) vs Order ID (OD...)
+                    String tId = "";
+                    String oId = "";
+
+                    if (col0.toUpperCase().startsWith("FMPC") || col1.toUpperCase().startsWith("OD")) {
+                        tId = col0;
+                        oId = col1;
+                    } else if (col1.toUpperCase().startsWith("FMPC") || col0.toUpperCase().startsWith("OD")) {
+                        tId = col1;
+                        oId = col0;
+                    } else {
+                        // Default: col0=OD, col1=FMPC or vice versa
+                        tId = col1.isEmpty() ? col0 : col1;
+                        oId = col0;
                     }
-                    datesInSheet.add(rawDate);
 
                     if (!tId.isEmpty() && !seenTrackingIds.contains(tId) && !tId.toUpperCase().contains("TRACKING")) {
                         seenTrackingIds.add(tId);
-                        if (!oId.isEmpty()) {
-                            ContentValues cv = new ContentValues();
-                            cv.put("tracking_id", tId);
-                            cv.put("order_id", oId);
-                            db.insert("orders", null, cv);
-                            count++;
-                        }
+                        ContentValues cv = new ContentValues();
+                        cv.put("tracking_id", tId);
+                        cv.put("order_id", oId);
+                        db.insert("orders", null, cv);
+                        count++;
                     }
 
-                    String name = parts.length > 3 ? parts[3].replace("\"", "").trim() : "";
-                    String mobile = parts.length > 4 ? parts[4].replace("\"", "").trim() : "";
+                    String name = parts.length > 2 ? parts[2].replace("\"", "").trim() : "";
+                    String mobile = parts.length > 3 ? parts[3].replace("\"", "").trim() : "";
 
-                    if (!name.isEmpty()) {
-                        int ofd = parts.length > 5 ? parseSafeInt(parts[5]) : 0;
-                        int del = parts.length > 6 ? parseSafeInt(parts[6]) : 0;
-                        int ofp = parts.length > 7 ? parseSafeInt(parts[7]) : 0;
-                        int piked = parts.length > 8 ? parseSafeInt(parts[8]) : 0;
+                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("AGENT NAME")) {
+                        int ofd = parts.length > 4 ? parseSafeInt(parts[4]) : 0;
+                        int del = parts.length > 5 ? parseSafeInt(parts[5]) : 0;
+                        int ofp = parts.length > 6 ? parseSafeInt(parts[6]) : 0;
+                        int piked = parts.length > 7 ? parseSafeInt(parts[7]) : 0;
 
-                        String key = rawDate + "_" + name + "_" + mobile;
+                        String key = name + "_" + mobile;
                         PerformanceData p = agentMap.get(key);
                         if (p == null) {
-                            p = new PerformanceData(name, mobile, rawDate);
+                            p = new PerformanceData(name, mobile, cycleDate);
                             agentMap.put(key, p);
                         }
                         p.ofd += ofd;
@@ -147,10 +153,7 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                for (String d : datesInSheet) {
-                    db.delete("agent_performance", "entry_date = ?", new String[]{d});
-                }
-
+                // Calculate DNP & DNPC Automatically
                 for (PerformanceData p : agentMap.values()) {
                     ContentValues cv = new ContentValues();
                     cv.put("name", p.name);
@@ -160,8 +163,8 @@ public class MainActivity extends Activity {
                     cv.put("ofp", p.ofp);
                     cv.put("piked", p.piked);
                     
-                    int dnpTotal = p.ofd + p.ofp;
-                    int dnpcTotal = p.del + p.piked;
+                    int dnpTotal = p.ofd + p.ofp;       // DNP = OFD + OFP
+                    int dnpcTotal = p.del + p.piked;    // DNPC = DEL + PIKED
                     cv.put("dnp", dnpTotal);
                     cv.put("dnpc", dnpcTotal);
                     cv.put("total_attempts", dnpTotal);
@@ -206,6 +209,7 @@ public class MainActivity extends Activity {
                     cond = " WHERE entry_date >= date('now', 'localtime', '-30 days') ";
                 }
 
+                // 1. HUB Summary Calculation
                 String hubQuery = "SELECT SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) FROM agent_performance " + cond;
                 hubCursor = db.rawQuery(hubQuery, null);
                 JSONObject hubObj = new JSONObject();
@@ -239,6 +243,7 @@ public class MainActivity extends Activity {
                 }
                 response.put("hub", hubObj);
 
+                // 2. Agents List (Low Conv % on Top ASC)
                 String query = "SELECT name, mobile, SUM(ofd), SUM(del), SUM(ofp), SUM(piked), SUM(dnp), SUM(dnpc) " +
                         "FROM agent_performance " + cond +
                         "GROUP BY name, mobile " +
@@ -404,7 +409,7 @@ public class MainActivity extends Activity {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private static final String DATABASE_NAME = "DeliveryTrackerPro.db";
-        private static final int DATABASE_VERSION = 16;
+        private static final int DATABASE_VERSION = 18;
 
         public DatabaseHelper(Activity context) { super(context, DATABASE_NAME, null, DATABASE_VERSION); }
 
@@ -422,4 +427,4 @@ public class MainActivity extends Activity {
             onCreate(db);
         }
     }
-}
+                        }
