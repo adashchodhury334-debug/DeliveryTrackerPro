@@ -80,7 +80,7 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.parseColor("#0d1117"));
 
-        // Header
+        // Header Top Bar
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setBackgroundColor(Color.parseColor("#161b22"));
@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
         header.addView(btnAdmin);
         root.addView(header);
 
-        // Tabs
+        // Tab Navigation
         LinearLayout tabs = new LinearLayout(this);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
         tabs.setBackgroundColor(Color.parseColor("#161b22"));
@@ -134,12 +134,12 @@ public class MainActivity extends Activity {
         tabs.addView(btnTabPerf, lpTab2);
         root.addView(tabs);
 
-        // Container
+        // Body Frame
         FrameLayout container = new FrameLayout(this);
         container.setPadding(20, 20, 20, 20);
         root.addView(container, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Tracker Section
+        // 1. Tracker Screen
         secTracker = new LinearLayout(this);
         secTracker.setOrientation(LinearLayout.VERTICAL);
         secTracker.setVisibility(View.VISIBLE);
@@ -173,7 +173,7 @@ public class MainActivity extends Activity {
         secTracker.addView(listView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         container.addView(secTracker);
 
-        // Performance Section
+        // 2. Performance Screen
         scrollPerf = new ScrollView(this);
         secPerformance = new LinearLayout(this);
         secPerformance.setOrientation(LinearLayout.VERTICAL);
@@ -181,7 +181,7 @@ public class MainActivity extends Activity {
         scrollPerf.setVisibility(View.GONE);
         container.addView(scrollPerf);
 
-        // Filters
+        // Date Filter Buttons
         LinearLayout filters = new LinearLayout(this);
         filters.setOrientation(LinearLayout.HORIZONTAL);
         filters.setPadding(0, 0, 0, 16);
@@ -191,10 +191,7 @@ public class MainActivity extends Activity {
         btnDaily.setTextColor(Color.WHITE);
         btnDaily.setBackgroundColor(Color.parseColor("#238636"));
         btnDaily.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setFilter("daily");
-            }
+            @Override public void onClick(View v) { setFilter("daily"); }
         });
 
         btnWeekly = new Button(this);
@@ -202,10 +199,7 @@ public class MainActivity extends Activity {
         btnWeekly.setTextColor(Color.parseColor("#8b949e"));
         btnWeekly.setBackgroundColor(Color.parseColor("#21262d"));
         btnWeekly.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setFilter("weekly");
-            }
+            @Override public void onClick(View v) { setFilter("weekly"); }
         });
 
         btnMonthly = new Button(this);
@@ -213,10 +207,7 @@ public class MainActivity extends Activity {
         btnMonthly.setTextColor(Color.parseColor("#8b949e"));
         btnMonthly.setBackgroundColor(Color.parseColor("#21262d"));
         btnMonthly.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setFilter("monthly");
-            }
+            @Override public void onClick(View v) { setFilter("monthly"); }
         });
 
         LinearLayout.LayoutParams lpF1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
@@ -231,7 +222,7 @@ public class MainActivity extends Activity {
         filters.addView(btnMonthly, lpF3);
         secPerformance.addView(filters);
 
-        // Hub Box
+        // Hub Performance Box
         LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackgroundColor(Color.parseColor("#1c2331"));
@@ -262,7 +253,7 @@ public class MainActivity extends Activity {
         agentsContainer.setOrientation(LinearLayout.VERTICAL);
         secPerformance.addView(agentsContainer);
 
-        // Tab click listeners
+        // Tab Switching Handlers
         btnTabTracker.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -365,7 +356,7 @@ public class MainActivity extends Activity {
                 double r = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
                 txtHubStats.setText("OFD: " + tofd + " | DEL: " + tdel + " | OFP: " + tofp + " | PIKED: " + tpik + "\nDNP: " + tdnp + " | DNPC: " + tdnpc + " | Actual Conv: " + String.format(Locale.US, "%.1f%%", r));
             } else {
-                txtHubStats.setText("No data synced yet. Tap Admin -> Sync Sheet.");
+                txtHubStats.setText("No data synced yet. Tap Admin -> Live Sync.");
             }
             hc.close();
 
@@ -437,7 +428,7 @@ public class MainActivity extends Activity {
 
     private void openSyncOptions() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("⚡ Sheet Sync");
+        builder.setTitle("⚡ Google Sheet Sync");
         builder.setMessage("Sync Google Sheet data live?");
         builder.setPositiveButton("Sync Now", new DialogInterface.OnClickListener() {
             @Override
@@ -445,7 +436,7 @@ public class MainActivity extends Activity {
                 new SyncTask().execute();
             }
         });
-        builder.setNegativeButton("Clear Data", new DialogInterface.OnClickListener() {
+        builder.setNegativeButton("Clear All Data", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 try {
@@ -471,4 +462,5 @@ public class MainActivity extends Activity {
 
         @Override
         protected Integer doInBackground(Void... voids) {
-       
+            int count = 0;
+            String cycleDate = getShiftC
