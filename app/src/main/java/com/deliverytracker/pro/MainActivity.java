@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
     FrameLayout root;
     LinearLayout vTrk, vPrf, vCrd;
     Button bT, bP, b1, b2, b3, bSort;
-    TextView tCnt, tHubData;
+    TextView tCnt, tHubData, tTopConv, tTopDnpc;
     ArrayList<String[]> ords = new ArrayList<>();
     BaseAdapter adp;
     String mode = "daily";
@@ -63,7 +63,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         try {
-            db = openOrCreateDatabase("TrackerV17.db", MODE_PRIVATE, null);
+            db = openOrCreateDatabase("TrackerV19.db", MODE_PRIVATE, null);
             db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
         } catch (Exception ignored) {}
@@ -207,16 +207,16 @@ public class MainActivity extends Activity {
         fl.addView(b3, new LinearLayout.LayoutParams(lpF));
         vPrf.addView(fl);
 
-        // Hub Details Card
+        // Hub Details Card (Direct Hub Name Only)
         LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#38BDF8"), 1));
         hubBox.setPadding(18, 16, 18, 16);
 
         TextView hTitle = new TextView(this);
-        hTitle.setText("🏢 NAME: MALBAZARHUB_NJP");
+        hTitle.setText("MALBAZARHUB_NJP");
         hTitle.setTextColor(Color.parseColor("#38BDF8"));
-        hTitle.setTextSize(14f);
+        hTitle.setTextSize(14.5f);
         hTitle.setTypeface(Typeface.DEFAULT_BOLD);
         hubBox.addView(hTitle);
 
@@ -226,6 +226,17 @@ public class MainActivity extends Activity {
         tHubData.setPadding(0, 6, 0, 0);
         hubBox.addView(tHubData);
         vPrf.addView(hubBox, new LinearLayout.LayoutParams(-1, -2));
+
+        // Top Summary Cards (Highest Conv & Highest DNPC)
+        LinearLayout sm = new LinearLayout(this);
+        sm.setPadding(0, 8, 0, 6);
+        LinearLayout sc1 = makeSummaryCard("🏆 TOP CONVERSION", Color.parseColor("#181920"), Color.parseColor("#00E676"), true);
+        LinearLayout sc2 = makeSummaryCard("📦 TOP DNPC", Color.parseColor("#181920"), Color.parseColor("#FB923C"), false);
+        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        scLp.setMargins(0, 0, 6, 0);
+        sm.addView(sc1, scLp);
+        sm.addView(sc2, new LinearLayout.LayoutParams(0, -2, 1f));
+        vPrf.addView(sm);
 
         // Sort Button
         bSort = new Button(this);
@@ -238,7 +249,7 @@ public class MainActivity extends Activity {
             load();
         });
         LinearLayout.LayoutParams sortLp = new LinearLayout.LayoutParams(-1, -2);
-        sortLp.setMargins(0, 8, 0, 8);
+        sortLp.setMargins(0, 2, 0, 8);
         vPrf.addView(bSort, sortLp);
 
         ScrollView sv = new ScrollView(this);
@@ -272,7 +283,26 @@ public class MainActivity extends Activity {
         cnt();
     }
 
-    void load() {
+    LinearLayout makeSummaryCard(String title, int bgCol, int accent, boolean isConv) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setBackground(box(bgCol, 14, Color.parseColor("#2A2D3D"), 1));
+        c.setPadding(14, 12, 14, 12);
+        TextView h = new TextView(this);
+        h.setText(title);
+        h.setTextColor(Color.parseColor("#9CA3AF"));
+        h.setTextSize(10.5f);
+        h.setTypeface(Typeface.DEFAULT_BOLD);
+        c.addView(h);
+        TextView v = new TextView(this);
+        v.setTextColor(accent);
+        v.setTextSize(13f);
+        v.setTypeface(Typeface.DEFAULT_BOLD);
+        v.setPadding(0, 4, 0, 0);
+        c.addView(v);
+        if (isConv) tTopConv = v; else tTopDnpc = v;
+        return c;
+    }    void load() {
         try {
             vCrd.removeAllViews();
             String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date('now','localtime','-7 days') " : " WHERE dt >= date('now','localtime','-30 days') ");
@@ -294,18 +324,35 @@ public class MainActivity extends Activity {
             }
             if (hc != null) hc.close();
 
-            // Agent List
+            // Agent List & Top Performers
             Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
             ArrayList<String[]> list = new ArrayList<>();
+            String bestConvName = "--", bestDnpcName = "--";
+            double maxConv = -1;
+            int maxDnpc = -1;
+
             while (ac != null && ac.moveToNext()) {
                 String name = ac.getString(0);
                 int o = ac.getInt(1), l = ac.getInt(2), p = ac.getInt(3), k = ac.getInt(4);
                 int dnp = o + p, dnpc = l + k;
                 double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
                 list.add(new String[]{name, String.valueOf(o), String.valueOf(l), String.valueOf(p), String.valueOf(k), String.valueOf(dnp), String.valueOf(dnpc), String.format(Locale.US, "%.1f", r), String.valueOf(r)});
+                
+                if (r > maxConv && dnp > 0) {
+                    maxConv = r;
+                    bestConvName = name + "\n" + String.format(Locale.US, "%.1f%%", r);
+                }
+                if (dnpc > maxDnpc) {
+                    maxDnpc = dnpc;
+                    bestDnpcName = name + "\n" + dnpc + " Done";
+                }
             }
             if (ac != null) ac.close();
 
+            tTopConv.setText(bestConvName);
+            tTopDnpc.setText(bestDnpcName);
+
+            // Sort High to Low by default
             Collections.sort(list, (a, b) -> isHighToLow ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
 
             for (String[] ag : list) {
@@ -321,12 +368,26 @@ public class MainActivity extends Activity {
                 clp.setMargins(0, 0, 0, 12);
                 card.setLayoutParams(clp);
 
+                LinearLayout nameRow = new LinearLayout(this);
+                nameRow.setOrientation(LinearLayout.HORIZONTAL);
+                nameRow.setGravity(Gravity.CENTER_VERTICAL);
+
                 TextView n = new TextView(this);
-                n.setText("👤 " + ag[0] + "  |  🔥 Active: " + strk + " Days");
+                n.setText("👤 " + ag[0]);
                 n.setTextColor(badgeColor);
                 n.setTypeface(Typeface.DEFAULT_BOLD);
-                n.setTextSize(14f);
-                card.addView(n);
+                n.setTextSize(13.5f);
+                nameRow.addView(n, new LinearLayout.LayoutParams(0, -2, 1f));
+
+                TextView st = new TextView(this);
+                st.setText("🔥 " + strk + "D");
+                st.setTextColor(Color.parseColor("#FBBF24"));
+                st.setTextSize(11.5f);
+                st.setTypeface(Typeface.DEFAULT_BOLD);
+                st.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
+                st.setPadding(10, 4, 10, 4);
+                nameRow.addView(st);
+                card.addView(nameRow);
 
                 LinearLayout r1 = new LinearLayout(this);
                 r1.setPadding(0, 8, 0, 4);
@@ -345,7 +406,9 @@ public class MainActivity extends Activity {
                 vCrd.addView(card);
             }
         } catch (Exception ignored) {}
-    }    int getStreak(String name) {
+    }
+
+    int getStreak(String name) {
         int streak = 0;
         Cursor c = db.rawQuery("SELECT dt FROM prf WHERE n = ? AND (o+p) > 0 GROUP BY dt ORDER BY dt DESC", new String[]{name});
         String lastDt = null;
@@ -537,6 +600,6 @@ public class MainActivity extends Activity {
     int pInt(String s) {
         try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
     }
-}
+            }
 
     
