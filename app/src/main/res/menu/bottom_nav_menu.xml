@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_order_id"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="ORDER ID" />
+    <item
+        android:id="@+id/nav_performance"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="PERFORMANCE" />
+    <item
+        android:id="@+id/nav_hub_vs_hub"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="HUB VS HUB" />
+</menu>
