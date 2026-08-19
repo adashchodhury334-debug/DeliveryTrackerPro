@@ -30,6 +30,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -49,7 +50,8 @@ public class MainActivity extends Activity {
     BaseAdapter adp;
     String mode = "daily";
     boolean isHighToLow = true;
-    String CSV = "https://docs.google.com/spreadsheets/d/1SxsB-1srlfIv3AN5H2ZbMJDEyteJ6LIDTV4EI7rbxjw/export?format=csv&gid=0";
+    
+    String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
 
     GradientDrawable box(int c, int r, int sCol, int sW) {
         GradientDrawable g = new GradientDrawable();
@@ -92,14 +94,14 @@ public class MainActivity extends Activity {
         h.setPadding(20, 16, 20, 16);
         h.setGravity(Gravity.CENTER_VERTICAL);
         TextView t = new TextView(this);
-        t.setText("📊 Delivery Tracker Pro");
+        t.setText("📊 Delivery Tracker");
         t.setTextColor(Color.WHITE);
         t.setTextSize(16f);
         t.setTypeface(Typeface.DEFAULT_BOLD);
         h.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
 
         Button bRef = new Button(this);
-        bRef.setText("🔄 Sync");
+        bRef.setText("🔄 SYNC");
         bRef.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
         bRef.setTextColor(Color.BLACK);
         bRef.setTypeface(Typeface.DEFAULT_BOLD);
@@ -140,7 +142,7 @@ public class MainActivity extends Activity {
         body.setPadding(14, 6, 14, 10);
         main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
-        // 1. ORDER ID TAB
+        // 1. ORDER ID / TRACKER VIEW
         vTrk = new LinearLayout(this);
         vTrk.setOrientation(LinearLayout.VERTICAL);
         vTrk.setVisibility(View.VISIBLE);
@@ -203,7 +205,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                // 2. PERFORMANCE TAB
+                // 2. PERFORMANCE VIEW
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -219,7 +221,7 @@ public class MainActivity extends Activity {
         fl.addView(b3, new LinearLayout.LayoutParams(lpF));
         vPrf.addView(fl);
 
-        // HUB HEADER CARD
+        // HUB DETAILS CARD
         LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#38BDF8"), 1));
@@ -312,7 +314,6 @@ public class MainActivity extends Activity {
         vHub.addView(svHub, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vHub);
 
-        // TAB SWITCH
         bT.setOnClickListener(v -> switchTab(0));
         bP.setOnClickListener(v -> switchTab(1));
         bH.setOnClickListener(v -> switchTab(2));
@@ -473,7 +474,6 @@ public class MainActivity extends Activity {
                 t3.setPadding(0, 2, 0, 0);
                 card.addView(t3);
 
-                // CONTACT NUMBER (BLANK)
                 TextView t4 = new TextView(this);
                 t4.setText("");
                 t4.setVisibility(View.GONE);
@@ -484,7 +484,7 @@ public class MainActivity extends Activity {
                 vCrd.addView(card);
             }
         } catch (Exception ignored) {}
-    }    void loadHubVsHub() {
+     void loadHubVsHub() {
         try {
             vHubCrd.removeAllViews();
             Cursor c = db.rawQuery("SELECT hname, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf", null);
@@ -605,15 +605,22 @@ public class MainActivity extends Activity {
     void doSync(boolean isAuto) {
         try {
             String targetUrl = CSV;
-            HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
-            conn.setInstanceFollowRedirects(true);
-            int code = conn.getResponseCode();
-            if (code == 301 || code == 302 || code == 307) {
-                targetUrl = conn.getHeaderField("Location");
+            HttpURLConnection conn = null;
+            for (int i = 0; i < 5; i++) {
                 conn = (HttpURLConnection) new URL(targetUrl).openConnection();
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+                conn.setInstanceFollowRedirects(false);
+                int code = conn.getResponseCode();
+                if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                    targetUrl = conn.getHeaderField("Location");
+                } else {
+                    break;
+                }
             }
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            InputStream is = (conn != null) ? conn.getInputStream() : null;
+            if (is == null) throw new Exception("Unable to connect");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
             String line;
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Calendar.getInstance().getTime());
 
@@ -621,6 +628,18 @@ public class MainActivity extends Activity {
             db.execSQL("DELETE FROM hub_prf");
             while ((line = reader.readLine()) != null) {
                 String[] p = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                // ORDER TRACKER DATA
+                if (p.length >= 2) {
+                    String trackId = clean(p[0]);
+                    String ordId = clean(p[1]);
+                    if (trackId.matches(".*\\d+.*") && ordId.matches(".*\\d+.*")) {
+                        ContentValues ocv = new ContentValues();
+                        ocv.put("t", trackId);
+                        ocv.put("d", ordId);
+                        db.insertWithOnConflict("ord", null, ocv, SQLiteDatabase.CONFLICT_REPLACE);
+                    }
+                }
 
                 // AGENT PERFORMANCE
                 if (p.length >= 6) {
@@ -699,5 +718,5 @@ public class MainActivity extends Activity {
         }
     }
 }
-
+}
     
