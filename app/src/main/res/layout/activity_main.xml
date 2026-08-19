@@ -5,7 +5,18 @@
     android:layout_height="match_parent"
     android:background="#121212">
 
-    <!-- 1. ORDER ID TAB -->
+    <!-- 1. BOTTOM NAVIGATION (Declared First to fix ID resolution) -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#1E1E1E"
+        app:itemIconTint="#FFFFFF"
+        app:itemTextColor="#FFFFFF"
+        app:menu="@menu/bottom_nav_menu" />
+
+    <!-- 2. ORDER ID TAB -->
     <LinearLayout
         android:id="@+id/layoutOrderIdTab"
         android:layout_width="match_parent"
@@ -24,7 +35,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 2. PERFORMANCE TAB -->
+    <!-- 3. PERFORMANCE TAB -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/layoutPerformanceTab"
         android:layout_width="match_parent"
@@ -91,7 +102,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- TOP CONVERSION & TOP DNPC BADGES -->
+            <!-- TOP BADGES -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -107,7 +118,7 @@
                     android:layout_weight="1"
                     android:background="#1F2937"
                     android:padding="10dp"
-                    android:text="🔥 TOP CONVERSION\n---"
+                    android:text="TOP CONVERSION\n---"
                     android:textColor="#FBBF24"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -120,13 +131,13 @@
                     android:layout_weight="1"
                     android:background="#1F2937"
                     android:padding="10dp"
-                    android:text="📦 TOP DNPC\n---"
+                    android:text="TOP DNPC\n---"
                     android:textColor="#60A5FA"
                     android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- AGENT PERFORMANCE SECTION HEADER -->
+            <!-- AGENT PERFORMANCE TITLE -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -145,7 +156,7 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 3. HUB VS HUB TAB -->
+    <!-- 4. HUB VS HUB TAB -->
     <LinearLayout
         android:id="@+id/layoutHubVsHubTab"
         android:layout_width="match_parent"
@@ -158,7 +169,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="14dp"
-            android:text="⚔️ HUB VS HUB"
+            android:text="HUB VS HUB"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -169,129 +180,4 @@
             android:layout_height="match_parent" />
     </LinearLayout>
 
-    <!-- 3 BOTTOM ICONS NAVIGATION -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNav"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="#1E1E1E"
-        app:itemIconTint="#FFFFFF"
-        app:itemTextColor="#FFFFFF"
-        app:menu="@menu/bottom_nav_menu" />
 </RelativeLayout>
-        android:background="#161b22"
-        android:orientation="horizontal"
-        android:weightSum="2"
-        android:padding="4dp">
-        <Button
-            android:id="@+id/tabTracker"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:text="🔍 Tracker"
-            android:backgroundTint="#00E676"
-            android:textColor="#000000"
-            android:textStyle="bold"
-            android:textSize="13sp" />
-        <Button
-            android:id="@+id/tabPerformance"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:text="📊 Performance"
-            android:backgroundTint="#21262d"
-            android:textColor="#8b949e"
-            android:textStyle="bold"
-            android:textSize="13sp"
-            android:layout_marginStart="4dp" />
-    </LinearLayout>
-
-    <FrameLayout
-        android:id="@+id/fragmentContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="12dp">
-
-        <LinearLayout
-            android:id="@+id/secTracker"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:visibility="visible">
-            <EditText
-                android:id="@+id/searchEditText"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:background="@android:drawable/edit_text"
-                android:backgroundTint="#161b22"
-                android:hint="Enter Tracking ID (FMPC...)..."
-                android:textColor="#ffffff"
-                android:textColorHint="#8b949e"
-                android:padding="12dp"
-                android:inputType="text" />
-            <TextView
-                android:id="@+id/txtActiveCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Order Results"
-                android:textColor="#8b949e"
-                android:textStyle="bold"
-                android:layout_marginVertical="10dp"/>
-            <ListView
-                android:id="@+id/ordersListView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:divider="#30363d"
-                android:dividerHeight="1dp" />
-        </LinearLayout>
-
-        <ScrollView
-            android:id="@+id/secPerformance"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-                
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:weightSum="3"
-                    android:layout_marginBottom="12dp">
-                    <Button android:id="@+id/btnDaily" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="📅 Daily" android:backgroundTint="#238636" android:textSize="11sp"/>
-                    <Button android:id="@+id/btnWeekly" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="📆 Weekly" android:backgroundTint="#21262d" android:textSize="11sp" android:layout_marginHorizontal="4dp"/>
-                    <Button android:id="@+id/btnMonthly" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="🗓️ Monthly" android:backgroundTint="#21262d" android:textSize="11sp"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="#1c2331"
-                    android:orientation="vertical"
-                    android:padding="14dp"
-                    android:layout_marginBottom="12dp">
-                    <TextView android:id="@+id/txtHubName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏢 MALBAZARHUB_NJP" android:textColor="#00E676" android:textStyle="bold" android:textSize="16sp"/>
-                    <TextView android:id="@+id/txtHubStats" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#ffffff" android:layout_marginTop="8dp" android:textSize="13sp"/>
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="👥 Delivery Agents Report (Low to High)"
-                    android:textColor="#8b949e"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp"/>
-
-                <LinearLayout
-                    android:id="@+id/agentsContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-            </LinearLayout>
-        </ScrollView>
-    </FrameLayout>
-</LinearLayout>
