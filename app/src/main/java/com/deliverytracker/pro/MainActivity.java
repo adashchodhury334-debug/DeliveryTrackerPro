@@ -63,7 +63,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         try {
-            db = openOrCreateDatabase("TrackerV19.db", MODE_PRIVATE, null);
+            db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
             db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
         } catch (Exception ignored) {}
@@ -302,7 +302,8 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-    }    void load() {
+    }
+        void load() {
         try {
             vCrd.removeAllViews();
             String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date('now','localtime','-7 days') " : " WHERE dt >= date('now','localtime','-30 days') ");
@@ -545,6 +546,8 @@ public class MainActivity extends Activity {
             db.beginTransaction();
             int count = 0;
             try {
+                // Exact Mirroring: Purana order data delete hoga aur sheet ka exact data load hoga
+                db.delete("ord", null, null);
                 db.delete("prf", "dt = ?", new String[]{curDt});
                 db.delete("prf", "dt < date('now', 'localtime', '-30 days')", null);
 
@@ -593,13 +596,13 @@ public class MainActivity extends Activity {
 
     String getDt() {
         Calendar c = Calendar.getInstance();
-        if (c.get(Calendar.HOUR_OF_DAY) < 9) c.add(Calendar.DAY_OF_YEAR, -1);
+        // 2:00 AM Cutoff: Raat 1:59:59 AM tak pichli tareekh manega, 2:00 AM se nayi tareekh shuru hogi
+        if (c.get(Calendar.HOUR_OF_DAY) < 2) c.add(Calendar.DAY_OF_YEAR, -1);
         return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(c.getTime());
     }
 
     int pInt(String s) {
         try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
     }
-            }
+                                                              }
 
-    
