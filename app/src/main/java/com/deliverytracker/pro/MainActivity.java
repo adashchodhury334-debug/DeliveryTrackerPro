@@ -63,7 +63,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         try {
-            db = openOrCreateDatabase("TrackerV15.db", MODE_PRIVATE, null);
+            db = openOrCreateDatabase("TrackerV17.db", MODE_PRIVATE, null);
             db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
         } catch (Exception ignored) {}
@@ -109,14 +109,14 @@ public class MainActivity extends Activity {
         tb.setPadding(16, 8, 16, 4);
         bT = new Button(this);
         bT.setText("🔍 Tracker");
-        bT.setBackground(box(Color.parseColor("#232634"), 12, 0, 0));
-        bT.setTextColor(Color.parseColor("#8E92A4"));
+        bT.setBackground(box(Color.parseColor("#00E676"), 12, 0, 0));
+        bT.setTextColor(Color.BLACK);
+        bT.setTypeface(Typeface.DEFAULT_BOLD);
 
         bP = new Button(this);
         bP.setText("📈 Performance");
-        bP.setBackground(box(Color.parseColor("#00E676"), 12, 0, 0));
-        bP.setTextColor(Color.BLACK);
-        bP.setTypeface(Typeface.DEFAULT_BOLD);
+        bP.setBackground(box(Color.parseColor("#232634"), 12, 0, 0));
+        bP.setTextColor(Color.parseColor("#8E92A4"));
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
         lp.setMargins(3, 0, 3, 0);
@@ -131,10 +131,10 @@ public class MainActivity extends Activity {
         // Tracker View
         vTrk = new LinearLayout(this);
         vTrk.setOrientation(LinearLayout.VERTICAL);
-        vTrk.setVisibility(View.GONE);
+        vTrk.setVisibility(View.VISIBLE);
 
         EditText s = new EditText(this);
-        s.setHint("🔍 Search Tracking ID or Order ID...");
+        s.setHint("🔍 Search last 4-5 digits or full ID...");
         s.setHintTextColor(Color.parseColor("#717688"));
         s.setTextColor(Color.WHITE);
         s.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#00E676"), 1));
@@ -172,16 +172,18 @@ public class MainActivity extends Activity {
                 t1.setTypeface(Typeface.DEFAULT_BOLD);
 
                 TextView t2 = new TextView(MainActivity.this);
-                t2.setText("🛒 Order ID: " + it[1] + "  📋 (Tap to Copy)");
+                t2.setText("🛒 Order ID: " + it[1] + "  📋 (Tap to Copy Last 6 Digits)");
                 t2.setTextColor(Color.parseColor("#00E676"));
                 t2.setPadding(0, 6, 0, 0);
 
                 c.addView(t1);
                 c.addView(t2);
                 c.setOnClickListener(vw -> {
+                    String fullOrd = it[1].trim();
+                    String last6 = (fullOrd.length() >= 6) ? fullOrd.substring(fullOrd.length() - 6) : fullOrd;
                     ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(ClipData.newPlainText("ID", it[1]));
-                    Toast.makeText(MainActivity.this, "Copied: " + it[1], Toast.LENGTH_SHORT).show();
+                    cm.setPrimaryClip(ClipData.newPlainText("Last6Digits", last6));
+                    Toast.makeText(MainActivity.this, "Copied: " + last6, Toast.LENGTH_SHORT).show();
                 });
                 return c;
             }
@@ -192,6 +194,7 @@ public class MainActivity extends Activity {
                 // Performance View
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
+        vPrf.setVisibility(View.GONE);
 
         LinearLayout fl = new LinearLayout(this);
         b1 = flt("📅 Daily", "daily");
@@ -342,8 +345,7 @@ public class MainActivity extends Activity {
                 vCrd.addView(card);
             }
         } catch (Exception ignored) {}
-    }
-        int getStreak(String name) {
+    }    int getStreak(String name) {
         int streak = 0;
         Cursor c = db.rawQuery("SELECT dt FROM prf WHERE n = ? AND (o+p) > 0 GROUP BY dt ORDER BY dt DESC", new String[]{name});
         String lastDt = null;
@@ -452,9 +454,18 @@ public class MainActivity extends Activity {
         try {
             ords.clear();
             if (!q.isEmpty()) {
-                Cursor c = db.rawQuery("SELECT DISTINCT t, d FROM ord WHERE t LIKE ? OR t LIKE ? OR d LIKE ? ORDER BY CASE WHEN t LIKE ? THEN 1 WHEN t LIKE ? THEN 2 ELSE 3 END LIMIT 30", 
-                    new String[]{"%" + q, "%" + q + "%", "%" + q + "%", q, "%" + q});
-                while (c.moveToNext()) ords.add(new String[]{c.getString(0), c.getString(1)});
+                Cursor c = db.rawQuery(
+                    "SELECT DISTINCT t, d FROM ord WHERE t LIKE ? OR t LIKE ? OR d LIKE ? OR d LIKE ? " +
+                    "ORDER BY CASE " +
+                    "WHEN t LIKE ? THEN 1 " +
+                    "WHEN t LIKE ? THEN 2 " +
+                    "WHEN d LIKE ? THEN 3 " +
+                    "ELSE 4 END LIMIT 30",
+                    new String[]{"%" + q, q + "%", "%" + q, q + "%", "%" + q, q + "%", "%" + q}
+                );
+                while (c.moveToNext()) {
+                    ords.add(new String[]{c.getString(0), c.getString(1)});
+                }
                 c.close();
             }
             adp.notifyDataSetChanged();
@@ -527,3 +538,5 @@ public class MainActivity extends Activity {
         try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
     }
 }
+
+    
