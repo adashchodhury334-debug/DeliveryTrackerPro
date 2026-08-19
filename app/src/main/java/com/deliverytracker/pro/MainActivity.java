@@ -1,608 +1,628 @@
-package com.deliverytracker.pro;
+package com.example.deliveryapp;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.ContentValues;
-import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.os.Bundle;
-import android.os.Handler;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.Gravity;
+public class AgentModel {
+    private String name;
+    private int ofd, del, ofp, piked;
+    private String phone; // Filhaal blank rahega
+
+    public AgentModel(String name, int ofd, int del, int ofp, int piked, String phone) {
+        this.name = name;
+        this.ofd = ofd;
+        this.del = del;
+        this.ofp = ofp;
+        this.piked = piked;
+        this.phone = phone;
+    }
+
+    public String getName() { return name; }
+    public String getOfdDelCon() {
+        double con = (ofd > 0) ? ((double) del / ofd) * 100 : 0;
+        return ofd + "/" + del + " = " + String.format("%.1f", con) + "%";
+    }
+    public String getOfpPikCon() {
+        double con = (ofp > 0) ? ((double) piked / ofp) * 100 : 0;
+        return ofp + "/" + piked + " = " + String.format("%.1f", con) + "%";
+    }
+    public String getDnpDnpcCon() {
+        int dnp = ofd + ofp;
+        int dnpc = del + piked;
+        double con = (dnp > 0) ? ((double) dnpc / dnp) * 100 : 0;
+        return dnp + "/" + dnpc + " = " + String.format("%.1f", con) + "%";
+    }
+    public double getTotalCon() {
+        int dnp = ofd + ofp;
+        int dnpc = del + piked;
+        return (dnp > 0) ? ((double) dnpc / dnp) * 100 : 0;
+    }
+    public int getDnpc() { return del + piked; }
+    public String getPhone() { return phone; }
+}package com.example.deliveryapp;
+
+public class HubVsHubModel {
+    private String hubName;
+    private String ofd, del, ofdCon;
+    private String ofp, piked, pikCon;
+    private String dnp, dnpc, totalCon;
+
+    public HubVsHubModel(String hubName, String ofd, String del, String ofdCon, 
+                         String ofp, String piked, String pikCon, 
+                         String dnp, String dnpc, String totalCon) {
+        this.hubName = hubName;
+        this.ofd = ofd;
+        this.del = del;
+        this.ofdCon = ofdCon;
+        this.ofp = ofp;
+        this.piked = piked;
+        this.pikCon = pikCon;
+        this.dnp = dnp;
+        this.dnpc = dnpc;
+        this.totalCon = totalCon;
+    }
+
+    public String getHubName() { return hubName; }
+    public String getOfdDelCon() { return ofd + "/" + del + " = " + ofdCon; }
+    public String getOfpPikCon() { return ofp + "/" + piked + " = " + pikCon; }
+    public String getDnpDnpcCon() { return dnp + "/" + dnpc + " = " + totalCon; }
+}<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_order_id"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="ORDER ID" />
+    <item
+        android:id="@+id/nav_performance"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="PERFORMANCE" />
+    <item
+        android:id="@+id/nav_hub_vs_hub"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="HUB VS HUB" />
+</menu>
+    <?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121212">
+
+    <!-- 1. ORDER ID TAB -->
+    <LinearLayout
+        android:id="@+id/layoutOrderIdTab"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNav"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ORDER ID SEARCH"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 2. PERFORMANCE TAB -->
+    <include
+        android:id="@+id/layoutPerformanceTab"
+        layout="@layout/tab_performance"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNav"
+        android:visibility="visible" />
+
+    <!-- 3. HUB VS HUB TAB -->
+    <LinearLayout
+        android:id="@+id/layoutHubVsHubTab"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNav"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="14dp"
+            android:text="⚔️ HUB VS HUB"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvHubVsHub"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </LinearLayout>
+
+    <!-- 3 BOTTOM ICONS -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#1E1E1E"
+        app:itemIconTint="#FFFFFF"
+        app:itemTextColor="#FFFFFF"
+        app:menu="@menu/bottom_nav_menu" />
+</RelativeLayout>
+    <?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121212">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- HUB HEADER CARD -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#1F2937"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/tvHubHeaderName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MALBAZARHUB_NJP"
+                    android:textColor="#60A5FA"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvHubOfdDel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="OFD/DEL = 0%"
+                    android:textColor="#E5E7EB"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvHubOfpPik"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="OFP/PIKED = 0%"
+                    android:textColor="#E5E7EB"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvHubDnpDnpc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="DNP/DNPC = 0%"
+                    android:textColor="#34D399"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- TOP CONVERSION & TOP DNPC BADGES -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <TextView
+                android:id="@+id/tvTopConversion"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="#374151"
+                android:padding="10dp"
+                android:text="🔥 TOP CONVERSION\n---"
+                android:textColor="#FBBF24"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvTopDnpc"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="#374151"
+                android:padding="10dp"
+                android:text="📦 TOP DNPC\n---"
+                android:textColor="#60A5FA"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- AGENT PERFORMANCE SECTION HEADER -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:text="AGENT PERFORMANCE"
+            android:textColor="#9CA3AF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvAgentPerformance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
+    <?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardBackgroundColor="#1E1E1E"
+    app:cardCornerRadius="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvAgentName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AGENT NAME"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvAgentOfdDel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="OFD/DEL = 0%"
+            android:textColor="#D1D5DB"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvAgentOfpPik"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="OFP/PIKED = 0%"
+            android:textColor="#D1D5DB"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvAgentDnpDnpc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="DNP/DNPC = 0%"
+            android:textColor="#34D399"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <!-- CONTACT NUMBER (FILHAAL BLANK) -->
+        <TextView
+            android:id="@+id/tvAgentContact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text=""
+            android:textColor="#9CA3AF"
+            android:textSize="12sp" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
+    <?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="10dp"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="#1E1E1E"
+    app:cardCornerRadius="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvVsHubName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="HUB NAME"
+            android:textColor="#60A5FA"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvVsOfdDel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="OFD/DEL = 0%"
+            android:textColor="#D1D5DB"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvVsOfpPik"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="OFP/PIKED = 0%"
+            android:textColor="#D1D5DB"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvVsDnpDnpc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="DNP/DNPC = 0%"
+            android:textColor="#34D399"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
+    package com.example.deliveryapp;
+
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.widget.BaseAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.text.SimpleDateFormat;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.List;
+
+public class AgentAdapter extends RecyclerView.Adapter<AgentAdapter.ViewHolder> {
+    private List<AgentModel> list;
+
+    public AgentAdapter(List<AgentModel> list) { this.list = list; }
+
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_agent_performance, parent, false);
+        return new ViewHolder(v);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        AgentModel item = list.get(position);
+        holder.tvName.setText(item.getName());
+        holder.tvOfdDel.setText("OFD/DEL = " + item.getOfdDelCon());
+        holder.tvOfpPik.setText("OFP/PIKED = " + item.getOfpPikCon());
+        holder.tvDnpDnpc.setText("DNP/DNPC = " + item.getDnpDnpcCon());
+        holder.tvContact.setText(item.getPhone()); // Blank rahega
+    }
+
+    @Override
+    public int getItemCount() { return list.size(); }
+
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView tvName, tvOfdDel, tvOfpPik, tvDnpDnpc, tvContact;
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvName = itemView.findViewById(R.id.tvAgentName);
+            tvOfdDel = itemView.findViewById(R.id.tvAgentOfdDel);
+            tvOfpPik = itemView.findViewById(R.id.tvAgentOfpPik);
+            tvDnpDnpc = itemView.findViewById(R.id.tvAgentDnpDnpc);
+            tvContact = itemView.findViewById(R.id.tvAgentContact);
+        }
+    }
+}package com.example.deliveryapp;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.List;
+
+public class HubVsHubAdapter extends RecyclerView.Adapter<HubVsHubAdapter.ViewHolder> {
+    private List<HubVsHubModel> list;
+
+    public HubVsHubAdapter(List<HubVsHubModel> list) { this.list = list; }
+
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_hub_vs_hub, parent, false);
+        return new ViewHolder(v);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        HubVsHubModel item = list.get(position);
+        holder.tvHubName.setText(item.getHubName());
+        holder.tvOfdDel.setText("OFD/DEL = " + item.getOfdDelCon());
+        holder.tvOfpPik.setText("OFP/PIKED = " + item.getOfpPikCon());
+        holder.tvDnpDnpc.setText("DNP/DNPC = " + item.getDnpDnpcCon());
+    }
+
+    @Override
+    public int getItemCount() { return list.size(); }
+
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView tvHubName, tvOfdDel, tvOfpPik, tvDnpDnpc;
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvHubName = itemView.findViewById(R.id.tvVsHubName);
+            tvOfdDel = itemView.findViewById(R.id.tvVsOfdDel);
+            tvOfpPik = itemView.findViewById(R.id.tvVsOfpPik);
+            tvDnpDnpc = itemView.findViewById(R.id.tvVsDnpDnpc);
+        }
+    }package com.example.deliveryapp;
+
+import android.os.Bundle;
+import android.view.View;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Locale;
+import java.util.List;
 
-public class MainActivity extends Activity {
-    SQLiteDatabase db;
-    FrameLayout root;
-    LinearLayout vTrk, vPrf, vCrd;
-    Button bT, bP, b1, b2, b3, bSort;
-    TextView tCnt, tHubData, tTopConv, tTopDnpc;
-    ArrayList<String[]> ords = new ArrayList<>();
-    BaseAdapter adp;
-    String mode = "daily";
-    boolean isHighToLow = true;
-    String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
+public class MainActivity extends AppCompatActivity {
 
-    GradientDrawable box(int c, int r, int sCol, int sW) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(c);
-        g.setCornerRadius(r);
-        if (sW > 0) g.setStroke(sW, sCol);
-        return g;
-    }
+    private View layoutOrderId, layoutPerformance, layoutHubVsHub;
+    private RecyclerView rvAgentPerformance, rvHubVsHub;
+    private TextView tvHubHeaderName, tvHubOfdDel, tvHubOfpPik, tvHubDnpDnpc;
+    private TextView tvTopConversion, tvTopDnpc;
 
     @Override
-    protected void onCreate(Bundle b) {
-        super.onCreate(b);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        try {
-            db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
-            db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
-            db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
-        } catch (Exception ignored) {}
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        root = new FrameLayout(this);
-        root.setBackgroundColor(Color.parseColor("#0F1015"));
-        setContentView(root);
-        buildUI();
-        new Thread(() -> doSync(true)).start();
-    }
+        layoutOrderId = findViewById(R.id.layoutOrderIdTab);
+        layoutPerformance = findViewById(R.id.layoutPerformanceTab);
+        layoutHubVsHub = findViewById(R.id.layoutHubVsHubTab);
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        new Thread(() -> doSync(true)).start();
-    }
+        rvAgentPerformance = findViewById(R.id.rvAgentPerformance);
+        rvAgentPerformance.setLayoutManager(new LinearLayoutManager(this));
 
-    void buildUI() {
-        LinearLayout main = new LinearLayout(this);
-        main.setOrientation(LinearLayout.VERTICAL);
+        rvHubVsHub = findViewById(R.id.rvHubVsHub);
+        rvHubVsHub.setLayoutManager(new LinearLayoutManager(this));
 
-        LinearLayout h = new LinearLayout(this);
-        h.setBackgroundColor(Color.parseColor("#181920"));
-        h.setPadding(20, 16, 20, 16);
-        h.setGravity(Gravity.CENTER_VERTICAL);
-        TextView t = new TextView(this);
-        t.setText("📊 Delivery Tracker");
-        t.setTextColor(Color.WHITE);
-        t.setTextSize(16f);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        h.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        tvHubHeaderName = findViewById(R.id.tvHubHeaderName);
+        tvHubOfdDel = findViewById(R.id.tvHubOfdDel);
+        tvHubOfpPik = findViewById(R.id.tvHubOfpPik);
+        tvHubDnpDnpc = findViewById(R.id.tvHubDnpDnpc);
+        tvTopConversion = findViewById(R.id.tvTopConversion);
+        tvTopDnpc = findViewById(R.id.tvTopDnpc);
 
-        Button bRef = new Button(this);
-        bRef.setText("🔄 Sync");
-        bRef.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
-        bRef.setTextColor(Color.BLACK);
-        bRef.setTypeface(Typeface.DEFAULT_BOLD);
-        bRef.setOnClickListener(v -> new Thread(() -> doSync(false)).start());
-        h.addView(bRef);
-        main.addView(h);
-
-        LinearLayout tb = new LinearLayout(this);
-        tb.setPadding(16, 8, 16, 4);
-        bT = new Button(this);
-        bT.setText("🔍 Tracker");
-        bT.setBackground(box(Color.parseColor("#00E676"), 12, 0, 0));
-        bT.setTextColor(Color.BLACK);
-        bT.setTypeface(Typeface.DEFAULT_BOLD);
-
-        bP = new Button(this);
-        bP.setText("📈 Performance");
-        bP.setBackground(box(Color.parseColor("#232634"), 12, 0, 0));
-        bP.setTextColor(Color.parseColor("#8E92A4"));
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
-        lp.setMargins(3, 0, 3, 0);
-        tb.addView(bT, lp);
-        tb.addView(bP, new LinearLayout.LayoutParams(lp));
-        main.addView(tb);
-
-        FrameLayout body = new FrameLayout(this);
-        body.setPadding(16, 6, 16, 10);
-        main.addView(body, new LinearLayout.LayoutParams(-1, -1));
-
-        // Tracker View
-        vTrk = new LinearLayout(this);
-        vTrk.setOrientation(LinearLayout.VERTICAL);
-        vTrk.setVisibility(View.VISIBLE);
-
-        EditText s = new EditText(this);
-        s.setHint("🔍 Search last 4-5 digits or full ID...");
-        s.setHintTextColor(Color.parseColor("#717688"));
-        s.setTextColor(Color.WHITE);
-        s.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#00E676"), 1));
-        s.setPadding(22, 18, 22, 18);
-        s.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence c, int i, int i1, int i2) {}
-            public void onTextChanged(CharSequence c, int i, int i1, int i2) { qry(c.toString().trim()); }
-            public void afterTextChanged(Editable e) {}
-        });
-        vTrk.addView(s);
-
-        tCnt = new TextView(this);
-        tCnt.setTextColor(Color.parseColor("#00E676"));
-        tCnt.setPadding(6, 10, 6, 8);
-        tCnt.setTypeface(Typeface.DEFAULT_BOLD);
-        vTrk.addView(tCnt);
-
-        ListView lv = new ListView(this);
-        lv.setDivider(null);
-        lv.setDividerHeight(10);
-        adp = new BaseAdapter() {
-            public int getCount() { return ords.size(); }
-            public Object getItem(int i) { return ords.get(i); }
-            public long getItemId(int i) { return i; }
-            public View getView(int i, View v, ViewGroup p) {
-                LinearLayout c = new LinearLayout(MainActivity.this);
-                c.setOrientation(LinearLayout.VERTICAL);
-                c.setPadding(20, 16, 20, 16);
-                c.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#2A2D3D"), 1));
-                String[] it = ords.get(i);
-
-                TextView t1 = new TextView(MainActivity.this);
-                t1.setText("📦 Track ID: " + it[0]);
-                t1.setTextColor(Color.parseColor("#38BDF8"));
-                t1.setTypeface(Typeface.DEFAULT_BOLD);
-
-                TextView t2 = new TextView(MainActivity.this);
-                t2.setText("🛒 Order ID: " + it[1] + "  📋 (Tap to Copy Last 6 Digits)");
-                t2.setTextColor(Color.parseColor("#00E676"));
-                t2.setPadding(0, 6, 0, 0);
-
-                c.addView(t1);
-                c.addView(t2);
-                c.setOnClickListener(vw -> {
-                    String fullOrd = it[1].trim();
-                    String last6 = (fullOrd.length() >= 6) ? fullOrd.substring(fullOrd.length() - 6) : fullOrd;
-                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(ClipData.newPlainText("Last6Digits", last6));
-                    Toast.makeText(MainActivity.this, "Copied: " + last6, Toast.LENGTH_SHORT).show();
-                });
-                return c;
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_order_id) {
+                showTab(layoutOrderId);
+            } else if (id == R.id.nav_performance) {
+                showTab(layoutPerformance);
+            } else if (id == R.id.nav_hub_vs_hub) {
+                showTab(layoutHubVsHub);
             }
-        };
-        lv.setAdapter(adp);
-        vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
-        body.addView(vTrk);
-                // Performance View
-        vPrf = new LinearLayout(this);
-        vPrf.setOrientation(LinearLayout.VERTICAL);
-        vPrf.setVisibility(View.GONE);
-
-        LinearLayout fl = new LinearLayout(this);
-        b1 = flt("📅 Daily", "daily");
-        b2 = flt("📆 Weekly", "weekly");
-        b3 = flt("🗓️ Monthly", "monthly");
-        LinearLayout.LayoutParams lpF = new LinearLayout.LayoutParams(0, -2, 1f);
-        lpF.setMargins(2, 0, 2, 8);
-        fl.addView(b1, lpF);
-        fl.addView(b2, new LinearLayout.LayoutParams(lpF));
-        fl.addView(b3, new LinearLayout.LayoutParams(lpF));
-        vPrf.addView(fl);
-
-        // Hub Details Card (Direct Hub Name Only)
-        LinearLayout hubBox = new LinearLayout(this);
-        hubBox.setOrientation(LinearLayout.VERTICAL);
-        hubBox.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#38BDF8"), 1));
-        hubBox.setPadding(18, 16, 18, 16);
-
-        TextView hTitle = new TextView(this);
-        hTitle.setText("MALBAZARHUB_NJP");
-        hTitle.setTextColor(Color.parseColor("#38BDF8"));
-        hTitle.setTextSize(14.5f);
-        hTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        hubBox.addView(hTitle);
-
-        tHubData = new TextView(this);
-        tHubData.setTextColor(Color.WHITE);
-        tHubData.setTextSize(13f);
-        tHubData.setPadding(0, 6, 0, 0);
-        hubBox.addView(tHubData);
-        vPrf.addView(hubBox, new LinearLayout.LayoutParams(-1, -2));
-
-        // Top Summary Cards (Highest Conv & Highest DNPC)
-        LinearLayout sm = new LinearLayout(this);
-        sm.setPadding(0, 8, 0, 6);
-        LinearLayout sc1 = makeSummaryCard("🏆 TOP CONVERSION", Color.parseColor("#181920"), Color.parseColor("#00E676"), true);
-        LinearLayout sc2 = makeSummaryCard("📦 TOP DNPC", Color.parseColor("#181920"), Color.parseColor("#FB923C"), false);
-        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        scLp.setMargins(0, 0, 6, 0);
-        sm.addView(sc1, scLp);
-        sm.addView(sc2, new LinearLayout.LayoutParams(0, -2, 1f));
-        vPrf.addView(sm);
-
-        // Sort Button
-        bSort = new Button(this);
-        bSort.setText("↕️ Sort: High to Low");
-        bSort.setBackground(box(Color.parseColor("#232634"), 10, 0, 0));
-        bSort.setTextColor(Color.WHITE);
-        bSort.setOnClickListener(v -> {
-            isHighToLow = !isHighToLow;
-            bSort.setText(isHighToLow ? "↕️ Sort: High to Low" : "↕️ Sort: Low to High");
-            load();
-        });
-        LinearLayout.LayoutParams sortLp = new LinearLayout.LayoutParams(-1, -2);
-        sortLp.setMargins(0, 2, 0, 8);
-        vPrf.addView(bSort, sortLp);
-
-        ScrollView sv = new ScrollView(this);
-        vCrd = new LinearLayout(this);
-        vCrd.setOrientation(LinearLayout.VERTICAL);
-        sv.addView(vCrd);
-        vPrf.addView(sv, new LinearLayout.LayoutParams(-1, -1));
-        body.addView(vPrf);
-
-        bT.setOnClickListener(v -> {
-            vTrk.setVisibility(View.VISIBLE);
-            vPrf.setVisibility(View.GONE);
-            bT.setBackground(box(Color.parseColor("#00E676"), 12, 0, 0));
-            bT.setTextColor(Color.BLACK);
-            bP.setBackground(box(Color.parseColor("#232634"), 12, 0, 0));
-            bP.setTextColor(Color.parseColor("#8E92A4"));
-            cnt();
-        });
-        bP.setOnClickListener(v -> {
-            vTrk.setVisibility(View.GONE);
-            vPrf.setVisibility(View.VISIBLE);
-            bP.setBackground(box(Color.parseColor("#00E676"), 12, 0, 0));
-            bP.setTextColor(Color.BLACK);
-            bT.setBackground(box(Color.parseColor("#232634"), 12, 0, 0));
-            bT.setTextColor(Color.parseColor("#8E92A4"));
-            load();
+            return true;
         });
 
-        root.addView(main);
-        load();
-        cnt();
+        // Sheet data parsing ko call karein
+        // loadSheetData();
     }
 
-    LinearLayout makeSummaryCard(String title, int bgCol, int accent, boolean isConv) {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(LinearLayout.VERTICAL);
-        c.setBackground(box(bgCol, 14, Color.parseColor("#2A2D3D"), 1));
-        c.setPadding(14, 12, 14, 12);
-        TextView h = new TextView(this);
-        h.setText(title);
-        h.setTextColor(Color.parseColor("#9CA3AF"));
-        h.setTextSize(10.5f);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        c.addView(h);
-        TextView v = new TextView(this);
-        v.setTextColor(accent);
-        v.setTextSize(13f);
-        v.setTypeface(Typeface.DEFAULT_BOLD);
-        v.setPadding(0, 4, 0, 0);
-        c.addView(v);
-        if (isConv) tTopConv = v; else tTopDnpc = v;
-        return c;
+    private void showTab(View tabToShow) {
+        layoutOrderId.setVisibility(View.GONE);
+        layoutPerformance.setVisibility(View.GONE);
+        layoutHubVsHub.setVisibility(View.GONE);
+        tabToShow.setVisibility(View.VISIBLE);
     }
-        void load() {
-        try {
-            vCrd.removeAllViews();
-            String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date('now','localtime','-7 days') " : " WHERE dt >= date('now','localtime','-30 days') ");
-            
-            // Hub Totals Calculation
-            Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, null);
-            if (hc != null && hc.moveToFirst()) {
-                int to = hc.getInt(0), tl = hc.getInt(1), tp = hc.getInt(2), tk = hc.getInt(3);
-                int tdnp = to + tp, tdnpc = tl + tk;
-                double ofdConv = to > 0 ? ((double) tl / to) * 100.0 : 0.0;
-                double ofpConv = tp > 0 ? ((double) tk / tp) * 100.0 : 0.0;
-                double dnpConv = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
 
-                tHubData.setText(
-                    "OFD/DEL: " + to + "/" + tl + " = " + String.format(Locale.US, "%.1f%%", ofdConv) + "\n" +
-                    "OFP/PIKED: " + tp + "/" + tk + " = " + String.format(Locale.US, "%.1f%%", ofpConv) + "\n" +
-                    "DNP/DNPC: " + tdnp + "/" + tdnpc + " = " + String.format(Locale.US, "%.1f%%", dnpConv)
-                );
-            }
-            if (hc != null) hc.close();
+    public void parseCsvData(List<String[]> rows) {
+        List<AgentModel> agentList = new ArrayList<>();
+        List<HubVsHubModel> hubVsHubList = new ArrayList<>();
 
-            // Agent List & Top Performers
-            Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
-            ArrayList<String[]> list = new ArrayList<>();
-            String bestConvName = "--", bestDnpcName = "--";
-            double maxConv = -1;
-            int maxDnpc = -1;
+        int totalHubOfd = 0, totalHubDel = 0, totalHubOfp = 0, totalHubPiked = 0;
+        String topConvAgent = "---", topDnpcAgent = "---";
+        double maxConv = -1;
+        int maxDnpc = -1;
 
-            while (ac != null && ac.moveToNext()) {
-                String name = ac.getString(0);
-                int o = ac.getInt(1), l = ac.getInt(2), p = ac.getInt(3), k = ac.getInt(4);
-                int dnp = o + p, dnpc = l + k;
-                double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-                list.add(new String[]{name, String.valueOf(o), String.valueOf(l), String.valueOf(p), String.valueOf(k), String.valueOf(dnp), String.valueOf(dnpc), String.format(Locale.US, "%.1f", r), String.valueOf(r)});
-                
-                if (r > maxConv && dnp > 0) {
-                    maxConv = r;
-                    bestConvName = name + "\n" + String.format(Locale.US, "%.1f%%", r);
+        for (int i = 1; i < rows.size(); i++) {
+            String[] row = rows.get(i);
+
+            // AGENT PERFORMANCE DATA (Cols B to F)
+            if (row.length >= 7 && !row[1].trim().isEmpty() && !row[1].equalsIgnoreCase("Total")) {
+                String agentName = row[1].trim();
+                int ofd = parseInt(row[2]);
+                int del = parseInt(row[3]);
+                int ofp = parseInt(row[4]);
+                int pik = parseInt(row[5]);
+
+                totalHubOfd += ofd;
+                totalHubDel += del;
+                totalHubOfp += ofp;
+                totalHubPiked += pik;
+
+                AgentModel agent = new AgentModel(agentName, ofd, del, ofp, pik, "");
+                agentList.add(agent);
+
+                if (agent.getTotalCon() > maxConv) {
+                    maxConv = agent.getTotalCon();
+                    topConvAgent = agentName + " (" + String.format("%.1f", maxConv) + "%)";
                 }
-                if (dnpc > maxDnpc) {
-                    maxDnpc = dnpc;
-                    bestDnpcName = name + "\n" + dnpc + " Done";
+                if (agent.getDnpc() > maxDnpc) {
+                    maxDnpc = agent.getDnpc();
+                    topDnpcAgent = agentName + " (" + maxDnpc + ")";
                 }
             }
-            if (ac != null) ac.close();
 
-            tTopConv.setText(bestConvName);
-            tTopDnpc.setText(bestDnpcName);
+            // HUB VS HUB DATA (Cols H to P)
+            if (row.length >= 17 && !row[8].trim().isEmpty() && !row[8].equalsIgnoreCase("HUB NAME")) {
+                String hubName = row[8].trim();
+                String ofd = row[9].trim();
+                String del = row[10].trim();
+                String ofdCon = row[11].trim();
+                String ofp = row[12].trim();
+                String pik = row[13].trim();
+                String pikCon = row[14].trim();
+                String totCon = row[16].trim();
 
-            // Sort High to Low by default
-            Collections.sort(list, (a, b) -> isHighToLow ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
+                int dnp = parseInt(ofd) + parseInt(ofp);
+                int dnpc = parseInt(del) + parseInt(pik);
 
-            for (String[] ag : list) {
-                int strk = getStreak(ag[0]);
-                double rate = Double.parseDouble(ag[8]);
-                int badgeColor = (rate >= 92.0) ? Color.parseColor("#00E676") : ((rate >= 85.0) ? Color.parseColor("#FBBF24") : Color.parseColor("#EF4444"));
-
-                LinearLayout card = new LinearLayout(this);
-                card.setOrientation(LinearLayout.VERTICAL);
-                card.setBackground(box(Color.parseColor("#181920"), 14, 0, 0));
-                card.setPadding(20, 16, 20, 16);
-                LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(-1, -2);
-                clp.setMargins(0, 0, 0, 12);
-                card.setLayoutParams(clp);
-
-                LinearLayout nameRow = new LinearLayout(this);
-                nameRow.setOrientation(LinearLayout.HORIZONTAL);
-                nameRow.setGravity(Gravity.CENTER_VERTICAL);
-
-                TextView n = new TextView(this);
-                n.setText("👤 " + ag[0]);
-                n.setTextColor(badgeColor);
-                n.setTypeface(Typeface.DEFAULT_BOLD);
-                n.setTextSize(13.5f);
-                nameRow.addView(n, new LinearLayout.LayoutParams(0, -2, 1f));
-
-                TextView st = new TextView(this);
-                st.setText("🔥 " + strk + "D");
-                st.setTextColor(Color.parseColor("#FBBF24"));
-                st.setTextSize(11.5f);
-                st.setTypeface(Typeface.DEFAULT_BOLD);
-                st.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
-                st.setPadding(10, 4, 10, 4);
-                nameRow.addView(st);
-                card.addView(nameRow);
-
-                LinearLayout r1 = new LinearLayout(this);
-                r1.setPadding(0, 8, 0, 4);
-                r1.addView(makePill("OFD/DEL", ag[1] + "/" + ag[2], Color.parseColor("#60A5FA")), new LinearLayout.LayoutParams(0, -2, 1f));
-                r1.addView(makePill("OFP/PIK", ag[3] + "/" + ag[4], Color.parseColor("#FBBF24")), new LinearLayout.LayoutParams(0, -2, 1f));
-                card.addView(r1);
-
-                LinearLayout r2 = new LinearLayout(this);
-                r2.setPadding(0, 2, 0, 2);
-                r2.addView(makePill("DNP/DNPC", ag[5] + "/" + ag[6], Color.WHITE), new LinearLayout.LayoutParams(0, -2, 1f));
-                r2.addView(makePill("CONV", ag[7] + "%", badgeColor), new LinearLayout.LayoutParams(0, -2, 1f));
-                card.addView(r2);
-
-                final String agName = ag[0];
-                card.setOnClickListener(v -> showDetails(agName));
-                vCrd.addView(card);
+                hubVsHubList.add(new HubVsHubModel(hubName, ofd, del, ofdCon, ofp, pik, pikCon, String.valueOf(dnp), String.valueOf(dnpc), totCon));
             }
-        } catch (Exception ignored) {}
-    }
-
-    int getStreak(String name) {
-        int streak = 0;
-        Cursor c = db.rawQuery("SELECT dt FROM prf WHERE n = ? AND (o+p) > 0 GROUP BY dt ORDER BY dt DESC", new String[]{name});
-        String lastDt = null;
-        while (c != null && c.moveToNext()) {
-            String dt = c.getString(0);
-            if (lastDt == null) {
-                streak = 1;
-            } else {
-                try {
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                    Calendar cal1 = Calendar.getInstance(); cal1.setTime(sdf.parse(lastDt));
-                    Calendar cal2 = Calendar.getInstance(); cal2.setTime(sdf.parse(dt));
-                    cal2.add(Calendar.DAY_OF_YEAR, 1);
-                    if (cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)) {
-                        streak++;
-                    } else {
-                        break;
-                    }
-                } catch (Exception e) { break; }
-            }
-            lastDt = dt;
         }
-        if (c != null) c.close();
-        return Math.max(1, streak);
+
+        // Set Hub Header Stats
+        double hubOfdCon = (totalHubOfd > 0) ? ((double) totalHubDel / totalHubOfd) * 100 : 0;
+        double hubOfpCon = (totalHubOfp > 0) ? ((double) totalHubPiked / totalHubOfp) * 100 : 0;
+        int totalDnp = totalHubOfd + totalHubOfp;
+        int totalDnpc = totalHubDel + totalHubPiked;
+        double hubTotalCon = (totalDnp > 0) ? ((double) totalDnpc / totalDnp) * 100 : 0;
+
+        tvHubOfdDel.setText("OFD/DEL = " + totalHubOfd + "/" + totalHubDel + " = " + String.format("%.1f", hubOfdCon) + "%");
+        tvHubOfpPik.setText("OFP/PIKED = " + totalHubOfp + "/" + totalHubPiked + " = " + String.format("%.1f", hubOfpCon) + "%");
+        tvHubDnpDnpc.setText("DNP/DNPC = " + totalDnp + "/" + totalDnpc + " = " + String.format("%.1f", hubTotalCon) + "%");
+
+        tvTopConversion.setText("🔥 TOP CONVERSION\n" + topConvAgent);
+        tvTopDnpc.setText("📦 TOP DNPC\n" + topDnpcAgent);
+
+        // Adapters Attach
+        rvAgentPerformance.setAdapter(new AgentAdapter(agentList));
+        rvHubVsHub.setAdapter(new HubVsHubAdapter(hubVsHubList));
     }
 
-    void showDetails(String name) {
-        Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= date('now','localtime','-30 days') ORDER BY dt DESC", new String[]{name});
-        LinearLayout pop = new LinearLayout(this);
-        pop.setOrientation(LinearLayout.VERTICAL);
-        pop.setPadding(20, 20, 20, 20);
-        pop.setBackgroundColor(Color.parseColor("#0F1015"));
-
-        TextView h = new TextView(this);
-        h.setText("👤 " + name + " (Last 30 Days)");
-        h.setTextColor(Color.parseColor("#00E676"));
-        h.setTextSize(15f);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        h.setPadding(0, 0, 0, 10);
-        pop.addView(h);
-
-        while (c != null && c.moveToNext()) {
-            int o = c.getInt(1), l = c.getInt(2), p = c.getInt(3), k = c.getInt(4);
-            int dnp = o + p, dnpc = l + k;
-            double cr = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-
-            TextView item = new TextView(this);
-            item.setText("📅 " + c.getString(0) + "  |  Conv: " + String.format(Locale.US, "%.1f%%", cr) + "\nOFD: " + o + " | DEL: " + l + " | OFP: " + p + " | PIK: " + k);
-            item.setTextColor(Color.WHITE);
-            item.setTextSize(11.5f);
-            item.setBackground(box(Color.parseColor("#181920"), 8, Color.parseColor("#2A2D3D"), 1));
-            item.setPadding(14, 10, 14, 10);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-            lp.setMargins(0, 0, 0, 6);
-            pop.addView(item, lp);
-        }
-        if (c != null) c.close();
-
-        ScrollView sv = new ScrollView(this);
-        sv.addView(pop);
-        new AlertDialog.Builder(this).setView(sv).setPositiveButton("Close", null).show();
-    }
-
-    Button flt(String txt, String m) {
-        Button b = new Button(this);
-        b.setText(txt);
-        b.setBackground(box(m.equals(mode) ? Color.parseColor("#00E676") : Color.parseColor("#181920"), 10, 0, 0));
-        b.setTextColor(m.equals(mode) ? Color.BLACK : Color.parseColor("#9CA3AF"));
-        b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setOnClickListener(v -> {
-            mode = m;
-            b1.setBackground(box("daily".equals(m) ? Color.parseColor("#00E676") : Color.parseColor("#181920"), 10, 0, 0));
-            b1.setTextColor("daily".equals(m) ? Color.BLACK : Color.parseColor("#9CA3AF"));
-            b2.setBackground(box("weekly".equals(m) ? Color.parseColor("#00E676") : Color.parseColor("#181920"), 10, 0, 0));
-            b2.setTextColor("weekly".equals(m) ? Color.BLACK : Color.parseColor("#9CA3AF"));
-            b3.setBackground(box("monthly".equals(m) ? Color.parseColor("#00E676") : Color.parseColor("#181920"), 10, 0, 0));
-            b3.setTextColor("monthly".equals(m) ? Color.BLACK : Color.parseColor("#9CA3AF"));
-            load();
-        });
-        return b;
-    }
-
-    View makePill(String l, String v, int c) {
-        LinearLayout p = new LinearLayout(this);
-        p.setOrientation(LinearLayout.HORIZONTAL);
-        p.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
-        p.setPadding(10, 8, 10, 8);
-        TextView t = new TextView(this);
-        t.setText(l + ": " + v);
-        t.setTextColor(c);
-        t.setTextSize(12f);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        p.addView(t);
-        return p;
-    }
-
-    void cnt() {
+    private int parseInt(String val) {
         try {
-            Cursor c = db.rawQuery("SELECT COUNT(*) FROM ord", null);
-            tCnt.setText("📦 Active Search Orders: " + (c.moveToFirst() ? c.getInt(0) : 0));
-            c.close();
-        } catch (Exception ignored) {}
-    }
-
-    void qry(String q) {
-        try {
-            ords.clear();
-            if (!q.isEmpty()) {
-                Cursor c = db.rawQuery(
-                    "SELECT DISTINCT t, d FROM ord WHERE t LIKE ? OR t LIKE ? OR d LIKE ? OR d LIKE ? " +
-                    "ORDER BY CASE " +
-                    "WHEN t LIKE ? THEN 1 " +
-                    "WHEN t LIKE ? THEN 2 " +
-                    "WHEN d LIKE ? THEN 3 " +
-                    "ELSE 4 END LIMIT 30",
-                    new String[]{"%" + q, q + "%", "%" + q, q + "%", "%" + q, q + "%", "%" + q}
-                );
-                while (c.moveToNext()) {
-                    ords.add(new String[]{c.getString(0), c.getString(1)});
-                }
-                c.close();
-            }
-            adp.notifyDataSetChanged();
-        } catch (Exception ignored) {}
-    }
-
-    void doSync(boolean isAuto) {
-        try {
-            if (!isAuto) runOnUiThread(() -> Toast.makeText(this, "Syncing live data...", Toast.LENGTH_SHORT).show());
-            String curDt = getDt();
-            HttpURLConnection conn = (HttpURLConnection) new URL(CSV).openConnection();
-            conn.setConnectTimeout(15000);
-            BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            db.beginTransaction();
-            int count = 0;
-            try {
-                // Exact Mirroring: Purana order data delete hoga aur sheet ka exact data load hoga
-                db.delete("ord", null, null);
-                db.delete("prf", "dt = ?", new String[]{curDt});
-                db.delete("prf", "dt < date('now', 'localtime', '-30 days')", null);
-
-                String l;
-                boolean hd = true;
-                while ((l = r.readLine()) != null) {
-                    if (hd) { hd = false; continue; }
-                    String[] p = l.split(",", -1);
-                    if (p.length < 2) continue;
-                    String t = p[0].replace("\"", "").trim();
-                    String o = p[1].replace("\"", "").trim();
-                    String name = p.length > 2 ? p[2].replace("\"", "").trim() : "";
-
-                    if (!t.isEmpty() && !o.isEmpty() && !t.equalsIgnoreCase("TRACKING ID")) {
-                        ContentValues cv = new ContentValues();
-                        cv.put("t", t);
-                        cv.put("d", o);
-                        db.insertWithOnConflict("ord", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
-                        count++;
-                    }
-                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME")) {
-                        ContentValues cv = new ContentValues();
-                        cv.put("n", name);
-                        cv.put("o", p.length > 3 ? pInt(p[3]) : 0);
-                        cv.put("l", p.length > 4 ? pInt(p[4]) : 0);
-                        cv.put("p", p.length > 5 ? pInt(p[5]) : 0);
-                        cv.put("k", p.length > 6 ? pInt(p[6]) : 0);
-                        cv.put("dt", curDt);
-                        db.insert("prf", null, cv);
-                    }
-                }
-                db.setTransactionSuccessful();
-            } finally {
-                db.endTransaction();
-            }
-            final int fin = count;
-            runOnUiThread(() -> {
-                if (!isAuto) Toast.makeText(this, "Synced successfully!", Toast.LENGTH_SHORT).show();
-                cnt();
-                load();
-            });
+            return Integer.parseInt(val.trim().replace("%", ""));
         } catch (Exception e) {
-            if (!isAuto) runOnUiThread(() -> Toast.makeText(this, "Sync failed! Check internet.", Toast.LENGTH_SHORT).show());
+            return 0;
         }
     }
+}
 
-    String getDt() {
-        Calendar c = Calendar.getInstance();
-        // 2:00 AM Cutoff: Raat 1:59:59 AM tak pichli tareekh manega, 2:00 AM se nayi tareekh shuru hogi
-        if (c.get(Calendar.HOUR_OF_DAY) < 2) c.add(Calendar.DAY_OF_YEAR, -1);
-        return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(c.getTime());
-    }
+}
 
-    int pInt(String s) {
-        try { return Integer.parseInt(s.replace("\"", "").trim()); } catch (Exception e) { return 0; }
-    }
-                                                              }
+
 
