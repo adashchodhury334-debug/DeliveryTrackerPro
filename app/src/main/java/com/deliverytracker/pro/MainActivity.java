@@ -105,15 +105,27 @@ public class MainActivity extends Activity {
 
         LinearLayout h = new LinearLayout(this);
         h.setBackgroundColor(Color.parseColor("#181920"));
-        h.setPadding(16, 14, 16, 14);
+        h.setPadding(16, 12, 16, 12);
         h.setGravity(Gravity.CENTER_VERTICAL);
+
+        LinearLayout titleBox = new LinearLayout(this);
+        titleBox.setOrientation(LinearLayout.VERTICAL);
 
         TextView t = new TextView(this);
         t.setText("📦 Delivery Tracker Pro");
         t.setTextColor(Color.WHITE);
         t.setTextSize(15f);
         t.setTypeface(Typeface.DEFAULT_BOLD);
-        h.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        titleBox.addView(t);
+
+        TextView tSub = new TextView(this);
+        tSub.setText("⚡ Managed by Adarsh");
+        tSub.setTextColor(Color.parseColor("#38BDF8"));
+        tSub.setTextSize(11f);
+        tSub.setTypeface(Typeface.DEFAULT_BOLD);
+        titleBox.addView(tSub);
+
+        h.addView(titleBox, new LinearLayout.LayoutParams(0, -2, 1f));
 
         bVoiceOtp = new Button(this);
         bVoiceOtp.setText("🎙️ OTP");
@@ -136,7 +148,6 @@ public class MainActivity extends Activity {
         h.addView(bRef);
         main.addView(h);
 
-        // 4 TABS HEADER BAR
         LinearLayout tb = new LinearLayout(this);
         tb.setPadding(8, 8, 8, 4);
 
@@ -251,8 +262,7 @@ public class MainActivity extends Activity {
                 bCpOrder.setTextColor(Color.parseColor("#00E676"));
                 bCpOrder.setTypeface(Typeface.DEFAULT_BOLD);
                 bCpOrder.setOnClickListener(vw -> {
-                    String cleanOrd = it[1].replaceAll("00$", "");
-                    String toCopy = cleanOrd.length() >= 6 ? cleanOrd.substring(cleanOrd.length() - 6) : cleanOrd;
+                    String toCopy = it[1].length() >= 6 ? it[1].substring(it[1].length() - 6) : it[1];
                     ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     cm.setPrimaryClip(ClipData.newPlainText("OrderID", toCopy));
                     Toast.makeText(MainActivity.this, "Copied: " + toCopy, Toast.LENGTH_SHORT).show();
@@ -287,7 +297,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                   // 2. PERFORMANCE TAB
+                                // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -506,7 +516,7 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-                            }
+                        }
         void load() {
         try {
             vCrd.removeAllViews();
@@ -573,7 +583,6 @@ public class MainActivity extends Activity {
             tTopConv.setText(bestConvName);
             tTopDnpc.setText(bestDnpcName);
 
-            // Leaderboard Sort (DEL & Conversion)
             Collections.sort(list, (a, b) -> isHighToLow ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
 
             int currentRank = 1;
@@ -594,7 +603,6 @@ public class MainActivity extends Activity {
                 nameRow.setOrientation(LinearLayout.HORIZONTAL);
                 nameRow.setGravity(Gravity.CENTER_VERTICAL);
 
-                // Leaderboard Rank Tag (🥇 🥈 🥉)
                 String rankBadge = (currentRank == 1) ? "🥇 Rank #1" : ((currentRank == 2) ? "🥈 Rank #2" : ((currentRank == 3) ? "🥉 Rank #3" : "🎖️ Rank #" + currentRank));
                 int rankBg = (currentRank == 1) ? Color.parseColor("#EAB308") : ((currentRank == 2) ? Color.parseColor("#94A3B8") : ((currentRank == 3) ? Color.parseColor("#B45309") : Color.parseColor("#374151")));
 
@@ -819,7 +827,7 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-                    }
+                                 }
         void launchVoiceOTP() {
         try {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -1051,7 +1059,7 @@ public class MainActivity extends Activity {
     }
 
     void doSync(boolean isAuto) {
-        showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
+        if (!isAuto) showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
         try {
             String targetUrl = CSV;
             HttpURLConnection conn = null;
