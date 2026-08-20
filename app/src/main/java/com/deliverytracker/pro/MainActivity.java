@@ -393,7 +393,7 @@ public class MainActivity extends Activity {
 
         load();
         cnt();
-                        }
+    }
         void showLoading(boolean show, String msg) {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (loadingOverlay != null) {
@@ -823,4 +823,35 @@ public class MainActivity extends Activity {
                 }
             }
             db.setTransactionSuccessful();
-            db.end
+                        db.endTransaction();
+            reader.close();
+
+            new Handler(Looper.getMainLooper()).post(() -> {
+                load();
+                loadHubVsHub();
+                cnt();
+                qry("");
+                showLoading(false, null);
+                if (!isAuto) Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
+            });
+        } catch (Exception e) {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                showLoading(false, null);
+                if (!isAuto) Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
+    String clean(String s) {
+        if (s == null) return "";
+        return s.replace("\"", "").trim();
+    }
+
+    int parseInt(String s) {
+        try {
+            return Integer.parseInt(clean(s).replace("%", ""));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+}
