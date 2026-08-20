@@ -317,7 +317,8 @@ public class MainActivity extends Activity {
 
         root.addView(main);
         load();
-        cnt();    void switchTab(int index) {
+        cnt();
+    }    void switchTab(int index) {
         vTrk.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         vPrf.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
         vHub.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
@@ -710,7 +711,6 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-                }
+}
 
-    }
     
