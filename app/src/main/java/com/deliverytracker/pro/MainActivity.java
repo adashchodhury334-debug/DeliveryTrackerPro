@@ -6,11 +6,13 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -20,6 +22,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -28,6 +31,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.BufferedReader;
@@ -44,10 +48,11 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     SQLiteDatabase db;
     FrameLayout root;
-    LinearLayout vTrk, vPrf, vHub, vCrd, vHubCrd, loadingOverlay;
-    Button bT, bP, bH, b1, b2, b3, bSort;
-    TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tLoadingText;
+    LinearLayout vTrk, vPrf, vHub, vCnt, vCrd, vHubCrd, vCntCrd, loadingOverlay;
+    Button bT, bP, bH, bC, b1, b2, b3, bSort, bVsBattle;
+    TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tGapTarget, tPersonalBest;
     ArrayList<String[]> ords = new ArrayList<>();
+    ArrayList<String> agentNamesList = new ArrayList<>();
     BaseAdapter adp;
     String mode = "daily";
     boolean isHighToLow = true;
@@ -63,9 +68,7 @@ public class MainActivity extends Activity {
 
     String getOperationalDate() {
         Calendar cal = Calendar.getInstance();
-        if (cal.get(Calendar.HOUR_OF_DAY) < 2) {
-            cal.add(Calendar.DATE, -1);
-        }
+        if (cal.get(Calendar.HOUR_OF_DAY) < 2) cal.add(Calendar.DATE, -1);
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
     }
 
@@ -78,27 +81,14 @@ public class MainActivity extends Activity {
             db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT);");
+            db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
         } catch (Exception ignored) {}
 
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#0F1015"));
         setContentView(root);
         buildUI();
-        showStartupPopup();
         new Thread(() -> doSync(true)).start();
-    }
-
-    void showStartupPopup() {
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            try {
-                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                builder.setTitle("📦 Delivery Tracker Pro");
-                builder.setMessage("⚡ MANAGED BY ADARSH\n\nLive Field Tracking & Analytics System\nOperational Shift Cutoff: 2:00 AM");
-                builder.setPositiveButton("GET STARTED", null);
-                builder.setCancelable(true);
-                builder.show();
-            } catch (Exception ignored) {}
-        }, 500);
     }
 
     @Override
@@ -113,13 +103,13 @@ public class MainActivity extends Activity {
 
         LinearLayout h = new LinearLayout(this);
         h.setBackgroundColor(Color.parseColor("#181920"));
-        h.setPadding(20, 16, 20, 16);
+        h.setPadding(16, 14, 16, 14);
         h.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView t = new TextView(this);
-        t.setText("📦 Delivery Tracker");
+        t.setText("📦 Delivery Tracker Pro");
         t.setTextColor(Color.WHITE);
-        t.setTextSize(16.5f);
+        t.setTextSize(15f);
         t.setTypeface(Typeface.DEFAULT_BOLD);
         h.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
 
@@ -128,41 +118,50 @@ public class MainActivity extends Activity {
         bRef.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
         bRef.setTextColor(Color.BLACK);
         bRef.setTypeface(Typeface.DEFAULT_BOLD);
+        bRef.setTextSize(11f);
         bRef.setOnClickListener(v -> new Thread(() -> doSync(false)).start());
         h.addView(bRef);
         main.addView(h);
 
+        // 4 TABS HEADER BAR
         LinearLayout tb = new LinearLayout(this);
-        tb.setPadding(12, 8, 12, 4);
+        tb.setPadding(8, 8, 8, 4);
 
         bT = new Button(this);
-        bT.setText("🔍 ORDER ID");
-        bT.setBackground(box(Color.parseColor("#00E676"), 10, 0, 0));
+        bT.setText("🔍 ORDER");
+        bT.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
         bT.setTextColor(Color.BLACK);
         bT.setTypeface(Typeface.DEFAULT_BOLD);
-        bT.setTextSize(11f);
+        bT.setTextSize(9.5f);
 
         bP = new Button(this);
-        bP.setText("📈 PERFORMANCE");
-        bP.setBackground(box(Color.parseColor("#232634"), 10, 0, 0));
+        bP.setText("📈 PERF");
+        bP.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
         bP.setTextColor(Color.parseColor("#8E92A4"));
-        bP.setTextSize(11f);
+        bP.setTextSize(9.5f);
 
         bH = new Button(this);
-        bH.setText("⚔️ HUB VS HUB");
-        bH.setBackground(box(Color.parseColor("#232634"), 10, 0, 0));
+        bH.setText("⚔️ HUBS");
+        bH.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
         bH.setTextColor(Color.parseColor("#8E92A4"));
-        bH.setTextSize(11f);
+        bH.setTextSize(9.5f);
+
+        bC = new Button(this);
+        bC.setText("📞 HELPLINE");
+        bC.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
+        bC.setTextColor(Color.parseColor("#8E92A4"));
+        bC.setTextSize(9.5f);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
         lp.setMargins(2, 0, 2, 0);
         tb.addView(bT, lp);
         tb.addView(bP, new LinearLayout.LayoutParams(lp));
         tb.addView(bH, new LinearLayout.LayoutParams(lp));
+        tb.addView(bC, new LinearLayout.LayoutParams(lp));
         main.addView(tb);
 
         FrameLayout body = new FrameLayout(this);
-        body.setPadding(14, 6, 14, 10);
+        body.setPadding(12, 6, 12, 10);
         main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
         // 1. ORDER ID TAB
@@ -171,11 +170,11 @@ public class MainActivity extends Activity {
         vTrk.setVisibility(View.VISIBLE);
 
         EditText s = new EditText(this);
-        s.setHint("🔍 Search last 4-5 digits of Track ID...");
+        s.setHint("🔍 Search last digits of Track ID...");
         s.setHintTextColor(Color.parseColor("#717688"));
         s.setTextColor(Color.WHITE);
         s.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#00E676"), 1));
-        s.setPadding(20, 16, 20, 16);
+        s.setPadding(18, 14, 18, 14);
         s.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence c, int i, int i1, int i2) {}
             public void onTextChanged(CharSequence c, int i, int i1, int i2) { qry(c.toString().trim()); }
@@ -221,20 +220,20 @@ public class MainActivity extends Activity {
                 btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
                 Button bCpTrack = new Button(MainActivity.this);
-                bCpTrack.setText("📋 Copy Track ID");
-                bCpTrack.setTextSize(11.5f);
+                bCpTrack.setText("📋 Track");
+                bCpTrack.setTextSize(11f);
                 bCpTrack.setBackground(box(Color.parseColor("#0284C7"), 8, 0, 0));
                 bCpTrack.setTextColor(Color.WHITE);
                 bCpTrack.setTypeface(Typeface.DEFAULT_BOLD);
                 bCpTrack.setOnClickListener(vw -> {
                     ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     cm.setPrimaryClip(ClipData.newPlainText("TrackID", it[0]));
-                    Toast.makeText(MainActivity.this, "Copied: " + it[0], Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Copied Track ID!", Toast.LENGTH_SHORT).show();
                 });
 
                 Button bCpOrder = new Button(MainActivity.this);
-                bCpOrder.setText("📋 Copy Order ID");
-                bCpOrder.setTextSize(11.5f);
+                bCpOrder.setText("📋 Order");
+                bCpOrder.setTextSize(11f);
                 bCpOrder.setBackground(box(Color.parseColor("#232634"), 8, Color.parseColor("#00E676"), 1));
                 bCpOrder.setTextColor(Color.parseColor("#00E676"));
                 bCpOrder.setTypeface(Typeface.DEFAULT_BOLD);
@@ -246,10 +245,27 @@ public class MainActivity extends Activity {
                     Toast.makeText(MainActivity.this, "Copied: " + toCopy, Toast.LENGTH_SHORT).show();
                 });
 
+                Button bWhatsApp = new Button(MainActivity.this);
+                bWhatsApp.setText("💬 Notify");
+                bWhatsApp.setTextSize(11f);
+                bWhatsApp.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+                bWhatsApp.setTextColor(Color.BLACK);
+                bWhatsApp.setTypeface(Typeface.DEFAULT_BOLD);
+                bWhatsApp.setOnClickListener(vw -> {
+                    try {
+                        String msg = "नमस्ते! आपका पार्सल (Track ID: " + it[0] + ") आज डिलीवरी के लिए निकला है। कृपया OTP तैयार रखें। - Delivery Executive";
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?text=" + Uri.encode(msg)));
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "WhatsApp not installed", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
                 LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
-                bLp.setMargins(0, 0, 8, 0);
+                bLp.setMargins(0, 0, 4, 0);
                 btnRow.addView(bCpTrack, bLp);
-                btnRow.addView(bCpOrder, new LinearLayout.LayoutParams(0, -2, 1f));
+                btnRow.addView(bCpOrder, new LinearLayout.LayoutParams(bLp));
+                btnRow.addView(bWhatsApp, new LinearLayout.LayoutParams(0, -2, 1f));
 
                 c.addView(btnRow);
                 return c;
@@ -258,8 +274,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-
-        // 2. PERFORMANCE TAB
+                // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -275,10 +290,22 @@ public class MainActivity extends Activity {
         fl.addView(b3, new LinearLayout.LayoutParams(lpF));
         vPrf.addView(fl);
 
+        tPersonalBest = new TextView(this);
+        tPersonalBest.setText("🏆 Hub Personal Best: -- DEL");
+        tPersonalBest.setTextColor(Color.parseColor("#FBBF24"));
+        tPersonalBest.setBackground(box(Color.parseColor("#232634"), 10, Color.parseColor("#FBBF24"), 1));
+        tPersonalBest.setPadding(14, 10, 14, 10);
+        tPersonalBest.setTextSize(12.5f);
+        tPersonalBest.setTypeface(Typeface.DEFAULT_BOLD);
+        vPrf.addView(tPersonalBest);
+
         LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#38BDF8"), 1));
-        hubBox.setPadding(16, 14, 16, 14);
+        hubBox.setPadding(16, 12, 16, 12);
+        LinearLayout.LayoutParams hbLp = new LinearLayout.LayoutParams(-1, -2);
+        hbLp.setMargins(0, 8, 0, 0);
+        hubBox.setLayoutParams(hbLp);
 
         TextView hTitle = new TextView(this);
         hTitle.setText("MALBAZARHUB_NJP");
@@ -305,7 +332,14 @@ public class MainActivity extends Activity {
         tHubDnpDnpc.setTypeface(Typeface.DEFAULT_BOLD);
         tHubDnpDnpc.setPadding(0, 2, 0, 0);
         hubBox.addView(tHubDnpDnpc);
-        vPrf.addView(hubBox, new LinearLayout.LayoutParams(-1, -2));
+
+        tGapTarget = new TextView(this);
+        tGapTarget.setTextColor(Color.parseColor("#FB923C"));
+        tGapTarget.setTextSize(13f);
+        tGapTarget.setTypeface(Typeface.DEFAULT_BOLD);
+        tGapTarget.setPadding(0, 6, 0, 0);
+        hubBox.addView(tGapTarget);
+        vPrf.addView(hubBox);
 
         LinearLayout sm = new LinearLayout(this);
         sm.setPadding(0, 8, 0, 6);
@@ -317,26 +351,30 @@ public class MainActivity extends Activity {
         sm.addView(sc2, new LinearLayout.LayoutParams(0, -2, 1f));
         vPrf.addView(sm);
 
+        LinearLayout actRow = new LinearLayout(this);
         bSort = new Button(this);
-        bSort.setText("↕️ Sort: High to Low");
+        bSort.setText("↕️ Sort Rate");
         bSort.setBackground(box(Color.parseColor("#232634"), 10, 0, 0));
         bSort.setTextColor(Color.WHITE);
+        bSort.setTextSize(11f);
         bSort.setOnClickListener(v -> {
             isHighToLow = !isHighToLow;
-            bSort.setText(isHighToLow ? "↕️ Sort: High to Low" : "↕️ Sort: Low to High");
             load();
         });
-        LinearLayout.LayoutParams sortLp = new LinearLayout.LayoutParams(-1, -2);
-        sortLp.setMargins(0, 2, 0, 8);
-        vPrf.addView(bSort, sortLp);
 
-        TextView apTitle = new TextView(this);
-        apTitle.setText("AGENT PERFORMANCE");
-        apTitle.setTextColor(Color.parseColor("#9CA3AF"));
-        apTitle.setTextSize(13f);
-        apTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        apTitle.setPadding(2, 4, 2, 6);
-        vPrf.addView(apTitle);
+        bVsBattle = new Button(this);
+        bVsBattle.setText("⚔️ Agent VS Agent");
+        bVsBattle.setBackground(box(Color.parseColor("#7C3AED"), 10, 0, 0));
+        bVsBattle.setTextColor(Color.WHITE);
+        bVsBattle.setTextSize(11f);
+        bVsBattle.setTypeface(Typeface.DEFAULT_BOLD);
+        bVsBattle.setOnClickListener(v -> showAgentVsAgentDialog());
+
+        LinearLayout.LayoutParams aLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        aLp.setMargins(0, 2, 4, 8);
+        actRow.addView(bSort, aLp);
+        actRow.addView(bVsBattle, new LinearLayout.LayoutParams(0, -2, 1f));
+        vPrf.addView(actRow);
 
         ScrollView sv = new ScrollView(this);
         vCrd = new LinearLayout(this);
@@ -349,15 +387,6 @@ public class MainActivity extends Activity {
         vHub = new LinearLayout(this);
         vHub.setOrientation(LinearLayout.VERTICAL);
         vHub.setVisibility(View.GONE);
-
-        TextView hvhTitle = new TextView(this);
-        hvhTitle.setText("⚔️ HUB VS HUB");
-        hvhTitle.setTextColor(Color.parseColor("#60A5FA"));
-        hvhTitle.setTextSize(15f);
-        hvhTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        hvhTitle.setPadding(4, 4, 4, 8);
-        vHub.addView(hvhTitle);
-
         ScrollView svHub = new ScrollView(this);
         vHubCrd = new LinearLayout(this);
         vHubCrd.setOrientation(LinearLayout.VERTICAL);
@@ -365,10 +394,21 @@ public class MainActivity extends Activity {
         vHub.addView(svHub, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vHub);
 
+        // 4. CONTACTS / HELPLINE TAB
+        vCnt = new LinearLayout(this);
+        vCnt.setOrientation(LinearLayout.VERTICAL);
+        vCnt.setVisibility(View.GONE);
+        ScrollView svCnt = new ScrollView(this);
+        vCntCrd = new LinearLayout(this);
+        vCntCrd.setOrientation(LinearLayout.VERTICAL);
+        svCnt.addView(vCntCrd);
+        vCnt.addView(svCnt, new LinearLayout.LayoutParams(-1, -1));
+        body.addView(vCnt);
+
         bT.setOnClickListener(v -> switchTab(0));
         bP.setOnClickListener(v -> switchTab(1));
         bH.setOnClickListener(v -> switchTab(2));
-
+        bC.setOnClickListener(v -> switchTab(3));
         root.addView(main);
 
         loadingOverlay = new LinearLayout(this);
@@ -376,34 +416,18 @@ public class MainActivity extends Activity {
         loadingOverlay.setGravity(Gravity.CENTER);
         loadingOverlay.setBackgroundColor(Color.parseColor("#EE0F1015"));
         loadingOverlay.setClickable(true);
-
         ProgressBar pb = new ProgressBar(this);
         loadingOverlay.addView(pb);
-
-        tLoadingText = new TextView(this);
-        tLoadingText.setText("⏳ Syncing Live Data...\nPlease wait");
-        tLoadingText.setTextColor(Color.parseColor("#00E676"));
-        tLoadingText.setTextSize(15f);
-        tLoadingText.setGravity(Gravity.CENTER);
-        tLoadingText.setTypeface(Typeface.DEFAULT_BOLD);
-        tLoadingText.setPadding(0, 16, 0, 0);
-        loadingOverlay.addView(tLoadingText);
-
         root.addView(loadingOverlay, new FrameLayout.LayoutParams(-1, -1));
 
         load();
         cnt();
+        loadContacts();
     }
-        void showLoading(boolean show, String msg) {
+
+    void showLoading(boolean show, String msg) {
         new Handler(Looper.getMainLooper()).post(() -> {
-            if (loadingOverlay != null) {
-                if (show) {
-                    if (msg != null && tLoadingText != null) tLoadingText.setText(msg);
-                    loadingOverlay.setVisibility(View.VISIBLE);
-                } else {
-                    loadingOverlay.setVisibility(View.GONE);
-                }
-            }
+            if (loadingOverlay != null) loadingOverlay.setVisibility(show ? View.VISIBLE : View.GONE);
         });
     }
 
@@ -411,19 +435,24 @@ public class MainActivity extends Activity {
         vTrk.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         vPrf.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
         vHub.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
+        vCnt.setVisibility(index == 3 ? View.VISIBLE : View.GONE);
 
-        bT.setBackground(box(index == 0 ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 10, 0, 0));
+        bT.setBackground(box(index == 0 ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
         bT.setTextColor(index == 0 ? Color.BLACK : Color.parseColor("#8E92A4"));
 
-        bP.setBackground(box(index == 1 ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 10, 0, 0));
+        bP.setBackground(box(index == 1 ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
         bP.setTextColor(index == 1 ? Color.BLACK : Color.parseColor("#8E92A4"));
 
-        bH.setBackground(box(index == 2 ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 10, 0, 0));
+        bH.setBackground(box(index == 2 ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
         bH.setTextColor(index == 2 ? Color.BLACK : Color.parseColor("#8E92A4"));
+
+        bC.setBackground(box(index == 3 ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
+        bC.setTextColor(index == 3 ? Color.BLACK : Color.parseColor("#8E92A4"));
 
         if (index == 0) cnt();
         if (index == 1) load();
         if (index == 2) loadHubVsHub();
+        if (index == 3) loadContacts();
     }
 
     Button flt(String text, String m) {
@@ -464,11 +493,11 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-    }
-
-    void load() {
+            }
+        void load() {
         try {
             vCrd.removeAllViews();
+            agentNamesList.clear();
             String opDate = getOperationalDate();
             String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date('" + opDate + "','-7 days') " : " WHERE dt >= date('" + opDate + "','-30 days') ");
 
@@ -483,8 +512,22 @@ public class MainActivity extends Activity {
                 tHubOfdDel.setText("OFD/DEL = " + to + "/" + tl + " = " + String.format(Locale.US, "%.1f%%", ofdConv));
                 tHubOfpPik.setText("OFP/PIKED = " + tp + "/" + tk + " = " + String.format(Locale.US, "%.1f%%", ofpConv));
                 tHubDnpDnpc.setText("DNP/DNPC = " + tdnp + "/" + tdnpc + " = " + String.format(Locale.US, "%.1f%%", dnpConv));
+
+                int targetNeeded = (int) Math.ceil(0.90 * tdnp);
+                int diff = targetNeeded - tdnpc;
+                if (diff <= 0 && tdnp > 0) {
+                    tGapTarget.setText("🎯 90% Target Achieved! 🚀");
+                    tGapTarget.setTextColor(Color.parseColor("#00E676"));
+                } else if (tdnp > 0) {
+                    tGapTarget.setText("🎯 Gap to 90%: " + diff + " more DNPC required");
+                    tGapTarget.setTextColor(Color.parseColor("#FB923C"));
+                } else {
+                    tGapTarget.setText("");
+                }
             }
             if (hc != null) hc.close();
+
+            updatePersonalBest();
 
             Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
             ArrayList<String[]> list = new ArrayList<>();
@@ -494,6 +537,7 @@ public class MainActivity extends Activity {
 
             while (ac != null && ac.moveToNext()) {
                 String name = ac.getString(0);
+                agentNamesList.add(name);
                 int o = ac.getInt(1), l = ac.getInt(2), p = ac.getInt(3), k = ac.getInt(4);
                 int dnp = o + p, dnpc = l + k;
                 double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
@@ -581,9 +625,100 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
+    void updatePersonalBest() {
+        try {
+            Cursor c = db.rawQuery("SELECT dt, SUM(l) as max_del FROM prf GROUP BY dt ORDER BY max_del DESC LIMIT 1", null);
+            if (c != null && c.moveToFirst()) {
+                tPersonalBest.setText("🏆 Hub Best: " + c.getInt(1) + " DEL (" + c.getString(0) + ")");
+            }
+            if (c != null) c.close();
+        } catch (Exception ignored) {}
+    }
+
+    void showAgentVsAgentDialog() {
+        if (agentNamesList.size() < 2) {
+            Toast.makeText(this, "Need at least 2 agents to compare", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        LinearLayout dLayout = new LinearLayout(this);
+        dLayout.setOrientation(LinearLayout.VERTICAL);
+        dLayout.setPadding(24, 20, 24, 20);
+        dLayout.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        TextView title = new TextView(this);
+        title.setText("⚔️ AGENT BATTLE ARENA");
+        title.setTextColor(Color.parseColor("#A855F7"));
+        title.setTextSize(16f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        dLayout.addView(title);
+
+        Spinner sp1 = new Spinner(this);
+        Spinner sp2 = new Spinner(this);
+        ArrayAdapter<String> ad = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, agentNamesList);
+        sp1.setAdapter(ad);
+        sp2.setAdapter(ad);
+        if (agentNamesList.size() > 1) sp2.setSelection(1);
+
+        dLayout.addView(sp1);
+        dLayout.addView(sp2);
+
+        LinearLayout resBox = new LinearLayout(this);
+        resBox.setOrientation(LinearLayout.VERTICAL);
+        resBox.setPadding(0, 16, 0, 0);
+        dLayout.addView(resBox);
+
+        Button bComp = new Button(this);
+        bComp.setText("⚡ COMPARE NOW");
+        bComp.setBackground(box(Color.parseColor("#7C3AED"), 8, 0, 0));
+        bComp.setTextColor(Color.WHITE);
+        bComp.setTypeface(Typeface.DEFAULT_BOLD);
+        bComp.setOnClickListener(v -> {
+            String ag1 = (String) sp1.getSelectedItem();
+            String ag2 = (String) sp2.getSelectedItem();
+            resBox.removeAllViews();
+
+            TextView vsTitle = new TextView(MainActivity.this);
+            vsTitle.setText("📊 " + ag1 + "  VS  " + ag2);
+            vsTitle.setTextColor(Color.parseColor("#38BDF8"));
+            vsTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            vsTitle.setTextSize(14f);
+            resBox.addView(vsTitle);
+
+            String r1 = getAgentStats(ag1);
+            String r2 = getAgentStats(ag2);
+
+            TextView stats = new TextView(MainActivity.this);
+            stats.setText("\n👤 " + ag1 + ":\n" + r1 + "\n\n👤 " + ag2 + ":\n" + r2);
+            stats.setTextColor(Color.WHITE);
+            stats.setTextSize(13f);
+            resBox.addView(stats);
+        });
+        dLayout.addView(bComp);
+
+        new AlertDialog.Builder(this)
+                .setView(dLayout)
+                .setPositiveButton("Close", null)
+                .show();
+    }
+
+    String getAgentStats(String name) {
+        String opDate = getOperationalDate();
+        String w = "daily".equals(mode) ? " WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE n = ? AND dt >= date('" + opDate + "','-7 days') " : " WHERE n = ? AND dt >= date('" + opDate + "','-30 days') ");
+        Cursor c = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, new String[]{name});
+        String res = "No data";
+        if (c != null && c.moveToFirst()) {
+            int o = c.getInt(0), l = c.getInt(1), p = c.getInt(2), k = c.getInt(3);
+            int dnp = o + p, dnpc = l + k;
+            double cr = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
+            res = "• OFD: " + o + " | DEL: " + l + "\n• Conv: " + String.format(Locale.US, "%.1f%%", cr) + " | Streak: " + getStreak(name) + " Days";
+        }
+        if (c != null) c.close();
+        return res;
+    }
+
     int getStreak(String name) {
         int streak = 0;
-        String opDate = getOperationalDate();
         Cursor c = db.rawQuery("SELECT dt FROM prf WHERE n = ? AND (o+p) > 0 GROUP BY dt ORDER BY dt DESC", new String[]{name});
         String lastDt = null;
         while (c != null && c.moveToNext()) {
@@ -609,7 +744,52 @@ public class MainActivity extends Activity {
         return Math.max(1, streak);
     }
 
-    void loadHubVsHub() {
+    void showDetails(String name) {
+        String opDate = getOperationalDate();
+        Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= date('" + opDate + "','-30 days') ORDER BY dt DESC", new String[]{name});
+        LinearLayout pop = new LinearLayout(this);
+        pop.setOrientation(LinearLayout.VERTICAL);
+        pop.setPadding(20, 20, 20, 20);
+        pop.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        TextView h = new TextView(this);
+        h.setText("👤 " + name + " (Last 30 Days)");
+        h.setTextColor(Color.parseColor("#00E676"));
+        h.setTextSize(15f);
+        h.setTypeface(Typeface.DEFAULT_BOLD);
+        h.setPadding(0, 0, 0, 10);
+        pop.addView(h);
+
+        ScrollView sv = new ScrollView(this);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+
+        while (c != null && c.moveToNext()) {
+            int o = c.getInt(1), l = c.getInt(2), p = c.getInt(3), k = c.getInt(4);
+            int dnp = o + p, dnpc = l + k;
+            double cr = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
+
+            TextView item = new TextView(this);
+            item.setText("📅 " + c.getString(0) + "  |  Conv: " + String.format(Locale.US, "%.1f%%", cr) + "\nOFD: " + o + " | DEL: " + l + " | OFP: " + p + " | PIK: " + k);
+            item.setTextColor(Color.WHITE);
+            item.setTextSize(13f);
+            item.setPadding(12, 10, 12, 10);
+            item.setBackground(box(Color.parseColor("#181920"), 10, Color.parseColor("#2A2D3D"), 1));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, 0, 0, 8);
+            item.setLayoutParams(lp);
+            content.addView(item);
+        }
+        if (c != null) c.close();
+        sv.addView(content);
+        pop.addView(sv);
+
+        new AlertDialog.Builder(this)
+            .setView(pop)
+            .setPositiveButton("Close", null)
+            .show();
+                               }
+        void loadHubVsHub() {
         try {
             vHubCrd.removeAllViews();
             Cursor c = db.rawQuery("SELECT hname, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf", null);
@@ -662,50 +842,101 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
-    void showDetails(String name) {
-        String opDate = getOperationalDate();
-        Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= date('" + opDate + "','-30 days') ORDER BY dt DESC", new String[]{name});
-        LinearLayout pop = new LinearLayout(this);
-        pop.setOrientation(LinearLayout.VERTICAL);
-        pop.setPadding(20, 20, 20, 20);
-        pop.setBackgroundColor(Color.parseColor("#0F1015"));
-
-        TextView h = new TextView(this);
-        h.setText("👤 " + name + " (Last 30 Days)");
-        h.setTextColor(Color.parseColor("#00E676"));
-        h.setTextSize(15f);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        h.setPadding(0, 0, 0, 10);
-        pop.addView(h);
-
-        ScrollView sv = new ScrollView(this);
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-
-        while (c != null && c.moveToNext()) {
-            int o = c.getInt(1), l = c.getInt(2), p = c.getInt(3), k = c.getInt(4);
-            int dnp = o + p, dnpc = l + k;
-            double cr = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-
-            TextView item = new TextView(this);
-            item.setText("📅 " + c.getString(0) + "  |  Conv: " + String.format(Locale.US, "%.1f%%", cr) + "\nOFD: " + o + " | DEL: " + l + " | OFP: " + p + " | PIK: " + k);
-            item.setTextColor(Color.WHITE);
-            item.setTextSize(13f);
-            item.setPadding(12, 10, 12, 10);
-            item.setBackground(box(Color.parseColor("#181920"), 10, Color.parseColor("#2A2D3D"), 1));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-            lp.setMargins(0, 0, 0, 8);
-            item.setLayoutParams(lp);
-            content.addView(item);
+    void loadContacts() {
+        vCntCrd.removeAllViews();
+        Cursor c = db.rawQuery("SELECT name, role, phone FROM contacts", null);
+        if (c != null && c.getCount() > 0) {
+            addContactHeader("📋 LIVE CONTACT DIRECTORY (FROM SHEET)");
+            while (c.moveToNext()) {
+                String name = c.getString(0);
+                String role = c.getString(1);
+                String phone = c.getString(2);
+                String colorHex = "#00E676";
+                String rLower = role.toLowerCase(Locale.ROOT);
+                if (rLower.contains("manager") || rLower.contains("tl") || rLower.contains("lead")) colorHex = "#38BDF8";
+                else if (rLower.contains("office") || rLower.contains("return") || rLower.contains("gate")) colorHex = "#FBBF24";
+                addContactItem(name, role, phone, colorHex);
+            }
+        } else {
+            addContactHeader("ℹ️ NO CONTACTS FOUND");
+            TextView emptyTxt = new TextView(this);
+            emptyTxt.setText("Sheet में Column R (Name), S (Role), T (Phone) भरें और SYNC दबाएं।");
+            emptyTxt.setTextColor(Color.parseColor("#9CA3AF"));
+            emptyTxt.setPadding(10, 10, 10, 10);
+            vCntCrd.addView(emptyTxt);
         }
         if (c != null) c.close();
-        sv.addView(content);
-        pop.addView(sv);
+    }
 
-        new AlertDialog.Builder(this)
-            .setView(pop)
-            .setPositiveButton("Close", null)
-            .show();
+    void addContactHeader(String text) {
+        TextView th = new TextView(this);
+        th.setText(text);
+        th.setTextColor(Color.parseColor("#9CA3AF"));
+        th.setTextSize(12f);
+        th.setTypeface(Typeface.DEFAULT_BOLD);
+        th.setPadding(4, 16, 4, 8);
+        vCntCrd.addView(th);
+    }
+
+    void addContactItem(String name, String role, String phone, String colorHex) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(box(Color.parseColor("#181920"), 12, Color.parseColor("#2A2D3D"), 1));
+        card.setPadding(16, 12, 16, 12);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(-1, -2);
+        clp.setMargins(0, 0, 0, 8);
+        card.setLayoutParams(clp);
+
+        TextView tN = new TextView(this);
+        tN.setText("👤 " + name);
+        tN.setTextColor(Color.parseColor(colorHex));
+        tN.setTextSize(14.5f);
+        tN.setTypeface(Typeface.DEFAULT_BOLD);
+        card.addView(tN);
+
+        TextView tR = new TextView(this);
+        tR.setText(role + "  •  📞 " + phone);
+        tR.setTextColor(Color.parseColor("#D1D5DB"));
+        tR.setTextSize(12.5f);
+        tR.setPadding(0, 2, 0, 8);
+        card.addView(tR);
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button bCall = new Button(this);
+        bCall.setText("📞 Call");
+        bCall.setTextSize(11f);
+        bCall.setBackground(box(Color.parseColor("#0284C7"), 8, 0, 0));
+        bCall.setTextColor(Color.WHITE);
+        bCall.setTypeface(Typeface.DEFAULT_BOLD);
+        bCall.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phone));
+            startActivity(intent);
+        });
+
+        Button bWp = new Button(this);
+        bWp.setText("💬 WhatsApp");
+        bWp.setTextSize(11f);
+        bWp.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+        bWp.setTextColor(Color.BLACK);
+        bWp.setTypeface(Typeface.DEFAULT_BOLD);
+        bWp.setOnClickListener(v -> {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=91" + phone));
+                startActivity(intent);
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "WhatsApp error", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        bLp.setMargins(0, 0, 6, 0);
+        row.addView(bCall, bLp);
+        row.addView(bWp, new LinearLayout.LayoutParams(0, -2, 1f));
+
+        card.addView(row);
+        vCntCrd.addView(card);
     }
 
     void qry(String q) {
@@ -755,12 +986,13 @@ public class MainActivity extends Activity {
 
             db.beginTransaction();
             db.execSQL("DELETE FROM hub_prf");
+            db.execSQL("DELETE FROM contacts");
             db.execSQL("DELETE FROM prf WHERE dt = '" + opDate + "'");
 
             while ((line = reader.readLine()) != null) {
                 String[] p = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
-                // ORDER TRACKER (Col A & B)
+                // 1. ORDER TRACKER (Col A & B)
                 if (p.length >= 2) {
                     String trackId = clean(p[0]);
                     String ordId = clean(p[1]);
@@ -772,7 +1004,7 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // AGENT PERFORMANCE (Col C to G)
+                // 2. AGENT PERFORMANCE (Col C to G)
                 if (p.length > 2) {
                     String name = clean(p[2]);
                     if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("Total") && !name.contains("Total")) {
@@ -792,7 +1024,7 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // HUB VS HUB DATA (Col I to P)
+                // 3. HUB VS HUB DATA (Col I to P)
                 if (p.length > 8) {
                     String hname = clean(p[8]);
                     if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
@@ -821,14 +1053,29 @@ public class MainActivity extends Activity {
                         db.insert("hub_prf", null, hcv);
                     }
                 }
+
+                // 4. CONTACTS DIRECTORY (Col R, S, T -> index 17, 18, 19)
+                if (p.length > 19) {
+                    String cName = clean(p[17]);
+                    String cRole = clean(p[18]);
+                    String cPhone = clean(p[19]);
+                    if (!cName.isEmpty() && !cName.equalsIgnoreCase("NAME") && !cPhone.equalsIgnoreCase("PHONE") && cPhone.matches(".*\\d+.*")) {
+                        ContentValues cntCv = new ContentValues();
+                        cntCv.put("name", cName);
+                        cntCv.put("role", cRole.isEmpty() ? "Staff" : cRole);
+                        cntCv.put("phone", cPhone);
+                        db.insert("contacts", null, cntCv);
+                    }
+                }
             }
             db.setTransactionSuccessful();
-                        db.endTransaction();
+            db.endTransaction();
             reader.close();
 
             new Handler(Looper.getMainLooper()).post(() -> {
                 load();
                 loadHubVsHub();
+                loadContacts();
                 cnt();
                 qry("");
                 showLoading(false, null);
