@@ -61,6 +61,14 @@ public class MainActivity extends Activity {
         return g;
     }
 
+    String getOperationalDate() {
+        Calendar cal = Calendar.getInstance();
+        if (cal.get(Calendar.HOUR_OF_DAY) < 2) {
+            cal.add(Calendar.DATE, -1);
+        }
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
+    }
+
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -85,7 +93,7 @@ public class MainActivity extends Activity {
             try {
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("📦 Delivery Tracker Pro");
-                builder.setMessage("⚡ MANAGED BY ADARSH\n\nLive Field Tracking & Analytics System");
+                builder.setMessage("⚡ MANAGED BY ADARSH\n\nLive Field Tracking & Analytics System\nOperational Shift Cutoff: 2:00 AM");
                 builder.setPositiveButton("GET STARTED", null);
                 builder.setCancelable(true);
                 builder.show();
@@ -163,7 +171,7 @@ public class MainActivity extends Activity {
         vTrk.setVisibility(View.VISIBLE);
 
         EditText s = new EditText(this);
-        s.setHint("🔍 Search last 4-5 digits or full ID...");
+        s.setHint("🔍 Search last 4-5 digits of Track ID...");
         s.setHintTextColor(Color.parseColor("#717688"));
         s.setTextColor(Color.WHITE);
         s.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#00E676"), 1));
@@ -191,7 +199,7 @@ public class MainActivity extends Activity {
             public View getView(int i, View v, ViewGroup p) {
                 LinearLayout c = new LinearLayout(MainActivity.this);
                 c.setOrientation(LinearLayout.VERTICAL);
-                c.setPadding(18, 14, 18, 14);
+                c.setPadding(16, 14, 16, 14);
                 c.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#2A2D3D"), 1));
                 String[] it = ords.get(i);
 
@@ -199,21 +207,51 @@ public class MainActivity extends Activity {
                 t1.setText("📦 Track ID: " + it[0]);
                 t1.setTextColor(Color.parseColor("#38BDF8"));
                 t1.setTypeface(Typeface.DEFAULT_BOLD);
+                t1.setTextSize(14f);
+                c.addView(t1);
 
                 TextView t2 = new TextView(MainActivity.this);
-                t2.setText("🛒 Order ID: " + it[1] + "  📋 (Tap to Copy Last 6 Digits)");
+                t2.setText("🛒 Order ID: " + it[1]);
                 t2.setTextColor(Color.parseColor("#00E676"));
-                t2.setPadding(0, 6, 0, 0);
-
-                c.addView(t1);
+                t2.setTextSize(13.5f);
+                t2.setPadding(0, 4, 0, 10);
                 c.addView(t2);
-                c.setOnClickListener(vw -> {
-                    String fullOrd = it[1].trim();
-                    String last6 = (fullOrd.length() >= 6) ? fullOrd.substring(fullOrd.length() - 6) : fullOrd;
+
+                LinearLayout btnRow = new LinearLayout(MainActivity.this);
+                btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+                Button bCpTrack = new Button(MainActivity.this);
+                bCpTrack.setText("📋 Copy Track ID");
+                bCpTrack.setTextSize(11.5f);
+                bCpTrack.setBackground(box(Color.parseColor("#0284C7"), 8, 0, 0));
+                bCpTrack.setTextColor(Color.WHITE);
+                bCpTrack.setTypeface(Typeface.DEFAULT_BOLD);
+                bCpTrack.setOnClickListener(vw -> {
                     ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(ClipData.newPlainText("Last6Digits", last6));
-                    Toast.makeText(MainActivity.this, "Copied: " + last6, Toast.LENGTH_SHORT).show();
+                    cm.setPrimaryClip(ClipData.newPlainText("TrackID", it[0]));
+                    Toast.makeText(MainActivity.this, "Copied: " + it[0], Toast.LENGTH_SHORT).show();
                 });
+
+                Button bCpOrder = new Button(MainActivity.this);
+                bCpOrder.setText("📋 Copy Order ID");
+                bCpOrder.setTextSize(11.5f);
+                bCpOrder.setBackground(box(Color.parseColor("#232634"), 8, Color.parseColor("#00E676"), 1));
+                bCpOrder.setTextColor(Color.parseColor("#00E676"));
+                bCpOrder.setTypeface(Typeface.DEFAULT_BOLD);
+                bCpOrder.setOnClickListener(vw -> {
+                    String cleanOrd = it[1].replaceAll("00$", "");
+                    String toCopy = cleanOrd.length() >= 6 ? cleanOrd.substring(cleanOrd.length() - 6) : cleanOrd;
+                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    cm.setPrimaryClip(ClipData.newPlainText("OrderID", toCopy));
+                    Toast.makeText(MainActivity.this, "Copied: " + toCopy, Toast.LENGTH_SHORT).show();
+                });
+
+                LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                bLp.setMargins(0, 0, 8, 0);
+                btnRow.addView(bCpTrack, bLp);
+                btnRow.addView(bCpOrder, new LinearLayout.LayoutParams(0, -2, 1f));
+
+                c.addView(btnRow);
                 return c;
             }
         };
@@ -333,7 +371,6 @@ public class MainActivity extends Activity {
 
         root.addView(main);
 
-        // Loading Overlay
         loadingOverlay = new LinearLayout(this);
         loadingOverlay.setOrientation(LinearLayout.VERTICAL);
         loadingOverlay.setGravity(Gravity.CENTER);
@@ -356,7 +393,7 @@ public class MainActivity extends Activity {
 
         load();
         cnt();
-            }
+                        }
         void showLoading(boolean show, String msg) {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (loadingOverlay != null) {
@@ -432,7 +469,8 @@ public class MainActivity extends Activity {
     void load() {
         try {
             vCrd.removeAllViews();
-            String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date('now','localtime','-7 days') " : " WHERE dt >= date('now','localtime','-30 days') ");
+            String opDate = getOperationalDate();
+            String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date('" + opDate + "','-7 days') " : " WHERE dt >= date('" + opDate + "','-30 days') ");
 
             Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, null);
             if (hc != null && hc.moveToFirst()) {
@@ -493,7 +531,6 @@ public class MainActivity extends Activity {
                 clp.setMargins(0, 0, 0, 10);
                 card.setLayoutParams(clp);
 
-                // AGENT NAME & STREAK ROW
                 LinearLayout nameRow = new LinearLayout(this);
                 nameRow.setOrientation(LinearLayout.HORIZONTAL);
                 nameRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -546,6 +583,7 @@ public class MainActivity extends Activity {
 
     int getStreak(String name) {
         int streak = 0;
+        String opDate = getOperationalDate();
         Cursor c = db.rawQuery("SELECT dt FROM prf WHERE n = ? AND (o+p) > 0 GROUP BY dt ORDER BY dt DESC", new String[]{name});
         String lastDt = null;
         while (c != null && c.moveToNext()) {
@@ -625,7 +663,8 @@ public class MainActivity extends Activity {
     }
 
     void showDetails(String name) {
-        Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= date('now','localtime','-30 days') ORDER BY dt DESC", new String[]{name});
+        String opDate = getOperationalDate();
+        Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= date('" + opDate + "','-30 days') ORDER BY dt DESC", new String[]{name});
         LinearLayout pop = new LinearLayout(this);
         pop.setOrientation(LinearLayout.VERTICAL);
         pop.setPadding(20, 20, 20, 20);
@@ -669,7 +708,7 @@ public class MainActivity extends Activity {
             .show();
     }
 
-        void qry(String q) {
+    void qry(String q) {
         ords.clear();
         if (!q.isEmpty()) {
             Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? LIMIT 50", new String[]{"%" + q + "%"});
@@ -680,7 +719,6 @@ public class MainActivity extends Activity {
         }
         if (adp != null) adp.notifyDataSetChanged();
     }
-
 
     void cnt() {
         try {
@@ -713,11 +751,11 @@ public class MainActivity extends Activity {
             if (is == null) throw new Exception("Unable to connect");
             BufferedReader reader = new BufferedReader(new InputStreamReader(is));
             String line;
-            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Calendar.getInstance().getTime());
+            String opDate = getOperationalDate();
 
             db.beginTransaction();
             db.execSQL("DELETE FROM hub_prf");
-            db.execSQL("DELETE FROM prf WHERE dt = '" + today + "'");
+            db.execSQL("DELETE FROM prf WHERE dt = '" + opDate + "'");
 
             while ((line = reader.readLine()) != null) {
                 String[] p = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
@@ -749,7 +787,7 @@ public class MainActivity extends Activity {
                         cv.put("l", l);
                         cv.put("p", op);
                         cv.put("k", k);
-                        cv.put("dt", today);
+                        cv.put("dt", opDate);
                         db.insert("prf", null, cv);
                     }
                 }
@@ -785,35 +823,4 @@ public class MainActivity extends Activity {
                 }
             }
             db.setTransactionSuccessful();
-                        db.endTransaction();
-            reader.close();
-
-            new Handler(Looper.getMainLooper()).post(() -> {
-                load();
-                loadHubVsHub();
-                cnt();
-                qry("");
-                showLoading(false, null);
-                if (!isAuto) Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
-            });
-        } catch (Exception e) {
-            new Handler(Looper.getMainLooper()).post(() -> {
-                showLoading(false, null);
-                if (!isAuto) Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            });
-        }
-    }
-
-    String clean(String s) {
-        if (s == null) return "";
-        return s.replace("\"", "").trim();
-    }
-
-    int parseInt(String s) {
-        try {
-            return Integer.parseInt(clean(s).replace("%", ""));
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-}
+            db.end
