@@ -669,10 +669,10 @@ public class MainActivity extends Activity {
             .show();
     }
 
-    void qry(String q) {
+        void qry(String q) {
         ords.clear();
         if (!q.isEmpty()) {
-            Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? OR d LIKE ? LIMIT 50", new String[]{"%" + q + "%", "%" + q + "%"});
+            Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? LIMIT 50", new String[]{"%" + q + "%"});
             while (c != null && c.moveToNext()) {
                 ords.add(new String[]{c.getString(0), c.getString(1)});
             }
@@ -680,6 +680,7 @@ public class MainActivity extends Activity {
         }
         if (adp != null) adp.notifyDataSetChanged();
     }
+
 
     void cnt() {
         try {
