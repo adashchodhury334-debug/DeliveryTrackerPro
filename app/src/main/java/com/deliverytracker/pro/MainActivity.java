@@ -26,6 +26,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -43,9 +44,9 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     SQLiteDatabase db;
     FrameLayout root;
-    LinearLayout vTrk, vPrf, vHub, vCrd, vHubCrd;
+    LinearLayout vTrk, vPrf, vHub, vCrd, vHubCrd, loadingOverlay;
     Button bT, bP, bH, b1, b2, b3, bSort;
-    TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc;
+    TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tLoadingText;
     ArrayList<String[]> ords = new ArrayList<>();
     BaseAdapter adp;
     String mode = "daily";
@@ -75,7 +76,21 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.parseColor("#0F1015"));
         setContentView(root);
         buildUI();
+        showStartupPopup();
         new Thread(() -> doSync(true)).start();
+    }
+
+    void showStartupPopup() {
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle("📦 Delivery Tracker Pro");
+                builder.setMessage("⚡ MANAGED BY ADARSH\n\nLive Field Tracking & Analytics System");
+                builder.setPositiveButton("GET STARTED", null);
+                builder.setCancelable(true);
+                builder.show();
+            } catch (Exception ignored) {}
+        }, 500);
     }
 
     @Override
@@ -92,10 +107,11 @@ public class MainActivity extends Activity {
         h.setBackgroundColor(Color.parseColor("#181920"));
         h.setPadding(20, 16, 20, 16);
         h.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView t = new TextView(this);
-        t.setText("📊 Delivery Tracker");
+        t.setText("📦 Delivery Tracker");
         t.setTextColor(Color.WHITE);
-        t.setTextSize(16f);
+        t.setTextSize(16.5f);
         t.setTypeface(Typeface.DEFAULT_BOLD);
         h.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
 
@@ -316,10 +332,45 @@ public class MainActivity extends Activity {
         bH.setOnClickListener(v -> switchTab(2));
 
         root.addView(main);
+
+        // Loading Overlay
+        loadingOverlay = new LinearLayout(this);
+        loadingOverlay.setOrientation(LinearLayout.VERTICAL);
+        loadingOverlay.setGravity(Gravity.CENTER);
+        loadingOverlay.setBackgroundColor(Color.parseColor("#EE0F1015"));
+        loadingOverlay.setClickable(true);
+
+        ProgressBar pb = new ProgressBar(this);
+        loadingOverlay.addView(pb);
+
+        tLoadingText = new TextView(this);
+        tLoadingText.setText("⏳ Syncing Live Data...\nPlease wait");
+        tLoadingText.setTextColor(Color.parseColor("#00E676"));
+        tLoadingText.setTextSize(15f);
+        tLoadingText.setGravity(Gravity.CENTER);
+        tLoadingText.setTypeface(Typeface.DEFAULT_BOLD);
+        tLoadingText.setPadding(0, 16, 0, 0);
+        loadingOverlay.addView(tLoadingText);
+
+        root.addView(loadingOverlay, new FrameLayout.LayoutParams(-1, -1));
+
         load();
         cnt();
-                        }
-        void switchTab(int index) {
+            }
+        void showLoading(boolean show, String msg) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (loadingOverlay != null) {
+                if (show) {
+                    if (msg != null && tLoadingText != null) tLoadingText.setText(msg);
+                    loadingOverlay.setVisibility(View.VISIBLE);
+                } else {
+                    loadingOverlay.setVisibility(View.GONE);
+                }
+            }
+        });
+    }
+
+    void switchTab(int index) {
         vTrk.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         vPrf.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
         vHub.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
@@ -430,6 +481,7 @@ public class MainActivity extends Activity {
             Collections.sort(list, (a, b) -> isHighToLow ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
 
             for (String[] ag : list) {
+                int strk = getStreak(ag[0]);
                 double rate = Double.parseDouble(ag[8]);
                 int badgeColor = (rate >= 90.0) ? Color.parseColor("#00E676") : ((rate >= 60.0) ? Color.parseColor("#FBBF24") : Color.parseColor("#EF4444"));
 
@@ -441,18 +493,33 @@ public class MainActivity extends Activity {
                 clp.setMargins(0, 0, 0, 10);
                 card.setLayoutParams(clp);
 
+                // AGENT NAME & STREAK ROW
+                LinearLayout nameRow = new LinearLayout(this);
+                nameRow.setOrientation(LinearLayout.HORIZONTAL);
+                nameRow.setGravity(Gravity.CENTER_VERTICAL);
+
                 TextView n = new TextView(this);
                 n.setText("👤 " + ag[0]);
                 n.setTextColor(badgeColor);
                 n.setTypeface(Typeface.DEFAULT_BOLD);
                 n.setTextSize(15f);
-                card.addView(n);
+                nameRow.addView(n, new LinearLayout.LayoutParams(0, -2, 1f));
+
+                TextView st = new TextView(this);
+                st.setText("🔥 " + strk + "D Active");
+                st.setTextColor(Color.parseColor("#FBBF24"));
+                st.setTextSize(11.5f);
+                st.setTypeface(Typeface.DEFAULT_BOLD);
+                st.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
+                st.setPadding(10, 4, 10, 4);
+                nameRow.addView(st);
+                card.addView(nameRow);
 
                 TextView t1 = new TextView(this);
                 t1.setText("OFD/DEL = " + ag[1] + "/" + ag[2] + " = " + ag[9] + "%");
                 t1.setTextColor(Color.parseColor("#D1D5DB"));
                 t1.setTextSize(13f);
-                t1.setPadding(0, 4, 0, 0);
+                t1.setPadding(0, 6, 0, 0);
                 card.addView(t1);
 
                 TextView t2 = new TextView(this);
@@ -470,16 +537,38 @@ public class MainActivity extends Activity {
                 t3.setPadding(0, 2, 0, 0);
                 card.addView(t3);
 
-                TextView t4 = new TextView(this);
-                t4.setText("");
-                t4.setVisibility(View.GONE);
-                card.addView(t4);
-
                 final String agName = ag[0];
                 card.setOnClickListener(v -> showDetails(agName));
                 vCrd.addView(card);
             }
         } catch (Exception ignored) {}
+    }
+
+    int getStreak(String name) {
+        int streak = 0;
+        Cursor c = db.rawQuery("SELECT dt FROM prf WHERE n = ? AND (o+p) > 0 GROUP BY dt ORDER BY dt DESC", new String[]{name});
+        String lastDt = null;
+        while (c != null && c.moveToNext()) {
+            String dt = c.getString(0);
+            if (lastDt == null) {
+                streak = 1;
+            } else {
+                try {
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+                    Calendar cal1 = Calendar.getInstance(); cal1.setTime(sdf.parse(lastDt));
+                    Calendar cal2 = Calendar.getInstance(); cal2.setTime(sdf.parse(dt));
+                    cal2.add(Calendar.DAY_OF_YEAR, 1);
+                    if (cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)) {
+                        streak++;
+                    } else {
+                        break;
+                    }
+                } catch (Exception e) { break; }
+            }
+            lastDt = dt;
+        }
+        if (c != null) c.close();
+        return Math.max(1, streak);
     }
 
     void loadHubVsHub() {
@@ -582,11 +671,13 @@ public class MainActivity extends Activity {
 
     void qry(String q) {
         ords.clear();
-        Cursor c = q.isEmpty() ? db.rawQuery("SELECT t, d FROM ord LIMIT 50", null) : db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? OR d LIKE ? LIMIT 50", new String[]{"%" + q + "%", "%" + q + "%"});
-        while (c != null && c.moveToNext()) {
-            ords.add(new String[]{c.getString(0), c.getString(1)});
+        if (!q.isEmpty()) {
+            Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? OR d LIKE ? LIMIT 50", new String[]{"%" + q + "%", "%" + q + "%"});
+            while (c != null && c.moveToNext()) {
+                ords.add(new String[]{c.getString(0), c.getString(1)});
+            }
+            if (c != null) c.close();
         }
-        if (c != null) c.close();
         if (adp != null) adp.notifyDataSetChanged();
     }
 
@@ -601,6 +692,7 @@ public class MainActivity extends Activity {
     }
 
     void doSync(boolean isAuto) {
+        showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
         try {
             String targetUrl = CSV;
             HttpURLConnection conn = null;
@@ -629,7 +721,7 @@ public class MainActivity extends Activity {
             while ((line = reader.readLine()) != null) {
                 String[] p = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
-                // ORDER TRACKER DATA (Col A & B)
+                // ORDER TRACKER (Col A & B)
                 if (p.length >= 2) {
                     String trackId = clean(p[0]);
                     String ordId = clean(p[1]);
@@ -641,7 +733,7 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // AGENT PERFORMANCE (Col C = Name, Col D = OFD, Col E = DEL, Col F = OFP, Col G = PIKED)
+                // AGENT PERFORMANCE (Col C to G)
                 if (p.length > 2) {
                     String name = clean(p[2]);
                     if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("Total") && !name.contains("Total")) {
@@ -661,7 +753,7 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // HUB VS HUB DATA (Col I = Hub Name, Col J = OFD, Col K = DEL, Col L = OFD CON, Col M = OFP, Col N = PIKED, Col O = PIK CON, Col P = Total CON)
+                // HUB VS HUB DATA (Col I to P)
                 if (p.length > 8) {
                     String hname = clean(p[8]);
                     if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
@@ -692,7 +784,7 @@ public class MainActivity extends Activity {
                 }
             }
             db.setTransactionSuccessful();
-            db.endTransaction();
+                        db.endTransaction();
             reader.close();
 
             new Handler(Looper.getMainLooper()).post(() -> {
@@ -700,10 +792,12 @@ public class MainActivity extends Activity {
                 loadHubVsHub();
                 cnt();
                 qry("");
+                showLoading(false, null);
                 if (!isAuto) Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
             });
         } catch (Exception e) {
             new Handler(Looper.getMainLooper()).post(() -> {
+                showLoading(false, null);
                 if (!isAuto) Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
         }
@@ -721,5 +815,4 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-                                    }
-            
+}
