@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
@@ -49,7 +50,7 @@ public class MainActivity extends Activity {
     SQLiteDatabase db;
     FrameLayout root;
     LinearLayout vTrk, vPrf, vHub, vCnt, vCrd, vHubCrd, vCntCrd, loadingOverlay;
-    Button bT, bP, bH, bC, b1, b2, b3, bSort, bVsBattle;
+    Button bT, bP, bH, bC, b1, b2, b3, bSort, bVsBattle, bVoiceOtp;
     TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tGapTarget, tPersonalBest;
     ArrayList<String[]> ords = new ArrayList<>();
     ArrayList<String> agentNamesList = new ArrayList<>();
@@ -57,6 +58,7 @@ public class MainActivity extends Activity {
     String mode = "daily";
     boolean isHighToLow = true;
     String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
+    static final int REQ_CODE_SPEECH = 101;
 
     GradientDrawable box(int c, int r, int sCol, int sW) {
         GradientDrawable g = new GradientDrawable();
@@ -112,6 +114,17 @@ public class MainActivity extends Activity {
         t.setTextSize(15f);
         t.setTypeface(Typeface.DEFAULT_BOLD);
         h.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+
+        bVoiceOtp = new Button(this);
+        bVoiceOtp.setText("🎙️ OTP");
+        bVoiceOtp.setBackground(box(Color.parseColor("#7C3AED"), 8, 0, 0));
+        bVoiceOtp.setTextColor(Color.WHITE);
+        bVoiceOtp.setTypeface(Typeface.DEFAULT_BOLD);
+        bVoiceOtp.setTextSize(11f);
+        bVoiceOtp.setOnClickListener(v -> launchVoiceOTP());
+        LinearLayout.LayoutParams vOtpLp = new LinearLayout.LayoutParams(-2, -2);
+        vOtpLp.setMargins(0, 0, 8, 0);
+        h.addView(bVoiceOtp, vOtpLp);
 
         Button bRef = new Button(this);
         bRef.setText("🔄 SYNC");
@@ -274,7 +287,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                // 2. PERFORMANCE TAB
+                   // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -493,7 +506,7 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-            }
+                            }
         void load() {
         try {
             vCrd.removeAllViews();
@@ -560,8 +573,10 @@ public class MainActivity extends Activity {
             tTopConv.setText(bestConvName);
             tTopDnpc.setText(bestDnpcName);
 
+            // Leaderboard Sort (DEL & Conversion)
             Collections.sort(list, (a, b) -> isHighToLow ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
 
+            int currentRank = 1;
             for (String[] ag : list) {
                 int strk = getStreak(ag[0]);
                 double rate = Double.parseDouble(ag[8]);
@@ -579,20 +594,35 @@ public class MainActivity extends Activity {
                 nameRow.setOrientation(LinearLayout.HORIZONTAL);
                 nameRow.setGravity(Gravity.CENTER_VERTICAL);
 
+                // Leaderboard Rank Tag (🥇 🥈 🥉)
+                String rankBadge = (currentRank == 1) ? "🥇 Rank #1" : ((currentRank == 2) ? "🥈 Rank #2" : ((currentRank == 3) ? "🥉 Rank #3" : "🎖️ Rank #" + currentRank));
+                int rankBg = (currentRank == 1) ? Color.parseColor("#EAB308") : ((currentRank == 2) ? Color.parseColor("#94A3B8") : ((currentRank == 3) ? Color.parseColor("#B45309") : Color.parseColor("#374151")));
+
+                TextView tRnk = new TextView(this);
+                tRnk.setText(rankBadge);
+                tRnk.setTextColor(Color.WHITE);
+                tRnk.setTextSize(10.5f);
+                tRnk.setTypeface(Typeface.DEFAULT_BOLD);
+                tRnk.setBackground(box(rankBg, 6, 0, 0));
+                tRnk.setPadding(8, 2, 8, 2);
+                nameRow.addView(tRnk);
+
                 TextView n = new TextView(this);
-                n.setText("👤 " + ag[0]);
+                n.setText(" " + ag[0]);
                 n.setTextColor(badgeColor);
                 n.setTypeface(Typeface.DEFAULT_BOLD);
-                n.setTextSize(15f);
-                nameRow.addView(n, new LinearLayout.LayoutParams(0, -2, 1f));
+                n.setTextSize(14.5f);
+                LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                nLp.setMargins(6, 0, 0, 0);
+                nameRow.addView(n, nLp);
 
                 TextView st = new TextView(this);
-                st.setText("🔥 " + strk + "D Active");
+                st.setText("🔥 " + strk + "D");
                 st.setTextColor(Color.parseColor("#FBBF24"));
-                st.setTextSize(11.5f);
+                st.setTextSize(11f);
                 st.setTypeface(Typeface.DEFAULT_BOLD);
                 st.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
-                st.setPadding(10, 4, 10, 4);
+                st.setPadding(8, 4, 8, 4);
                 nameRow.addView(st);
                 card.addView(nameRow);
 
@@ -621,6 +651,7 @@ public class MainActivity extends Activity {
                 final String agName = ag[0];
                 card.setOnClickListener(v -> showDetails(agName));
                 vCrd.addView(card);
+                currentRank++;
             }
         } catch (Exception ignored) {}
     }
@@ -788,8 +819,66 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-                               }
-        void loadHubVsHub() {
+                    }
+        void launchVoiceOTP() {
+        try {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "🗣️ Speak Customer OTP (e.g. 5 4 8 2)...");
+            startActivityForResult(intent, REQ_CODE_SPEECH);
+        } catch (Exception e) {
+            Toast.makeText(this, "Voice recognition not supported on this device", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_CODE_SPEECH && resultCode == RESULT_OK && data != null) {
+            ArrayList<String> res = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (res != null && !res.isEmpty()) {
+                String spoken = res.get(0).replaceAll("[^0-9]", "");
+                if (spoken.isEmpty()) spoken = res.get(0);
+
+                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                cm.setPrimaryClip(ClipData.newPlainText("OTP", spoken));
+
+                LinearLayout d = new LinearLayout(this);
+                d.setOrientation(LinearLayout.VERTICAL);
+                d.setPadding(24, 20, 24, 20);
+                d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+                TextView h = new TextView(this);
+                h.setText("🎙️ CAPTURED OTP");
+                h.setTextColor(Color.parseColor("#A855F7"));
+                h.setTypeface(Typeface.DEFAULT_BOLD);
+                h.setTextSize(14f);
+                d.addView(h);
+
+                TextView otpVal = new TextView(this);
+                otpVal.setText(spoken);
+                otpVal.setTextColor(Color.parseColor("#00E676"));
+                otpVal.setTextSize(32f);
+                otpVal.setTypeface(Typeface.DEFAULT_BOLD);
+                otpVal.setGravity(Gravity.CENTER);
+                otpVal.setPadding(0, 16, 0, 16);
+                d.addView(otpVal);
+
+                TextView note = new TextView(this);
+                note.setText("✅ Copied to Clipboard! Ready to paste in FieldX.");
+                note.setTextColor(Color.parseColor("#9CA3AF"));
+                note.setTextSize(12f);
+                d.addView(note);
+
+                new AlertDialog.Builder(this)
+                        .setView(d)
+                        .setPositiveButton("OK", null)
+                        .show();
+            }
+        }
+    }
+
+    void loadHubVsHub() {
         try {
             vHubCrd.removeAllViews();
             Cursor c = db.rawQuery("SELECT hname, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf", null);
