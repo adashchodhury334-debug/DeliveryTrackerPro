@@ -50,7 +50,6 @@ public class MainActivity extends Activity {
     BaseAdapter adp;
     String mode = "daily";
     boolean isHighToLow = true;
-    
     String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
 
     GradientDrawable box(int c, int r, int sCol, int sW) {
@@ -142,7 +141,7 @@ public class MainActivity extends Activity {
         body.setPadding(14, 6, 14, 10);
         main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
-        // 1. ORDER ID / TRACKER VIEW
+        // 1. ORDER ID TAB
         vTrk = new LinearLayout(this);
         vTrk.setOrientation(LinearLayout.VERTICAL);
         vTrk.setVisibility(View.VISIBLE);
@@ -205,7 +204,8 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                // 2. PERFORMANCE VIEW
+
+        // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -221,7 +221,6 @@ public class MainActivity extends Activity {
         fl.addView(b3, new LinearLayout.LayoutParams(lpF));
         vPrf.addView(fl);
 
-        // HUB DETAILS CARD
         LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#38BDF8"), 1));
@@ -254,7 +253,6 @@ public class MainActivity extends Activity {
         hubBox.addView(tHubDnpDnpc);
         vPrf.addView(hubBox, new LinearLayout.LayoutParams(-1, -2));
 
-        // TOP BADGES
         LinearLayout sm = new LinearLayout(this);
         sm.setPadding(0, 8, 0, 6);
         LinearLayout sc1 = makeSummaryCard("TOP CONVERSION", Color.parseColor("#181920"), Color.parseColor("#00E676"), true);
@@ -265,7 +263,6 @@ public class MainActivity extends Activity {
         sm.addView(sc2, new LinearLayout.LayoutParams(0, -2, 1f));
         vPrf.addView(sm);
 
-        // SORT BUTTON
         bSort = new Button(this);
         bSort.setText("↕️ Sort: High to Low");
         bSort.setBackground(box(Color.parseColor("#232634"), 10, 0, 0));
@@ -320,10 +317,7 @@ public class MainActivity extends Activity {
 
         root.addView(main);
         load();
-        cnt();
-    }
-
-    void switchTab(int index) {
+        cnt();    void switchTab(int index) {
         vTrk.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         vPrf.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
         vHub.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
@@ -484,7 +478,9 @@ public class MainActivity extends Activity {
                 vCrd.addView(card);
             }
         } catch (Exception ignored) {}
-     void loadHubVsHub() {
+    }
+
+    void loadHubVsHub() {
         try {
             vHubCrd.removeAllViews();
             Cursor c = db.rawQuery("SELECT hname, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf", null);
@@ -629,7 +625,6 @@ public class MainActivity extends Activity {
             while ((line = reader.readLine()) != null) {
                 String[] p = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
-                // ORDER TRACKER DATA
                 if (p.length >= 2) {
                     String trackId = clean(p[0]);
                     String ordId = clean(p[1]);
@@ -641,7 +636,6 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // AGENT PERFORMANCE
                 if (p.length >= 6) {
                     String name = clean(p[1]);
                     if (!name.isEmpty() && !name.equalsIgnoreCase("WM Name") && !name.equalsIgnoreCase("Total") && !name.contains("Total")) {
@@ -657,7 +651,6 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // HUB VS HUB DATA
                 if (p.length >= 17) {
                     String hname = clean(p[8]);
                     if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
@@ -717,6 +710,7 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-}
-}
+                }
+
+    }
     
