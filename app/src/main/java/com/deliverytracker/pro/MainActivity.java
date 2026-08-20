@@ -318,7 +318,8 @@ public class MainActivity extends Activity {
         root.addView(main);
         load();
         cnt();
-    }    void switchTab(int index) {
+                        }
+        void switchTab(int index) {
         vTrk.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         vPrf.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
         vHub.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
@@ -430,7 +431,7 @@ public class MainActivity extends Activity {
 
             for (String[] ag : list) {
                 double rate = Double.parseDouble(ag[8]);
-                int badgeColor = (rate >= 92.0) ? Color.parseColor("#00E676") : ((rate >= 85.0) ? Color.parseColor("#FBBF24") : Color.parseColor("#EF4444"));
+                int badgeColor = (rate >= 90.0) ? Color.parseColor("#00E676") : ((rate >= 60.0) ? Color.parseColor("#FBBF24") : Color.parseColor("#EF4444"));
 
                 LinearLayout card = new LinearLayout(this);
                 card.setOrientation(LinearLayout.VERTICAL);
@@ -623,13 +624,16 @@ public class MainActivity extends Activity {
 
             db.beginTransaction();
             db.execSQL("DELETE FROM hub_prf");
+            db.execSQL("DELETE FROM prf WHERE dt = '" + today + "'");
+
             while ((line = reader.readLine()) != null) {
                 String[] p = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
+                // ORDER TRACKER DATA (Col A & B)
                 if (p.length >= 2) {
                     String trackId = clean(p[0]);
                     String ordId = clean(p[1]);
-                    if (trackId.matches(".*\\d+.*") && ordId.matches(".*\\d+.*")) {
+                    if (trackId.matches(".*\\d+.*") && ordId.matches(".*\\d+.*") && !trackId.equalsIgnoreCase("TRACKING ID")) {
                         ContentValues ocv = new ContentValues();
                         ocv.put("t", trackId);
                         ocv.put("d", ordId);
@@ -637,10 +641,15 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                if (p.length >= 6) {
-                    String name = clean(p[1]);
-                    if (!name.isEmpty() && !name.equalsIgnoreCase("WM Name") && !name.equalsIgnoreCase("Total") && !name.contains("Total")) {
-                        int o = parseInt(p[2]), l = parseInt(p[3]), op = parseInt(p[4]), k = parseInt(p[5]);
+                // AGENT PERFORMANCE (Col C = Name, Col D = OFD, Col E = DEL, Col F = OFP, Col G = PIKED)
+                if (p.length > 2) {
+                    String name = clean(p[2]);
+                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("Total") && !name.contains("Total")) {
+                        int o = (p.length > 3) ? parseInt(p[3]) : 0;
+                        int l = (p.length > 4) ? parseInt(p[4]) : 0;
+                        int op = (p.length > 5) ? parseInt(p[5]) : 0;
+                        int k = (p.length > 6) ? parseInt(p[6]) : 0;
+
                         ContentValues cv = new ContentValues();
                         cv.put("n", name);
                         cv.put("o", o);
@@ -652,16 +661,17 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                if (p.length >= 17) {
+                // HUB VS HUB DATA (Col I = Hub Name, Col J = OFD, Col K = DEL, Col L = OFD CON, Col M = OFP, Col N = PIKED, Col O = PIK CON, Col P = Total CON)
+                if (p.length > 8) {
                     String hname = clean(p[8]);
                     if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
-                        String o = clean(p[9]);
-                        String l = clean(p[10]);
-                        String lc = clean(p[11]);
-                        String ofp = clean(p[12]);
-                        String pik = clean(p[13]);
-                        String kc = clean(p[14]);
-                        String tc = clean(p[16]);
+                        String o = (p.length > 9) ? clean(p[9]) : "0";
+                        String l = (p.length > 10) ? clean(p[10]) : "0";
+                        String lc = (p.length > 11) ? clean(p[11]) : "0%";
+                        String ofp = (p.length > 12) ? clean(p[12]) : "0";
+                        String pik = (p.length > 13) ? clean(p[13]) : "0";
+                        String kc = (p.length > 14) ? clean(p[14]) : "0%";
+                        String tc = (p.length > 15) ? clean(p[15]) : "0%";
 
                         int dnp = parseInt(o) + parseInt(ofp);
                         int dnpc = parseInt(l) + parseInt(pik);
@@ -711,6 +721,5 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-}
-
-    
+                                    }
+            
