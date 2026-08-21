@@ -60,6 +60,16 @@ public class MainActivity extends Activity {
     String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
     static final int REQ_CODE_SPEECH = 101;
 
+    // AUTO-SYNC HANDLER (EVERY 60 SECONDS SILENT REFRESH)
+    Handler autoSyncHandler = new Handler(Looper.getMainLooper());
+    Runnable autoSyncRunnable = new Runnable() {
+        @Override
+        public void run() {
+            new Thread(() -> doSync(true)).start();
+            autoSyncHandler.postDelayed(this, 60000);
+        }
+    };
+
     GradientDrawable box(int c, int r, int sCol, int sW) {
         GradientDrawable g = new GradientDrawable();
         g.setColor(c);
@@ -93,6 +103,21 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.parseColor("#0F1015"));
         setContentView(root);
         buildUI();
+        new Thread(() -> doSync(true)).start();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        new Thread(() -> doSync(true)).start();
+        autoSyncHandler.removeCallbacks(autoSyncRunnable);
+        autoSyncHandler.postDelayed(autoSyncRunnable, 60000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        autoSyncHandler.removeCallbacks(autoSyncRunnable);
     }
 
     void buildUI() {
@@ -293,7 +318,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-            // 2. PERFORMANCE TAB
+                    // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -513,7 +538,7 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-        }
+                      }
         void load() {
         try {
             vCrd.removeAllViews();
@@ -533,7 +558,7 @@ public class MainActivity extends Activity {
                 tHubOfpPik.setText("OFP/PIKED = " + tp + "/" + tk + " = " + String.format(Locale.US, "%.1f%%", ofpConv));
                 tHubDnpDnpc.setText("DNP/DNPC = " + tdnp + "/" + tdnpc + " = " + String.format(Locale.US, "%.1f%%", dnpConv));
 
-                // 92% DEL TARGET CALCULATION
+                // GAP TO 92% DEL TARGET
                 int targetNeeded = (int) Math.ceil(0.92 * to);
                 int diff = targetNeeded - tl;
                 if (diff <= 0 && to > 0) {
@@ -810,7 +835,8 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-    }    void launchVoiceOTP() {
+            }
+                    void launchVoiceOTP() {
         try {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -1040,6 +1066,7 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
+    // HIGH SPEED & SILENT AUTO-SYNC
     void doSync(boolean isAuto) {
         if (!isAuto) showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
         try {
@@ -1157,13 +1184,17 @@ public class MainActivity extends Activity {
                 loadContacts();
                 cnt();
                 qry("");
-                showLoading(false, null);
-                if (!isAuto) Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
+                if (!isAuto) {
+                    showLoading(false, null);
+                    Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
+                }
             });
         } catch (Exception e) {
             new Handler(Looper.getMainLooper()).post(() -> {
-                showLoading(false, null);
-                if (!isAuto) Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                if (!isAuto) {
+                    showLoading(false, null);
+                    Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
             });
         }
     }
@@ -1180,6 +1211,7 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-}
+                }
+
 
     
