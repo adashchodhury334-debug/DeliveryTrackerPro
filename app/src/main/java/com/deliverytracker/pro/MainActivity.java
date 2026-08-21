@@ -84,7 +84,6 @@ public class MainActivity extends Activity {
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
-            // SPEED OPTIMIZATION INDEXES
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_ord_t ON ord(t);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_dt ON prf(dt);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_n ON prf(n);");
@@ -294,7 +293,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                  // 2. PERFORMANCE TAB
+            // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -436,7 +435,7 @@ public class MainActivity extends Activity {
         loadingOverlay.setGravity(Gravity.CENTER);
         loadingOverlay.setBackgroundColor(Color.parseColor("#EE0F1015"));
         loadingOverlay.setClickable(true);
-        loadingOverlay.setVisibility(View.GONE); // DEFAULT HIDDEN
+        loadingOverlay.setVisibility(View.GONE);
         ProgressBar pb = new ProgressBar(this);
         loadingOverlay.addView(pb);
         root.addView(loadingOverlay, new FrameLayout.LayoutParams(-1, -1));
@@ -534,7 +533,7 @@ public class MainActivity extends Activity {
                 tHubOfpPik.setText("OFP/PIKED = " + tp + "/" + tk + " = " + String.format(Locale.US, "%.1f%%", ofpConv));
                 tHubDnpDnpc.setText("DNP/DNPC = " + tdnp + "/" + tdnpc + " = " + String.format(Locale.US, "%.1f%%", dnpConv));
 
-                // GAP TO 92% DEL TARGET CALCULATION
+                // 92% DEL TARGET CALCULATION
                 int targetNeeded = (int) Math.ceil(0.92 * to);
                 int diff = targetNeeded - tl;
                 if (diff <= 0 && to > 0) {
@@ -586,6 +585,7 @@ public class MainActivity extends Activity {
 
             int currentRank = 1;
             for (String[] ag : list) {
+                int strk = getStreak(ag[0]);
                 double rate = Double.parseDouble(ag[8]);
                 int badgeColor = (rate >= 90.0) ? Color.parseColor("#00E676") : ((rate >= 60.0) ? Color.parseColor("#FBBF24") : Color.parseColor("#EF4444"));
 
@@ -623,7 +623,7 @@ public class MainActivity extends Activity {
                 nameRow.addView(n, nLp);
 
                 TextView st = new TextView(this);
-                st.setText("🔥 1D");
+                st.setText("🔥 " + strk + "D");
                 st.setTextColor(Color.parseColor("#FBBF24"));
                 st.setTextSize(11f);
                 st.setTypeface(Typeface.DEFAULT_BOLD);
@@ -660,6 +660,18 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
+    }
+
+    int getStreak(String name) {
+        int streak = 1;
+        try {
+            Cursor c = db.rawQuery("SELECT COUNT(DISTINCT dt) FROM prf WHERE n = ? AND (o+p) > 0", new String[]{name});
+            if (c != null && c.moveToFirst()) {
+                streak = Math.max(1, c.getInt(0));
+            }
+            if (c != null) c.close();
+        } catch (Exception ignored) {}
+        return streak;
     }
 
     void updatePersonalBest() {
@@ -798,7 +810,7 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-                void launchVoiceOTP() {
+    }    void launchVoiceOTP() {
         try {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -1029,7 +1041,7 @@ public class MainActivity extends Activity {
     }
 
     void doSync(boolean isAuto) {
-        showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
+        if (!isAuto) showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
         try {
             String targetUrl = CSV;
             HttpURLConnection conn = null;
@@ -1169,5 +1181,5 @@ public class MainActivity extends Activity {
         }
     }
 }
-}
-                
+
+    
