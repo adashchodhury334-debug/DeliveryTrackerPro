@@ -7,6 +7,7 @@ import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
@@ -67,7 +68,7 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             new Thread(() -> doSync(true)).start();
-            autoSyncHandler.postDelayed(this, 120000); // 2 mins auto silent check
+            autoSyncHandler.postDelayed(this, 120000);
         }
     };
 
@@ -96,7 +97,6 @@ public class MainActivity extends Activity {
             db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_ord_t ON ord(t);");
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_ord_d ON ord(d);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_dt ON prf(dt);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_n ON prf(n);");
         } catch (Exception ignored) {}
@@ -213,13 +213,13 @@ public class MainActivity extends Activity {
         body.setPadding(12, 6, 12, 10);
         main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
-        // 1. ORDER ID TAB
+        // 1. ORDER ID TAB (ONLY TRACK ID SEARCH)
         vTrk = new LinearLayout(this);
         vTrk.setOrientation(LinearLayout.VERTICAL);
         vTrk.setVisibility(View.VISIBLE);
 
         EditText s = new EditText(this);
-        s.setHint("🔍 Search last digits of Track ID or Order ID...");
+        s.setHint("🔍 Search last digits of Track ID...");
         s.setHintTextColor(Color.parseColor("#717688"));
         s.setTextColor(Color.WHITE);
         s.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#00E676"), 1));
@@ -322,7 +322,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-            // 2. PERFORMANCE TAB
+                    // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -339,7 +339,7 @@ public class MainActivity extends Activity {
         vPrf.addView(fl);
 
         tPersonalBest = new TextView(this);
-        tPersonalBest.setText("🏆 Hub Personal Best: -- DEL");
+        tPersonalBest.setText("🏆 Hub Best: -- DEL");
         tPersonalBest.setTextColor(Color.parseColor("#FBBF24"));
         tPersonalBest.setBackground(box(Color.parseColor("#232634"), 10, Color.parseColor("#FBBF24"), 1));
         tPersonalBest.setPadding(14, 10, 14, 10);
@@ -542,9 +542,8 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-    }
-        
-    void load() {
+                     }
+        void load() {
         try {
             vCrd.removeAllViews();
             agentNamesList.clear();
@@ -578,7 +577,6 @@ public class MainActivity extends Activity {
 
             updatePersonalBest();
 
-            // SINGLE FAST QUERY FOR ALL STREAKS (ELIMINATES UI FREEZE)
             HashMap<String, Integer> streakMap = new HashMap<>();
             Cursor sc = db.rawQuery("SELECT n, COUNT(DISTINCT dt) FROM prf WHERE (o+p) > 0 GROUP BY n", null);
             while (sc != null && sc.moveToNext()) {
@@ -700,11 +698,80 @@ public class MainActivity extends Activity {
 
     void updatePersonalBest() {
         try {
-            Cursor c = db.rawQuery("SELECT dt, SUM(l) as max_del FROM prf GROUP BY dt ORDER BY max_del DESC LIMIT 1", null);
+            Cursor c = db.rawQuery(
+                "SELECT dt, SUM(o), SUM(l), (CAST(SUM(l) AS REAL) * 100.0 / SUM(o)) as conv " +
+                "FROM prf GROUP BY dt HAVING SUM(o) > 0 " +
+                "ORDER BY conv DESC, SUM(l) DESC LIMIT 1", null);
             if (c != null && c.moveToFirst()) {
-                tPersonalBest.setText("🏆 Hub Best: " + c.getInt(1) + " DEL (" + c.getString(0) + ")");
+                String bestDt = c.getString(0);
+                int bestOfd = c.getInt(1);
+                int bestDel = c.getInt(2);
+                double bestConv = c.getDouble(3);
+                tPersonalBest.setText("🏆 Hub Best: " + String.format(Locale.US, "%.1f%%", bestConv) + " DEL (" + bestDel + "/" + bestOfd + ") (" + bestDt + ")");
             }
             if (c != null) c.close();
+        } catch (Exception ignored) {}
+    }
+
+    // AUTOMATIC REPORT OPENING DIRECTLY TO +91 8337868714 CHAT
+    void triggerAutomaticEODReport(String completedDate) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("🏁 *MALBAZARHUB_NJP DELIVERY COMPLETED REPORT*\n");
+            sb.append("📅 *Completed Date:* ").append(completedDate).append("\n");
+            sb.append("━━━━━━━━━━━━━━━━━━━\n");
+
+            Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE dt = ?", new String[]{completedDate});
+            if (hc != null && hc.moveToFirst()) {
+                int to = hc.getInt(0), tl = hc.getInt(1), tp = hc.getInt(2), tk = hc.getInt(3);
+                int tdnp = to + tp, tdnpc = tl + tk;
+                double ofdConv = to > 0 ? ((double) tl / to) * 100.0 : 0.0;
+                double ofpConv = tp > 0 ? ((double) tk / tp) * 100.0 : 0.0;
+                double dnpConv = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
+
+                sb.append("🚚 *Total OFD / DEL:* ").append(to).append(" / ").append(tl).append(" (").append(String.format(Locale.US, "%.1f%%", ofdConv)).append(")\n");
+                sb.append("📦 *Total OFP / PIK:* ").append(tp).append(" / ").append(tk).append(" (").append(String.format(Locale.US, "%.1f%%", ofpConv)).append(")\n");
+                sb.append("🔄 *Total DNP / DNPC:* ").append(tdnp).append(" / ").append(tdnpc).append(" (").append(String.format(Locale.US, "%.1f%%", dnpConv)).append(")\n");
+
+                int targetNeeded = (int) Math.ceil(0.92 * to);
+                int diff = targetNeeded - tl;
+                if (diff <= 0 && to > 0) {
+                    sb.append("🎯 *Target 92%:* Achieved! 🚀\n");
+                } else if (to > 0) {
+                    sb.append("🎯 *Target 92%:* Gap ").append(diff).append(" DEL required\n");
+                }
+            }
+            if (hc != null) hc.close();
+
+            sb.append("━━━━━━━━━━━━━━━━━━━\n");
+            sb.append("📊 *ALL AGENTS (LOW TO HIGH DEL CONV):*\n");
+
+            Cursor ac = db.rawQuery(
+                "SELECT n, SUM(o), SUM(l), (CAST(SUM(l) AS REAL) * 100.0 / CASE WHEN SUM(o) > 0 THEN SUM(o) ELSE 1 END) as del_conv " +
+                "FROM prf WHERE dt = ? GROUP BY n HAVING (SUM(o) + SUM(p)) > 0 " +
+                "ORDER BY del_conv ASC, SUM(l) ASC", new String[]{completedDate});
+
+            int rank = 1;
+            while (ac != null && ac.moveToNext()) {
+                String agN = ac.getString(0);
+                int agOfd = ac.getInt(1);
+                int agDel = ac.getInt(2);
+                double agConv = ac.getDouble(3);
+                String tag = (agConv < 75.0) ? "⚠️" : ((agConv >= 92.0) ? "✅" : "⚡");
+
+                sb.append(rank).append(". ").append(tag).append(" ").append(agN)
+                  .append(" ➔ ").append(String.format(Locale.US, "%.1f%%", agConv))
+                  .append(" (DEL: ").append(agDel).append("/").append(agOfd).append(")\n");
+                rank++;
+            }
+            if (ac != null) ac.close();
+
+            sb.append("━━━━━━━━━━━━━━━━━━━\n");
+            sb.append("⚡ _Auto-Generated EOD Report | Managed by Adarsh_");
+
+            String url = "https://api.whatsapp.com/send?phone=918337868714&text=" + Uri.encode(sb.toString());
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(intent);
         } catch (Exception ignored) {}
     }
 
@@ -833,8 +900,8 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-                        }
-                void launchVoiceOTP() {
+                }
+                    void launchVoiceOTP() {
         try {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -1042,10 +1109,11 @@ public class MainActivity extends Activity {
         vCntCrd.addView(card);
     }
 
+    // ONLY SEARCHES TRACK ID (LAST DIGITS OR FULL)
     void qry(String q) {
         ords.clear();
         if (!q.isEmpty()) {
-            Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? OR d LIKE ? LIMIT 50", new String[]{"%" + q + "%", "%" + q + "%"});
+            Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? LIMIT 50", new String[]{"%" + q + "%"});
             while (c != null && c.moveToNext()) {
                 ords.add(new String[]{c.getString(0), c.getString(1)});
             }
@@ -1064,7 +1132,6 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
-    // ULTRA FAST CHAR-BY-CHAR CSV SPLITTER (NO CPU LAG)
     ArrayList<String> fastSplitCsv(String line) {
         ArrayList<String> res = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
@@ -1108,12 +1175,14 @@ public class MainActivity extends Activity {
             BufferedReader reader = new BufferedReader(new InputStreamReader(is));
             String line;
             String opDate = getOperationalDate();
+            int parsedAgentsInSheet = 0;
 
             db.beginTransaction();
-            db.execSQL("DELETE FROM ord"); // CLEARS OLD GHOST DATA TO MATCH EXACT SHEET
+            db.execSQL("DELETE FROM ord");
             db.execSQL("DELETE FROM hub_prf");
             db.execSQL("DELETE FROM contacts");
-            db.execSQL("DELETE FROM prf WHERE dt = '" + opDate + "'");
+
+            ArrayList<ContentValues> tempAgentData = new ArrayList<>();
 
             while ((line = reader.readLine()) != null) {
                 ArrayList<String> p = fastSplitCsv(line);
@@ -1147,7 +1216,8 @@ public class MainActivity extends Activity {
                             cv.put("p", op);
                             cv.put("k", k);
                             cv.put("dt", opDate);
-                            db.insert("prf", null, cv);
+                            tempAgentData.add(cv);
+                            parsedAgentsInSheet++;
                         }
                     }
                 }
@@ -1196,6 +1266,27 @@ public class MainActivity extends Activity {
                     }
                 }
             }
+
+            // AUTO-TRIGGER DIRECTLY TO +91 8337868714 WHEN SHEET IS CLEARED (EOD)
+            SharedPreferences prefs = getSharedPreferences("DeliveryTrackerPrefs", MODE_PRIVATE);
+            if (parsedAgentsInSheet == 0) {
+                Cursor lastDayC = db.rawQuery("SELECT dt FROM prf GROUP BY dt HAVING SUM(o) > 0 ORDER BY dt DESC LIMIT 1", null);
+                if (lastDayC != null && lastDayC.moveToFirst()) {
+                    String completedDay = lastDayC.getString(0);
+                    boolean alreadyReported = prefs.getBoolean("eod_reported_" + completedDay, false);
+                    if (!alreadyReported) {
+                        prefs.edit().putBoolean("eod_reported_" + completedDay, true).apply();
+                        new Handler(Looper.getMainLooper()).post(() -> triggerAutomaticEODReport(completedDay));
+                    }
+                }
+                if (lastDayC != null) lastDayC.close();
+            } else {
+                db.execSQL("DELETE FROM prf WHERE dt = '" + opDate + "'");
+                for (ContentValues cv : tempAgentData) {
+                    db.insert("prf", null, cv);
+                }
+            }
+
             db.setTransactionSuccessful();
             db.endTransaction();
             reader.close();
@@ -1234,5 +1325,5 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-                            }
-                        
+                                }
+
