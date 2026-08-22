@@ -44,6 +44,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
@@ -59,14 +60,14 @@ public class MainActivity extends Activity {
     boolean isHighToLow = true;
     String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
     static final int REQ_CODE_SPEECH = 101;
+    long lastSyncTime = 0;
 
-    // AUTO-SYNC HANDLER (EVERY 60 SECONDS SILENT REFRESH)
     Handler autoSyncHandler = new Handler(Looper.getMainLooper());
     Runnable autoSyncRunnable = new Runnable() {
         @Override
         public void run() {
             new Thread(() -> doSync(true)).start();
-            autoSyncHandler.postDelayed(this, 60000);
+            autoSyncHandler.postDelayed(this, 120000); // 2 mins auto silent check
         }
     };
 
@@ -95,6 +96,7 @@ public class MainActivity extends Activity {
             db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_ord_t ON ord(t);");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_ord_d ON ord(d);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_dt ON prf(dt);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_n ON prf(n);");
         } catch (Exception ignored) {}
@@ -109,9 +111,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        new Thread(() -> doSync(true)).start();
+        if (System.currentTimeMillis() - lastSyncTime > 120000) {
+            new Thread(() -> doSync(true)).start();
+        }
         autoSyncHandler.removeCallbacks(autoSyncRunnable);
-        autoSyncHandler.postDelayed(autoSyncRunnable, 60000);
+        autoSyncHandler.postDelayed(autoSyncRunnable, 120000);
     }
 
     @Override
@@ -215,7 +219,7 @@ public class MainActivity extends Activity {
         vTrk.setVisibility(View.VISIBLE);
 
         EditText s = new EditText(this);
-        s.setHint("🔍 Search last digits of Track ID...");
+        s.setHint("🔍 Search last digits of Track ID or Order ID...");
         s.setHintTextColor(Color.parseColor("#717688"));
         s.setTextColor(Color.WHITE);
         s.setBackground(box(Color.parseColor("#181920"), 14, Color.parseColor("#00E676"), 1));
@@ -318,7 +322,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                    // 2. PERFORMANCE TAB
+            // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -538,13 +542,13 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-                      }
-        void load() {
+    }
+        
+    void load() {
         try {
             vCrd.removeAllViews();
             agentNamesList.clear();
-            String opDate = getOperationalDate();
-            String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date('" + opDate + "','-7 days') " : " WHERE dt >= date('" + opDate + "','-30 days') ");
+            String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date((SELECT MAX(dt) FROM prf),'-7 days') " : " WHERE dt >= date((SELECT MAX(dt) FROM prf),'-30 days') ");
 
             Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, null);
             if (hc != null && hc.moveToFirst()) {
@@ -558,7 +562,6 @@ public class MainActivity extends Activity {
                 tHubOfpPik.setText("OFP/PIKED = " + tp + "/" + tk + " = " + String.format(Locale.US, "%.1f%%", ofpConv));
                 tHubDnpDnpc.setText("DNP/DNPC = " + tdnp + "/" + tdnpc + " = " + String.format(Locale.US, "%.1f%%", dnpConv));
 
-                // GAP TO 92% DEL TARGET
                 int targetNeeded = (int) Math.ceil(0.92 * to);
                 int diff = targetNeeded - tl;
                 if (diff <= 0 && to > 0) {
@@ -574,6 +577,14 @@ public class MainActivity extends Activity {
             if (hc != null) hc.close();
 
             updatePersonalBest();
+
+            // SINGLE FAST QUERY FOR ALL STREAKS (ELIMINATES UI FREEZE)
+            HashMap<String, Integer> streakMap = new HashMap<>();
+            Cursor sc = db.rawQuery("SELECT n, COUNT(DISTINCT dt) FROM prf WHERE (o+p) > 0 GROUP BY n", null);
+            while (sc != null && sc.moveToNext()) {
+                streakMap.put(sc.getString(0), sc.getInt(1));
+            }
+            if (sc != null) sc.close();
 
             Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
             ArrayList<String[]> list = new ArrayList<>();
@@ -610,7 +621,7 @@ public class MainActivity extends Activity {
 
             int currentRank = 1;
             for (String[] ag : list) {
-                int strk = getStreak(ag[0]);
+                int strk = streakMap.containsKey(ag[0]) ? Math.max(1, streakMap.get(ag[0])) : 1;
                 double rate = Double.parseDouble(ag[8]);
                 int badgeColor = (rate >= 90.0) ? Color.parseColor("#00E676") : ((rate >= 60.0) ? Color.parseColor("#FBBF24") : Color.parseColor("#EF4444"));
 
@@ -685,18 +696,6 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
-    }
-
-    int getStreak(String name) {
-        int streak = 1;
-        try {
-            Cursor c = db.rawQuery("SELECT COUNT(DISTINCT dt) FROM prf WHERE n = ? AND (o+p) > 0", new String[]{name});
-            if (c != null && c.moveToFirst()) {
-                streak = Math.max(1, c.getInt(0));
-            }
-            if (c != null) c.close();
-        } catch (Exception ignored) {}
-        return streak;
     }
 
     void updatePersonalBest() {
@@ -777,8 +776,7 @@ public class MainActivity extends Activity {
     }
 
     String getAgentStats(String name) {
-        String opDate = getOperationalDate();
-        String w = "daily".equals(mode) ? " WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE n = ? AND dt >= date('" + opDate + "','-7 days') " : " WHERE n = ? AND dt >= date('" + opDate + "','-30 days') ");
+        String w = "daily".equals(mode) ? " WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE n = ? AND dt >= date((SELECT MAX(dt) FROM prf),'-7 days') " : " WHERE n = ? AND dt >= date((SELECT MAX(dt) FROM prf),'-30 days') ");
         Cursor c = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, new String[]{name});
         String res = "No data";
         if (c != null && c.moveToFirst()) {
@@ -835,8 +833,8 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-            }
-                    void launchVoiceOTP() {
+                        }
+                void launchVoiceOTP() {
         try {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -1047,7 +1045,7 @@ public class MainActivity extends Activity {
     void qry(String q) {
         ords.clear();
         if (!q.isEmpty()) {
-            Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? LIMIT 50", new String[]{"%" + q + "%"});
+            Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? OR d LIKE ? LIMIT 50", new String[]{"%" + q + "%", "%" + q + "%"});
             while (c != null && c.moveToNext()) {
                 ords.add(new String[]{c.getString(0), c.getString(1)});
             }
@@ -1066,7 +1064,26 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
-    // HIGH SPEED & SILENT AUTO-SYNC
+    // ULTRA FAST CHAR-BY-CHAR CSV SPLITTER (NO CPU LAG)
+    ArrayList<String> fastSplitCsv(String line) {
+        ArrayList<String> res = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (ch == '\"') {
+                inQuotes = !inQuotes;
+            } else if (ch == ',' && !inQuotes) {
+                res.add(sb.toString());
+                sb.setLength(0);
+            } else {
+                sb.append(ch);
+            }
+        }
+        res.add(sb.toString());
+        return res;
+    }
+
     void doSync(boolean isAuto) {
         if (!isAuto) showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
         try {
@@ -1075,6 +1092,8 @@ public class MainActivity extends Activity {
             for (int i = 0; i < 5; i++) {
                 conn = (HttpURLConnection) new URL(targetUrl).openConnection();
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+                conn.setConnectTimeout(8000);
+                conn.setReadTimeout(8000);
                 conn.setInstanceFollowRedirects(false);
                 int code = conn.getResponseCode();
                 if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
@@ -1091,56 +1110,59 @@ public class MainActivity extends Activity {
             String opDate = getOperationalDate();
 
             db.beginTransaction();
+            db.execSQL("DELETE FROM ord"); // CLEARS OLD GHOST DATA TO MATCH EXACT SHEET
             db.execSQL("DELETE FROM hub_prf");
             db.execSQL("DELETE FROM contacts");
             db.execSQL("DELETE FROM prf WHERE dt = '" + opDate + "'");
 
             while ((line = reader.readLine()) != null) {
-                String[] p = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                ArrayList<String> p = fastSplitCsv(line);
 
                 // 1. ORDER TRACKER (Col A & B)
-                if (p.length >= 2) {
-                    String trackId = clean(p[0]);
-                    String ordId = clean(p[1]);
-                    if (trackId.matches(".*\\d+.*") && ordId.matches(".*\\d+.*") && !trackId.equalsIgnoreCase("TRACKING ID")) {
+                if (p.size() >= 1) {
+                    String trackId = clean(p.get(0));
+                    String ordId = (p.size() > 1) ? clean(p.get(1)) : "";
+                    if (!trackId.isEmpty() && !trackId.equalsIgnoreCase("TRACKING ID") && !trackId.equalsIgnoreCase("TRACK ID") && !trackId.equalsIgnoreCase("WAYBILL") && !trackId.equalsIgnoreCase("NAME")) {
                         ContentValues ocv = new ContentValues();
                         ocv.put("t", trackId);
-                        ocv.put("d", ordId);
+                        ocv.put("d", ordId.isEmpty() ? trackId : ordId);
                         db.insertWithOnConflict("ord", null, ocv, SQLiteDatabase.CONFLICT_REPLACE);
                     }
                 }
 
                 // 2. AGENT PERFORMANCE (Col C to G)
-                if (p.length > 2) {
-                    String name = clean(p[2]);
-                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("Total") && !name.contains("Total")) {
-                        int o = (p.length > 3) ? parseInt(p[3]) : 0;
-                        int l = (p.length > 4) ? parseInt(p[4]) : 0;
-                        int op = (p.length > 5) ? parseInt(p[5]) : 0;
-                        int k = (p.length > 6) ? parseInt(p[6]) : 0;
+                if (p.size() > 2) {
+                    String name = clean(p.get(2));
+                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("Total") && !name.contains("Total") && !name.equalsIgnoreCase("#N/A") && !name.equalsIgnoreCase("N/A")) {
+                        int o = (p.size() > 3) ? parseInt(p.get(3)) : 0;
+                        int l = (p.size() > 4) ? parseInt(p.get(4)) : 0;
+                        int op = (p.size() > 5) ? parseInt(p.get(5)) : 0;
+                        int k = (p.size() > 6) ? parseInt(p.get(6)) : 0;
 
-                        ContentValues cv = new ContentValues();
-                        cv.put("n", name);
-                        cv.put("o", o);
-                        cv.put("l", l);
-                        cv.put("p", op);
-                        cv.put("k", k);
-                        cv.put("dt", opDate);
-                        db.insert("prf", null, cv);
+                        if (o > 0 || l > 0 || op > 0 || k > 0) {
+                            ContentValues cv = new ContentValues();
+                            cv.put("n", name);
+                            cv.put("o", o);
+                            cv.put("l", l);
+                            cv.put("p", op);
+                            cv.put("k", k);
+                            cv.put("dt", opDate);
+                            db.insert("prf", null, cv);
+                        }
                     }
                 }
 
                 // 3. HUB VS HUB DATA (Col I to P)
-                if (p.length > 8) {
-                    String hname = clean(p[8]);
+                if (p.size() > 8) {
+                    String hname = clean(p.get(8));
                     if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
-                        String o = (p.length > 9) ? clean(p[9]) : "0";
-                        String l = (p.length > 10) ? clean(p[10]) : "0";
-                        String lc = (p.length > 11) ? clean(p[11]) : "0%";
-                        String ofp = (p.length > 12) ? clean(p[12]) : "0";
-                        String pik = (p.length > 13) ? clean(p[13]) : "0";
-                        String kc = (p.length > 14) ? clean(p[14]) : "0%";
-                        String tc = (p.length > 15) ? clean(p[15]) : "0%";
+                        String o = (p.size() > 9) ? clean(p.get(9)) : "0";
+                        String l = (p.size() > 10) ? clean(p.get(10)) : "0";
+                        String lc = (p.size() > 11) ? clean(p.get(11)) : "0%";
+                        String ofp = (p.size() > 12) ? clean(p.get(12)) : "0";
+                        String pik = (p.size() > 13) ? clean(p.get(13)) : "0";
+                        String kc = (p.size() > 14) ? clean(p.get(14)) : "0%";
+                        String tc = (p.size() > 15) ? clean(p.get(15)) : "0%";
 
                         int dnp = parseInt(o) + parseInt(ofp);
                         int dnpc = parseInt(l) + parseInt(pik);
@@ -1161,10 +1183,10 @@ public class MainActivity extends Activity {
                 }
 
                 // 4. CONTACTS DIRECTORY (Col R, S, T -> index 17, 18, 19)
-                if (p.length > 19) {
-                    String cName = clean(p[17]);
-                    String cRole = clean(p[18]);
-                    String cPhone = clean(p[19]);
+                if (p.size() > 19) {
+                    String cName = clean(p.get(17));
+                    String cRole = clean(p.get(18));
+                    String cPhone = clean(p.get(19));
                     if (!cName.isEmpty() && !cName.equalsIgnoreCase("NAME") && !cPhone.equalsIgnoreCase("PHONE") && cPhone.matches(".*\\d+.*")) {
                         ContentValues cntCv = new ContentValues();
                         cntCv.put("name", cName);
@@ -1177,6 +1199,7 @@ public class MainActivity extends Activity {
             db.setTransactionSuccessful();
             db.endTransaction();
             reader.close();
+            lastSyncTime = System.currentTimeMillis();
 
             new Handler(Looper.getMainLooper()).post(() -> {
                 load();
@@ -1211,7 +1234,5 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-                }
-
-
-    
+                            }
+                        
