@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     SQLiteDatabase db;
     FrameLayout root;
     LinearLayout vTrk, vPrf, vHub, vCnt, vCrd, vHubCrd, vCntCrd, loadingOverlay;
-    Button bT, bP, bH, bC, b1, b2, b3, bSort, bVsBattle, bVoiceOtp;
+    Button bT, bP, bH, bC, b1, b2, b3, b4, bSort, bVsBattle, bVoiceOtp;
     TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tGapTarget, tPersonalBest;
     ArrayList<String[]> ords = new ArrayList<>();
     ArrayList<String> agentNamesList = new ArrayList<>();
@@ -84,6 +84,45 @@ public class MainActivity extends Activity {
         Calendar cal = Calendar.getInstance();
         if (cal.get(Calendar.HOUR_OF_DAY) < 2) cal.add(Calendar.DATE, -1);
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
+    }
+
+    String getWeekStartDate(String opDateStr) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(sdf.parse(opDateStr));
+            cal.setFirstDayOfWeek(Calendar.MONDAY);
+            int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+            int diff = (dayOfWeek == Calendar.SUNDAY) ? 6 : (dayOfWeek - Calendar.MONDAY);
+            cal.add(Calendar.DAY_OF_MONTH, -diff);
+            return sdf.format(cal.getTime());
+        } catch (Exception e) {
+            return opDateStr;
+        }
+    }
+
+    String getMonthStartDate(String opDateStr) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(sdf.parse(opDateStr));
+            cal.set(Calendar.DAY_OF_MONTH, 1);
+            return sdf.format(cal.getTime());
+        } catch (Exception e) {
+            return opDateStr;
+        }
+    }
+
+    String getYearStartDate(String opDateStr) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(sdf.parse(opDateStr));
+            cal.set(Calendar.DAY_OF_YEAR, 1);
+            return sdf.format(cal.getTime());
+        } catch (Exception e) {
+            return opDateStr;
+        }
     }
 
     @Override
@@ -322,20 +361,24 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                    // 2. PERFORMANCE TAB
+                // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
 
+        // 4 PERIOD FILTERS: DAILY, WEEKLY (MON-SUN), MONTHLY (1-30/31), YEARLY (JAN-DEC)
         LinearLayout fl = new LinearLayout(this);
-        b1 = flt("📅 Daily", "daily");
-        b2 = flt("📆 Weekly", "weekly");
-        b3 = flt("🗓️ Monthly", "monthly");
+        b1 = flt("📅 Day", "daily");
+        b2 = flt("📆 Week", "weekly");
+        b3 = flt("🗓️ Month", "monthly");
+        b4 = flt("📊 Year", "yearly");
+
         LinearLayout.LayoutParams lpF = new LinearLayout.LayoutParams(0, -2, 1f);
-        lpF.setMargins(2, 0, 2, 8);
+        lpF.setMargins(1, 0, 1, 8);
         fl.addView(b1, lpF);
         fl.addView(b2, new LinearLayout.LayoutParams(lpF));
         fl.addView(b3, new LinearLayout.LayoutParams(lpF));
+        fl.addView(b4, new LinearLayout.LayoutParams(lpF));
         vPrf.addView(fl);
 
         tPersonalBest = new TextView(this);
@@ -507,7 +550,7 @@ public class MainActivity extends Activity {
     Button flt(String text, String m) {
         Button b = new Button(this);
         b.setText(text);
-        b.setTextSize(11.5f);
+        b.setTextSize(10f);
         b.setBackground(box("daily".equals(m) ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
         b.setTextColor("daily".equals(m) ? Color.BLACK : Color.parseColor("#8E92A4"));
         b.setOnClickListener(v -> {
@@ -518,6 +561,8 @@ public class MainActivity extends Activity {
             b2.setTextColor("weekly".equals(m) ? Color.BLACK : Color.parseColor("#8E92A4"));
             b3.setBackground(box("monthly".equals(m) ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
             b3.setTextColor("monthly".equals(m) ? Color.BLACK : Color.parseColor("#8E92A4"));
+            b4.setBackground(box("yearly".equals(m) ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
+            b4.setTextColor("yearly".equals(m) ? Color.BLACK : Color.parseColor("#8E92A4"));
             load();
         });
         return b;
@@ -542,12 +587,23 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-                     }
-        void load() {
+    }
+           void load() {
         try {
             vCrd.removeAllViews();
             agentNamesList.clear();
-            String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE dt >= date((SELECT MAX(dt) FROM prf),'-7 days') " : " WHERE dt >= date((SELECT MAX(dt) FROM prf),'-30 days') ");
+            String opDate = getOperationalDate();
+
+            String w;
+            if ("daily".equals(mode)) {
+                w = " WHERE dt = (SELECT MAX(dt) FROM prf) ";
+            } else if ("weekly".equals(mode)) {
+                w = " WHERE dt >= '" + getWeekStartDate(opDate) + "' ";
+            } else if ("monthly".equals(mode)) {
+                w = " WHERE dt >= '" + getMonthStartDate(opDate) + "' ";
+            } else {
+                w = " WHERE dt >= '" + getYearStartDate(opDate) + "' ";
+            }
 
             Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, null);
             if (hc != null && hc.moveToFirst()) {
@@ -576,13 +632,6 @@ public class MainActivity extends Activity {
             if (hc != null) hc.close();
 
             updatePersonalBest();
-
-            HashMap<String, Integer> streakMap = new HashMap<>();
-            Cursor sc = db.rawQuery("SELECT n, COUNT(DISTINCT dt) FROM prf WHERE (o+p) > 0 GROUP BY n", null);
-            while (sc != null && sc.moveToNext()) {
-                streakMap.put(sc.getString(0), sc.getInt(1));
-            }
-            if (sc != null) sc.close();
 
             Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
             ArrayList<String[]> list = new ArrayList<>();
@@ -619,7 +668,10 @@ public class MainActivity extends Activity {
 
             int currentRank = 1;
             for (String[] ag : list) {
-                int strk = streakMap.containsKey(ag[0]) ? Math.max(1, streakMap.get(ag[0])) : 1;
+                int[] strkInfo = getStreakInfo(ag[0]);
+                int curStrk = strkInfo[0];
+                int prevStrk = strkInfo[1];
+
                 double rate = Double.parseDouble(ag[8]);
                 int badgeColor = (rate >= 90.0) ? Color.parseColor("#00E676") : ((rate >= 60.0) ? Color.parseColor("#FBBF24") : Color.parseColor("#EF4444"));
 
@@ -656,10 +708,12 @@ public class MainActivity extends Activity {
                 nLp.setMargins(6, 0, 0, 0);
                 nameRow.addView(n, nLp);
 
+                // STREAK BADGE (CURRENT + PREVIOUS STREAK)
+                String streakDisplay = (prevStrk > 0) ? "🔥 " + curStrk + "D (Prev: " + prevStrk + "D)" : "🔥 " + curStrk + "D (Prev: --)";
                 TextView st = new TextView(this);
-                st.setText("🔥 " + strk + "D");
+                st.setText(streakDisplay);
                 st.setTextColor(Color.parseColor("#FBBF24"));
-                st.setTextSize(11f);
+                st.setTextSize(10.5f);
                 st.setTypeface(Typeface.DEFAULT_BOLD);
                 st.setBackground(box(Color.parseColor("#232634"), 8, 0, 0));
                 st.setPadding(8, 4, 8, 4);
@@ -694,6 +748,55 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
+    }
+
+    // RETURNS [CURRENT STREAK, PREVIOUS STREAK]
+    int[] getStreakInfo(String name) {
+        int cur = 0, prev = 0;
+        try {
+            Cursor c = db.rawQuery("SELECT DISTINCT dt FROM prf WHERE n = ? AND (o+p) > 0 ORDER BY dt DESC", new String[]{name});
+            ArrayList<Calendar> dates = new ArrayList<>();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            while (c != null && c.moveToNext()) {
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(sdf.parse(c.getString(0)));
+                dates.add(cal);
+            }
+            if (c != null) c.close();
+
+            if (!dates.isEmpty()) {
+                cur = 1;
+                int i = 1;
+                while (i < dates.size()) {
+                    Calendar prevCal = (Calendar) dates.get(i - 1).clone();
+                    prevCal.add(Calendar.DAY_OF_YEAR, -1);
+                    if (prevCal.get(Calendar.YEAR) == dates.get(i).get(Calendar.YEAR) &&
+                        prevCal.get(Calendar.DAY_OF_YEAR) == dates.get(i).get(Calendar.DAY_OF_YEAR)) {
+                        cur++;
+                        i++;
+                    } else {
+                        break;
+                    }
+                }
+                while (i < dates.size()) {
+                    prev = 1;
+                    i++;
+                    while (i < dates.size()) {
+                        Calendar prevCal = (Calendar) dates.get(i - 1).clone();
+                        prevCal.add(Calendar.DAY_OF_YEAR, -1);
+                        if (prevCal.get(Calendar.YEAR) == dates.get(i).get(Calendar.YEAR) &&
+                            prevCal.get(Calendar.DAY_OF_YEAR) == dates.get(i).get(Calendar.DAY_OF_YEAR)) {
+                            prev++;
+                            i++;
+                        } else {
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        } catch (Exception ignored) {}
+        return new int[]{Math.max(1, cur), prev};
     }
 
     void updatePersonalBest() {
@@ -843,7 +946,18 @@ public class MainActivity extends Activity {
     }
 
     String getAgentStats(String name) {
-        String w = "daily".equals(mode) ? " WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf) " : ("weekly".equals(mode) ? " WHERE n = ? AND dt >= date((SELECT MAX(dt) FROM prf),'-7 days') " : " WHERE n = ? AND dt >= date((SELECT MAX(dt) FROM prf),'-30 days') ");
+        String opDate = getOperationalDate();
+        String w;
+        if ("daily".equals(mode)) {
+            w = " WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf) ";
+        } else if ("weekly".equals(mode)) {
+            w = " WHERE n = ? AND dt >= '" + getWeekStartDate(opDate) + "' ";
+        } else if ("monthly".equals(mode)) {
+            w = " WHERE n = ? AND dt >= '" + getMonthStartDate(opDate) + "' ";
+        } else {
+            w = " WHERE n = ? AND dt >= '" + getYearStartDate(opDate) + "' ";
+        }
+
         Cursor c = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, new String[]{name});
         String res = "No data";
         if (c != null && c.moveToFirst()) {
@@ -900,8 +1014,8 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-                }
-                    void launchVoiceOTP() {
+    } 
+    void launchVoiceOTP() {
         try {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -1325,5 +1439,4 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-                                }
-
+                                                       }
