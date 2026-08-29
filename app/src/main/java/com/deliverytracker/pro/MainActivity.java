@@ -275,8 +275,7 @@ public class MainActivity extends Activity {
         tCnt.setPadding(6, 8, 6, 6);
         tCnt.setTypeface(Typeface.DEFAULT_BOLD);
         vTrk.addView(tCnt);
-
-        ListView lv = new ListView(this);
+                ListView lv = new ListView(this);
         lv.setDivider(null);
         lv.setDividerHeight(10);
         adp = new BaseAdapter() {
@@ -361,12 +360,12 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                // 2. PERFORMANCE TAB
+
+        // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
 
-        // 4 PERIOD FILTERS: DAILY, WEEKLY (MON-SUN), MONTHLY (1-30/31), YEARLY (JAN-DEC)
         LinearLayout fl = new LinearLayout(this);
         b1 = flt("📅 Day", "daily");
         b2 = flt("📆 Week", "weekly");
@@ -473,8 +472,7 @@ public class MainActivity extends Activity {
         sv.addView(vCrd);
         vPrf.addView(sv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vPrf);
-
-        // 3. HUB VS HUB TAB
+                // 3. HUB VS HUB TAB
         vHub = new LinearLayout(this);
         vHub.setOrientation(LinearLayout.VERTICAL);
         vHub.setVisibility(View.GONE);
@@ -588,7 +586,8 @@ public class MainActivity extends Activity {
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
     }
-           void load() {
+
+    void load() {
         try {
             vCrd.removeAllViews();
             agentNamesList.clear();
@@ -708,7 +707,6 @@ public class MainActivity extends Activity {
                 nLp.setMargins(6, 0, 0, 0);
                 nameRow.addView(n, nLp);
 
-                // STREAK BADGE (CURRENT + PREVIOUS STREAK)
                 String streakDisplay = (prevStrk > 0) ? "🔥 " + curStrk + "D (Prev: " + prevStrk + "D)" : "🔥 " + curStrk + "D (Prev: --)";
                 TextView st = new TextView(this);
                 st.setText(streakDisplay);
@@ -748,10 +746,7 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
-    }
-
-    // RETURNS [CURRENT STREAK, PREVIOUS STREAK]
-    int[] getStreakInfo(String name) {
+    }    int[] getStreakInfo(String name) {
         int cur = 0, prev = 0;
         try {
             Cursor c = db.rawQuery("SELECT DISTINCT dt FROM prf WHERE n = ? AND (o+p) > 0 ORDER BY dt DESC", new String[]{name});
@@ -816,7 +811,6 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
-    // AUTOMATIC REPORT OPENING DIRECTLY TO +91 8337868714 CHAT
     void triggerAutomaticEODReport(String completedDate) {
         try {
             StringBuilder sb = new StringBuilder();
@@ -1014,8 +1008,7 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-    } 
-    void launchVoiceOTP() {
+    }    void launchVoiceOTP() {
         try {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -1301,7 +1294,6 @@ public class MainActivity extends Activity {
             while ((line = reader.readLine()) != null) {
                 ArrayList<String> p = fastSplitCsv(line);
 
-                // 1. ORDER TRACKER (Col A & B)
                 if (p.size() >= 1) {
                     String trackId = clean(p.get(0));
                     String ordId = (p.size() > 1) ? clean(p.get(1)) : "";
@@ -1313,7 +1305,6 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // 2. AGENT PERFORMANCE (Col C to G)
                 if (p.size() > 2) {
                     String name = clean(p.get(2));
                     if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("Total") && !name.contains("Total") && !name.equalsIgnoreCase("#N/A") && !name.equalsIgnoreCase("N/A")) {
@@ -1336,7 +1327,6 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // 3. HUB VS HUB DATA (Col I to P)
                 if (p.size() > 8) {
                     String hname = clean(p.get(8));
                     if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
@@ -1366,7 +1356,6 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                // 4. CONTACTS DIRECTORY (Col R, S, T -> index 17, 18, 19)
                 if (p.size() > 19) {
                     String cName = clean(p.get(17));
                     String cRole = clean(p.get(18));
@@ -1381,7 +1370,6 @@ public class MainActivity extends Activity {
                 }
             }
 
-            // AUTO-TRIGGER DIRECTLY TO +91 8337868714 WHEN SHEET IS CLEARED (EOD)
             SharedPreferences prefs = getSharedPreferences("DeliveryTrackerPrefs", MODE_PRIVATE);
             if (parsedAgentsInSheet == 0) {
                 Cursor lastDayC = db.rawQuery("SELECT dt FROM prf GROUP BY dt HAVING SUM(o) > 0 ORDER BY dt DESC LIMIT 1", null);
@@ -1439,4 +1427,7 @@ public class MainActivity extends Activity {
             return 0;
         }
     }
-                                                       }
+}
+
+    
+    
