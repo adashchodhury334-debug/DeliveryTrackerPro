@@ -133,11 +133,13 @@ public class MainActivity extends Activity {
             db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
             db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
-            db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT);");
+            db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
+            try { db.execSQL("ALTER TABLE hub_prf ADD COLUMN dt TEXT;"); } catch (Exception ignored) {}
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_ord_t ON ord(t);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_dt ON prf(dt);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_n ON prf(n);");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_hub_dt ON hub_prf(dt);");
         } catch (Exception ignored) {}
 
         root = new FrameLayout(this);
@@ -740,13 +742,59 @@ public class MainActivity extends Activity {
                 t3.setPadding(0, 2, 0, 0);
                 card.addView(t3);
 
+                // AGENT GAP TO 92% BASED ON DEL
+                int agOfd = Integer.parseInt(ag[1]);
+                int agDel = Integer.parseInt(ag[2]);
+                int agTargetNeeded = (int) Math.ceil(0.92 * agOfd);
+                int agDiff = agTargetNeeded - agDel;
+
+                TextView tAgGap = new TextView(this);
+                if (agDiff <= 0 && agOfd > 0) {
+                    tAgGap.setText("🎯 92% Target Achieved! 🚀");
+                    tAgGap.setTextColor(Color.parseColor("#00E676"));
+                } else if (agOfd > 0) {
+                    tAgGap.setText("🎯 Gap to 92%: " + agDiff + " more DEL required");
+                    tAgGap.setTextColor(Color.parseColor("#FB923C"));
+                } else {
+                    tAgGap.setText("");
+                }
+                tAgGap.setTextSize(12f);
+                tAgGap.setTypeface(Typeface.DEFAULT_BOLD);
+                tAgGap.setPadding(0, 2, 0, 0);
+                card.addView(tAgGap);
+
+                // YESTERDAY / PREVIOUS WORKING DAY 92% TARGET MISSED STATUS
+                Cursor yc = db.rawQuery("SELECT dt, o, l, (CAST(l AS REAL)*100.0/CASE WHEN o>0 THEN o ELSE 1 END) FROM prf WHERE n = ? AND dt < ? AND o > 0 ORDER BY dt DESC LIMIT 1", new String[]{ag[0], opDate});
+                if (yc != null && yc.moveToFirst()) {
+                    String yDt = yc.getString(0);
+                    int yO = yc.getInt(1);
+                    int yL = yc.getInt(2);
+                    double yConv = yc.getDouble(3);
+                    int yGap = (int) Math.ceil(0.92 * yO) - yL;
+
+                    TextView tPrevMiss = new TextView(this);
+                    if (yConv < 92.0) {
+                        tPrevMiss.setText("⚠️ Prev Day (" + yDt + "): " + String.format(Locale.US, "%.1f%%", yConv) + " (Missed 92% by " + yGap + " DEL)");
+                        tPrevMiss.setTextColor(Color.parseColor("#EF4444"));
+                    } else {
+                        tPrevMiss.setText("✅ Prev Day (" + yDt + "): " + String.format(Locale.US, "%.1f%%", yConv) + " (92% Achieved)");
+                        tPrevMiss.setTextColor(Color.parseColor("#10B981"));
+                    }
+                    tPrevMiss.setTextSize(11.5f);
+                    tPrevMiss.setTypeface(Typeface.DEFAULT_BOLD);
+                    tPrevMiss.setPadding(0, 2, 0, 0);
+                    card.addView(tPrevMiss);
+                }
+                if (yc != null) yc.close();
+
                 final String agName = ag[0];
                 card.setOnClickListener(v -> showDetails(agName));
                 vCrd.addView(card);
                 currentRank++;
             }
         } catch (Exception ignored) {}
-    }    int[] getStreakInfo(String name) {
+                    }
+             int[] getStreakInfo(String name) {
         int cur = 0, prev = 0;
         try {
             Cursor c = db.rawQuery("SELECT DISTINCT dt FROM prf WHERE n = ? AND (o+p) > 0 ORDER BY dt DESC", new String[]{name});
@@ -988,9 +1036,67 @@ public class MainActivity extends Activity {
             int o = c.getInt(1), l = c.getInt(2), p = c.getInt(3), k = c.getInt(4);
             int dnp = o + p, dnpc = l + k;
             double cr = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
+            double ofdConv = o > 0 ? ((double) l / o) * 100.0 : 0.0;
+
+            String tag92 = "";
+            if (o > 0) {
+                int gap = (int) Math.ceil(0.92 * o) - l;
+                if (gap > 0) {
+                    tag92 = "  \n⚠️ [Missed 92% | Gap: " + gap + " DEL]";
+                } else {
+                    tag92 = "  \n✅ [92% Target Hit]";
+                }
+            }
 
             TextView item = new TextView(this);
-            item.setText("📅 " + c.getString(0) + "  |  Conv: " + String.format(Locale.US, "%.1f%%", cr) + "\nOFD: " + o + " | DEL: " + l + " | OFP: " + p + " | PIK: " + k);
+            item.setText("📅 " + c.getString(0) + "  |  Conv: " + String.format(Locale.US, "%.1f%%", cr) + "\nOFD: " + o + " | DEL: " + l + " (" + String.format(Locale.US, "%.1f%%", ofdConv) + ") | OFP: " + p + " | PIK: " + k + tag92);
+            item.setTextColor(Color.WHITE);
+            item.setTextSize(13f);
+            item.setPadding(12, 10, 12, 10);
+            item.setBackground(box(Color.parseColor("#181920"), 10, Color.parseColor("#2A2D3D"), 1));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, 0, 0, 8);
+            item.setLayoutParams(lp);
+            content.addView(item);
+        }
+        if (c != null) c.close();
+        sv.addView(content);
+        pop.addView(sv);
+
+        new AlertDialog.Builder(this)
+            .setView(pop)
+            .setPositiveButton("Close", null)
+            .show();
+    }
+
+    void showHubDetails(String hname) {
+        String opDate = getOperationalDate();
+        Cursor c = db.rawQuery("SELECT dt, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf WHERE hname = ? ORDER BY dt DESC LIMIT 30", new String[]{hname});
+        LinearLayout pop = new LinearLayout(this);
+        pop.setOrientation(LinearLayout.VERTICAL);
+        pop.setPadding(20, 20, 20, 20);
+        pop.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        TextView h = new TextView(this);
+        h.setText("🏢 " + hname + " (History)");
+        h.setTextColor(Color.parseColor("#38BDF8"));
+        h.setTextSize(15f);
+        h.setTypeface(Typeface.DEFAULT_BOLD);
+        h.setPadding(0, 0, 0, 10);
+        pop.addView(h);
+
+        ScrollView sv = new ScrollView(this);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+
+        while (c != null && c.moveToNext()) {
+            String dt = c.getString(0) != null ? c.getString(0) : opDate;
+            String o = c.getString(1), l = c.getString(2), lc = c.getString(3);
+            String p = c.getString(4), k = c.getString(5), kc = c.getString(6);
+            String tc = c.getString(9);
+
+            TextView item = new TextView(this);
+            item.setText("📅 " + dt + "  |  Overall Conv: " + tc + "\nOFD/DEL = " + o + "/" + l + " (" + lc + ")\nOFP/PIK = " + p + "/" + k + " (" + kc + ")");
             item.setTextColor(Color.WHITE);
             item.setTextSize(13f);
             item.setPadding(12, 10, 12, 10);
@@ -1069,7 +1175,7 @@ public class MainActivity extends Activity {
     void loadHubVsHub() {
         try {
             vHubCrd.removeAllViews();
-            Cursor c = db.rawQuery("SELECT hname, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf", null);
+            Cursor c = db.rawQuery("SELECT hname, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf WHERE dt = (SELECT MAX(dt) FROM hub_prf) OR dt IS NULL", null);
             while (c != null && c.moveToNext()) {
                 String name = c.getString(0);
                 String o = c.getString(1), l = c.getString(2), lc = c.getString(3);
@@ -1112,6 +1218,9 @@ public class MainActivity extends Activity {
                 t3.setTypeface(Typeface.DEFAULT_BOLD);
                 t3.setPadding(0, 2, 0, 0);
                 card.addView(t3);
+
+                final String hubName = name;
+                card.setOnClickListener(v -> showHubDetails(hubName));
 
                 vHubCrd.addView(card);
             }
@@ -1286,8 +1395,8 @@ public class MainActivity extends Activity {
 
             db.beginTransaction();
             db.execSQL("DELETE FROM ord");
-            db.execSQL("DELETE FROM hub_prf");
             db.execSQL("DELETE FROM contacts");
+            db.execSQL("DELETE FROM hub_prf WHERE dt = '" + opDate + "'");
 
             ArrayList<ContentValues> tempAgentData = new ArrayList<>();
 
@@ -1352,6 +1461,7 @@ public class MainActivity extends Activity {
                         hcv.put("dnp", String.valueOf(dnp));
                         hcv.put("dnpc", String.valueOf(dnpc));
                         hcv.put("tc", tc);
+                        hcv.put("dt", opDate);
                         db.insert("hub_prf", null, hcv);
                     }
                 }
@@ -1429,5 +1539,4 @@ public class MainActivity extends Activity {
     }
 }
 
-    
     
