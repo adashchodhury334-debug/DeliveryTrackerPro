@@ -61,8 +61,8 @@ public class MainActivity extends Activity {
     ArrayList<String> agentNamesList = new ArrayList<>();
     BaseAdapter adp;
     
-    String currentCategory = "AGENT"; // "AGENT", "KIRANA", "ALL"
-    String mode = "daily";            // "daily", "weekly", "cycle1", "cycle2"
+    String currentCategory = "AGENT";
+    String mode = "daily";
     boolean isHighToLow = true;
     String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
     static final int REQ_CODE_SPEECH = 101;
@@ -151,8 +151,7 @@ public class MainActivity extends Activity {
         super.onPause();
         autoSyncHandler.removeCallbacks(autoSyncRunnable);
     }
-
-    void buildUI() {
+        void buildUI() {
         LinearLayout main = new LinearLayout(this);
         main.setOrientation(LinearLayout.VERTICAL);
 
@@ -264,7 +263,8 @@ public class MainActivity extends Activity {
         tCnt.setPadding(6, 8, 6, 6);
         tCnt.setTypeface(Typeface.DEFAULT_BOLD);
         vTrk.addView(tCnt);
-                ListView lv = new ListView(this);
+
+        ListView lv = new ListView(this);
         lv.setDivider(null);
         lv.setDividerHeight(10);
         adp = new BaseAdapter() {
@@ -349,13 +349,11 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-
-        // 2. PERFORMANCE TAB
+                  // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
 
-        // TOP CATEGORY SELECTOR: AGENT | KIRANA | ALL (MIX)
         LinearLayout catRow = new LinearLayout(this);
         catRow.setPadding(0, 0, 0, 6);
         
@@ -381,7 +379,6 @@ public class MainActivity extends Activity {
         catRow.addView(bCatAll, new LinearLayout.LayoutParams(catLp));
         vPrf.addView(catRow);
 
-        // DYNAMIC PERIOD FILTER ROW (Changes based on Category)
         periodFilterRow = new LinearLayout(this);
         periodFilterRow.setPadding(0, 0, 0, 6);
         vPrf.addView(periodFilterRow);
@@ -482,7 +479,8 @@ public class MainActivity extends Activity {
         sv.addView(vCrd);
         vPrf.addView(sv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vPrf);
-                 // 3. HUB VS HUB TAB
+
+        // 3. HUB VS HUB TAB
         vHub = new LinearLayout(this);
         vHub.setOrientation(LinearLayout.VERTICAL);
         vHub.setVisibility(View.GONE);
@@ -653,9 +651,8 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-    }
-
-    void load() {
+                    }
+        void load() {
         try {
             vCrd.removeAllViews();
             agentNamesList.clear();
@@ -718,7 +715,6 @@ public class MainActivity extends Activity {
                 String name = ac.getString(0);
                 boolean isKirana = isKiranaAgent(name);
 
-                // CATEGORY FILTER LOGIC
                 if ("AGENT".equals(currentCategory) && isKirana) continue;
                 if ("KIRANA".equals(currentCategory) && !isKirana) continue;
 
@@ -822,7 +818,6 @@ public class MainActivity extends Activity {
                 t3.setPadding(0, 2, 0, 0);
                 card.addView(t3);
 
-                // AGENT GAP TO 92% BASED ON DEL
                 int agOfd = Integer.parseInt(ag[1]);
                 int agDel = Integer.parseInt(ag[2]);
                 int agTargetNeeded = (int) Math.ceil(0.92 * agOfd);
@@ -843,7 +838,6 @@ public class MainActivity extends Activity {
                 tAgGap.setPadding(0, 2, 0, 0);
                 card.addView(tAgGap);
 
-                // PREVIOUS WORKING DAY STATUS
                 Cursor yc = db.rawQuery("SELECT dt, o, l, (CAST(l AS REAL)*100.0/CASE WHEN o>0 THEN o ELSE 1 END) FROM prf WHERE n = ? AND dt < ? AND o > 0 ORDER BY dt DESC LIMIT 1", new String[]{ag[0], opDate});
                 if (yc != null && yc.moveToFirst()) {
                     String yDt = yc.getString(0);
@@ -873,7 +867,7 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
-                    }
+        }
         int[] getStreakInfo(String name) {
         int cur = 0, prev = 0;
         try {
@@ -1302,8 +1296,8 @@ public class MainActivity extends Activity {
         t3.setPadding(0, 2, 0, 0);
         item.addView(t3);
 
-    if (o > 0) {
-            int gap = (int) Math.ceil(0.92 * o) - l;
+        if (o > 0) {
+                        int gap = (int) Math.ceil(0.92 * o) - l;
             TextView tGap = new TextView(this);
             if (gap <= 0) {
                 tGap.setText("✅ 92% Target Hit");
@@ -1319,7 +1313,9 @@ public class MainActivity extends Activity {
         }
 
         return item;
-    }    void showHubDetails(String hname) {
+    }
+
+    void showHubDetails(String hname) {
         String opDate = getOperationalDate();
         Cursor c = db.rawQuery("SELECT dt, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf WHERE hname = ? ORDER BY dt DESC LIMIT 30", new String[]{hname});
         LinearLayout pop = new LinearLayout(this);
@@ -1423,7 +1419,6 @@ public class MainActivity extends Activity {
             }
         }
     }
-
     void loadHubVsHub() {
         try {
             vHubCrd.removeAllViews();
@@ -1767,8 +1762,26 @@ public class MainActivity extends Activity {
                 }
             });
         } catch (Exception e) {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (!isAuto) {
+                    showLoading(false, null);
+                    Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    String clean(String s) {
+        if (s == null) return "";
+        return s.replace("\"", "").trim();
+    }
+
+    int parseInt(String s) {
+        try {
+            return Integer.parseInt(clean(s).replace("%", ""));
+        } catch (Exception e) {
             return 0;
         }
     }
 }
-      
+
