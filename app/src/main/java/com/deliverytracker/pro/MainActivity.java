@@ -1210,9 +1210,8 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-    }
-
-    TextView makeEmptyText(String text) {
+        }
+        TextView makeEmptyText(String text) {
         TextView tv = new TextView(this);
         tv.setText(text);
         tv.setTextColor(Color.parseColor("#9CA3AF"));
@@ -1767,7 +1766,7 @@ public class MainActivity extends Activity {
             reader.close();
             lastSyncTime = System.currentTimeMillis();
 
-            new Handler(Looper.getMainLooper()).post(() -> {
+                        new Handler(Looper.getMainLooper()).post(() -> {
                 load();
                 loadHubVsHub();
                 loadContacts();
@@ -1779,8 +1778,12 @@ public class MainActivity extends Activity {
                 }
             });
         } catch (Exception e) {
-            return 0;
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (!isAuto) {
+                    showLoading(false, null);
+                    Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
-}
-      
+    
