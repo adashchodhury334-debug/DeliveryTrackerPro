@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
@@ -55,14 +56,14 @@ public class MainActivity extends Activity {
     LinearLayout periodFilterRow;
     Button bT, bP, bH, bC, bSort, bVsBattle, bVoiceOtp;
     Button bCatAgent, bCatKirana, bCatAll;
-    Button bSub1, bSub2, bSub3;
+    Button bSubDay, bSubYearly;
     TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tGapTarget, tPersonalBest;
     ArrayList<String[]> ords = new ArrayList<>();
     ArrayList<String> agentNamesList = new ArrayList<>();
     BaseAdapter adp;
     
-    String currentCategory = "AGENT";
-    String mode = "daily";
+    String currentCategory = "AGENT"; // "AGENT", "KIRANA", "ALL"
+    String mode = "daily";            // "daily", "yearly"
     boolean isHighToLow = true;
     String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
     static final int REQ_CODE_SPEECH = 101;
@@ -91,24 +92,64 @@ public class MainActivity extends Activity {
         return n.contains("KIRANA") || n.contains("RATAN SARKAR") || n.equals("RATAN SARKAR");
     }
 
+    String getPerformanceBadge(double delConv, int ofd) {
+        if (ofd == 0) return "⚪ NO OFD ASSIGNED";
+        if (delConv >= 96.0) return "🌟 EXCELLENT PERFORMANCE";
+        if (delConv >= 92.0) return "🔥 BEST PERFORMANCE (Target Met)";
+        if (delConv >= 88.0) return "⚠️ FOCUS PERFORMANCE";
+        return "🚨 NOT ACCEPTED - IMPROVE YOUR PERFORMANCE";
+    }
+
+    int getPerformanceColor(double delConv, int ofd) {
+        if (ofd == 0) return Color.parseColor("#9CA3AF");
+        if (delConv >= 96.0) return Color.parseColor("#38BDF8");
+        if (delConv >= 92.0) return Color.parseColor("#00E676");
+        if (delConv >= 88.0) return Color.parseColor("#FBBF24");
+        return Color.parseColor("#EF4444");
+    }
+
     String getOperationalDate() {
         Calendar cal = Calendar.getInstance();
         if (cal.get(Calendar.HOUR_OF_DAY) < 2) cal.add(Calendar.DATE, -1);
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
     }
 
-    String getWeekStartDate(String opDateStr) {
+    String getYearStartDate(String opDateStr) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
             cal.setTime(sdf.parse(opDateStr));
+            cal.set(Calendar.DAY_OF_YEAR, 1);
+            return sdf.format(cal.getTime());
+        } catch (Exception e) {
+            return opDateStr;
+        }
+    }
+
+    String getWeekStartDate(String dateStr) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(sdf.parse(dateStr));
             cal.setFirstDayOfWeek(Calendar.MONDAY);
             int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
             int diff = (dayOfWeek == Calendar.SUNDAY) ? 6 : (dayOfWeek - Calendar.MONDAY);
             cal.add(Calendar.DAY_OF_MONTH, -diff);
             return sdf.format(cal.getTime());
         } catch (Exception e) {
-            return opDateStr;
+            return dateStr;
+        }
+    }
+
+    String getWeekEndDate(String dateStr) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(sdf.parse(getWeekStartDate(dateStr)));
+            cal.add(Calendar.DAY_OF_MONTH, 6);
+            return sdf.format(cal.getTime());
+        } catch (Exception e) {
+            return dateStr;
         }
     }
 
@@ -349,7 +390,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                  // 2. PERFORMANCE TAB
+                    // 2. PERFORMANCE TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -545,60 +586,42 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(0, -2, 1f);
         pLp.setMargins(1, 0, 1, 0);
 
-        if ("KIRANA".equals(currentCategory)) {
-            String opDate = getOperationalDate();
-            String mName = "Month";
-            try {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(sdf.parse(opDate));
-                mName = new SimpleDateFormat("MMM", Locale.US).format(cal.getTime());
-            } catch (Exception ignored) {}
-
-            bSub1 = makePeriodBtn("📅 Day", "daily");
-            bSub2 = makePeriodBtn("🔄 " + mName + " Cyc 1 (1-15)", "cycle1");
-            bSub3 = makePeriodBtn("🔄 " + mName + " Cyc 2 (16-End)", "cycle2");
-
-            periodFilterRow.addView(bSub1, pLp);
-            periodFilterRow.addView(bSub2, new LinearLayout.LayoutParams(pLp));
-            periodFilterRow.addView(bSub3, new LinearLayout.LayoutParams(pLp));
-        } else {
-            bSub1 = makePeriodBtn("📅 Day", "daily");
-            bSub2 = makePeriodBtn("📆 Week (Mon-Sun)", "weekly");
-
-            periodFilterRow.addView(bSub1, pLp);
-            periodFilterRow.addView(bSub2, new LinearLayout.LayoutParams(pLp));
-        }
-        updatePeriodBtnStyles();
-    }
-
-    Button makePeriodBtn(String text, String m) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setTextSize(10f);
-        b.setOnClickListener(v -> {
-            mode = m;
+        bSubDay = new Button(this);
+        bSubDay.setText("📅 Day (Live)");
+        bSubDay.setTextSize(10f);
+        bSubDay.setTypeface(Typeface.DEFAULT_BOLD);
+        bSubDay.setOnClickListener(v -> {
+            mode = "daily";
             updatePeriodBtnStyles();
             load();
         });
-        return b;
+
+        String yearlyTitle = "KIRANA".equals(currentCategory) ? "📊 Yearly (All Cycles)" : "📊 Yearly (All Weeks)";
+        bSubYearly = new Button(this);
+        bSubYearly.setText(yearlyTitle);
+        bSubYearly.setTextSize(10f);
+        bSubYearly.setTypeface(Typeface.DEFAULT_BOLD);
+        bSubYearly.setOnClickListener(v -> {
+            mode = "yearly";
+            updatePeriodBtnStyles();
+            load();
+        });
+
+        periodFilterRow.addView(bSubDay, pLp);
+        periodFilterRow.addView(bSubYearly, new LinearLayout.LayoutParams(pLp));
+        updatePeriodBtnStyles();
     }
 
     void updatePeriodBtnStyles() {
-        if (bSub1 != null) {
+        if (bSubDay != null) {
             boolean active = "daily".equals(mode);
-            bSub1.setBackground(box(active ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
-            bSub1.setTextColor(active ? Color.BLACK : Color.parseColor("#8E92A4"));
+            bSubDay.setBackground(box(active ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
+            bSubDay.setTextColor(active ? Color.BLACK : Color.parseColor("#8E92A4"));
         }
-        if (bSub2 != null) {
-            boolean active = ("weekly".equals(mode) || "cycle1".equals(mode));
-            bSub2.setBackground(box(active ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
-            bSub2.setTextColor(active ? Color.BLACK : Color.parseColor("#8E92A4"));
-        }
-        if (bSub3 != null) {
-            boolean active = "cycle2".equals(mode);
-            bSub3.setBackground(box(active ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
-            bSub3.setTextColor(active ? Color.BLACK : Color.parseColor("#8E92A4"));
+        if (bSubYearly != null) {
+            boolean active = "yearly".equals(mode);
+            bSubYearly.setBackground(box(active ? Color.parseColor("#00E676") : Color.parseColor("#232634"), 8, 0, 0));
+            bSubYearly.setTextColor(active ? Color.BLACK : Color.parseColor("#8E92A4"));
         }
     }
 
@@ -651,30 +674,18 @@ public class MainActivity extends Activity {
         c.addView(v);
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
-                    }
+    }
         void load() {
         try {
             vCrd.removeAllViews();
             agentNamesList.clear();
             String opDate = getOperationalDate();
 
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-            Calendar cal = Calendar.getInstance();
-            try { cal.setTime(sdf.parse(opDate)); } catch (Exception ignored) {}
-            int curYear = cal.get(Calendar.YEAR);
-            int curMonth = cal.get(Calendar.MONTH) + 1;
-            int maxDayOfMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-            String mPrefix = String.format(Locale.US, "%04d-%02d-", curYear, curMonth);
-
             String w;
             if ("daily".equals(mode)) {
                 w = " WHERE dt = (SELECT MAX(dt) FROM prf) ";
-            } else if ("weekly".equals(mode)) {
-                w = " WHERE dt >= '" + getWeekStartDate(opDate) + "' ";
-            } else if ("cycle1".equals(mode)) {
-                w = " WHERE dt >= '" + mPrefix + "01' AND dt <= '" + mPrefix + "15' ";
             } else {
-                w = " WHERE dt >= '" + mPrefix + "16' AND dt <= '" + mPrefix + String.format(Locale.US, "%02d", maxDayOfMonth) + "' ";
+                w = " WHERE dt >= '" + getYearStartDate(opDate) + "' ";
             }
 
             Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, null);
@@ -1063,23 +1074,11 @@ public class MainActivity extends Activity {
 
     String getAgentStats(String name) {
         String opDate = getOperationalDate();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        Calendar cal = Calendar.getInstance();
-        try { cal.setTime(sdf.parse(opDate)); } catch (Exception ignored) {}
-        int curYear = cal.get(Calendar.YEAR);
-        int curMonth = cal.get(Calendar.MONTH) + 1;
-        int maxDayOfMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-        String mPrefix = String.format(Locale.US, "%04d-%02d-", curYear, curMonth);
-
         String w;
         if ("daily".equals(mode)) {
             w = " WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf) ";
-        } else if ("weekly".equals(mode)) {
-            w = " WHERE n = ? AND dt >= '" + getWeekStartDate(opDate) + "' ";
-        } else if ("cycle1".equals(mode)) {
-            w = " WHERE n = ? AND dt >= '" + mPrefix + "01' AND dt <= '" + mPrefix + "15' ";
         } else {
-            w = " WHERE n = ? AND dt >= '" + mPrefix + "16' AND dt <= '" + mPrefix + String.format(Locale.US, "%02d", maxDayOfMonth) + "' ";
+            w = " WHERE n = ? AND dt >= '" + getYearStartDate(opDate) + "' ";
         }
 
         Cursor c = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, new String[]{name});
@@ -1093,20 +1092,11 @@ public class MainActivity extends Activity {
         if (c != null) c.close();
         return res;
     }
-
-    void showDetails(String name) {
+        void showDetails(String name) {
         String opDate = getOperationalDate();
         boolean isKirana = isKiranaAgent(name);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
         SimpleDateFormat sdfDayName = new SimpleDateFormat("EEEE, dd MMM yyyy", Locale.US);
-
-        Calendar cal = Calendar.getInstance();
-        try { cal.setTime(sdf.parse(opDate)); } catch (Exception ignored) {}
-        int curYear = cal.get(Calendar.YEAR);
-        int curMonth = cal.get(Calendar.MONTH) + 1;
-        int maxDayOfMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-        String monthName = new SimpleDateFormat("MMMM", Locale.US).format(cal.getTime());
-        String mPrefix = String.format(Locale.US, "%04d-%02d-", curYear, curMonth);
 
         LinearLayout pop = new LinearLayout(this);
         pop.setOrientation(LinearLayout.VERTICAL);
@@ -1124,68 +1114,95 @@ public class MainActivity extends Activity {
         content.setOrientation(LinearLayout.VERTICAL);
 
         if (isKirana) {
-            h.setText("🏪 " + name + " (" + monthName + " Cycles)");
-            String d1Start = mPrefix + "01", d1End = mPrefix + "15";
-            String d2Start = mPrefix + "16", d2End = mPrefix + String.format(Locale.US, "%02d", maxDayOfMonth);
+            h.setText("🏪 " + name + " (All Cycles Breakdown)");
 
-            Cursor c1 = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= ? AND dt <= ?", new String[]{name, d1Start, d1End});
-            if (c1 != null && c1.moveToFirst() && (c1.getInt(0) + c1.getInt(2)) > 0) {
-                content.addView(makeDetailItemCard("🏪 Cycle 1 (1st to 15th " + monthName + ")", c1.getInt(0), c1.getInt(1), c1.getInt(2), c1.getInt(3)));
+            Cursor mc = db.rawQuery("SELECT DISTINCT SUBSTR(dt, 1, 7) FROM prf WHERE n = ? ORDER BY dt DESC", new String[]{name});
+            boolean foundAny = false;
+            while (mc != null && mc.moveToNext()) {
+                foundAny = true;
+                String ym = mc.getString(0);
+                try {
+                    Calendar mCal = Calendar.getInstance();
+                    mCal.setTime(new SimpleDateFormat("yyyy-MM", Locale.US).parse(ym));
+                    int maxD = mCal.getActualMaximum(Calendar.DAY_OF_MONTH);
+                    String mName = new SimpleDateFormat("MMMM yyyy", Locale.US).format(mCal.getTime());
+
+                    String d2Start = ym + "-16", d2End = ym + String.format(Locale.US, "-%02d", maxD);
+                    Cursor c2 = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= ? AND dt <= ?", new String[]{name, d2Start, d2End});
+                    if (c2 != null && c2.moveToFirst() && (c2.getInt(0) + c2.getInt(2)) > 0) {
+                        content.addView(makeSummaryHeaderCard("🏪 " + mName + " Cyc 2 (16-" + maxD + ")", c2.getInt(0), c2.getInt(1), c2.getInt(2), c2.getInt(3)));
+                        
+                        Cursor dc2 = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= ? AND dt <= ? ORDER BY dt DESC", new String[]{name, d2Start, d2End});
+                        while (dc2 != null && dc2.moveToNext()) {
+                            content.addView(makeDetailItemCard("📅 " + dc2.getString(0), dc2.getInt(1), dc2.getInt(2), dc2.getInt(3), dc2.getInt(4)));
+                        }
+                        if (dc2 != null) dc2.close();
+                    }
+                    if (c2 != null) c2.close();
+
+                    String d1Start = ym + "-01", d1End = ym + "-15";
+                    Cursor c1 = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= ? AND dt <= ?", new String[]{name, d1Start, d1End});
+                    if (c1 != null && c1.moveToFirst() && (c1.getInt(0) + c1.getInt(2)) > 0) {
+                        content.addView(makeSummaryHeaderCard("🏪 " + mName + " Cyc 1 (1-15)", c1.getInt(0), c1.getInt(1), c1.getInt(2), c1.getInt(3)));
+                        
+                        Cursor dc1 = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= ? AND dt <= ? ORDER BY dt DESC", new String[]{name, d1Start, d1End});
+                        while (dc1 != null && dc1.moveToNext()) {
+                            content.addView(makeDetailItemCard("📅 " + dc1.getString(0), dc1.getInt(1), dc1.getInt(2), dc1.getInt(3), dc1.getInt(4)));
+                        }
+                        if (dc1 != null) dc1.close();
+                    }
+                    if (c1 != null) c1.close();
+                } catch (Exception ignored) {}
             }
-            if (c1 != null) c1.close();
+            if (mc != null) mc.close();
 
-            Cursor c2 = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= ? AND dt <= ?", new String[]{name, d2Start, d2End});
-            if (c2 != null && c2.moveToFirst() && (c2.getInt(0) + c2.getInt(2)) > 0) {
-                content.addView(makeDetailItemCard("🏪 Cycle 2 (16th to " + maxDayOfMonth + "th " + monthName + ")", c2.getInt(0), c2.getInt(1), c2.getInt(2), c2.getInt(3)));
-            }
-            if (c2 != null) c2.close();
-
-            TextView dayTitle = new TextView(this);
-            dayTitle.setText("\n📅 Daily Breakdown:");
-            dayTitle.setTextColor(Color.parseColor("#9CA3AF"));
-            dayTitle.setTypeface(Typeface.DEFAULT_BOLD);
-            content.addView(dayTitle);
-
-            Cursor dc = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= '" + mPrefix + "01' ORDER BY dt DESC", new String[]{name});
-            while (dc != null && dc.moveToNext()) {
-                content.addView(makeDetailItemCard("📅 " + dc.getString(0), dc.getInt(1), dc.getInt(2), dc.getInt(3), dc.getInt(4)));
-            }
-            if (dc != null) dc.close();
+            if (!foundAny) content.addView(makeEmptyText("No Kirana records found."));
         } else {
-            if ("daily".equals(mode)) {
-                h.setText("👤 " + name + " (📅 Today's Live)");
-                Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf)", new String[]{name});
-                if (c != null && c.moveToFirst()) {
-                    content.addView(makeDetailItemCard("📅 Live: " + c.getString(0), c.getInt(1), c.getInt(2), c.getInt(3), c.getInt(4)));
-                } else {
-                    content.addView(makeEmptyText("No data recorded for today."));
+            h.setText("👤 " + name + " (All Weeks & Day Breakdown)");
+
+            Cursor allDaysC = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? ORDER BY dt DESC LIMIT 90", new String[]{name});
+            LinkedHashMap<String, ArrayList<String[]>> weekGroups = new LinkedHashMap<>();
+
+            while (allDaysC != null && allDaysC.moveToNext()) {
+                String dStr = allDaysC.getString(0);
+                String wStart = getWeekStartDate(dStr);
+                String wEnd = getWeekEndDate(dStr);
+                String wKey = wStart + " to " + wEnd;
+
+                if (!weekGroups.containsKey(wKey)) {
+                    weekGroups.put(wKey, new ArrayList<>());
                 }
-                if (c != null) c.close();
+                weekGroups.get(wKey).add(new String[]{dStr, String.valueOf(allDaysC.getInt(1)), String.valueOf(allDaysC.getInt(2)), String.valueOf(allDaysC.getInt(3)), String.valueOf(allDaysC.getInt(4))});
+            }
+            if (allDaysC != null) allDaysC.close();
+
+            if (weekGroups.isEmpty()) {
+                content.addView(makeEmptyText("No records found for this agent."));
             } else {
-                String wStart = getWeekStartDate(opDate);
-                h.setText("👤 " + name + " (📆 Week Breakdown: Mon - Sun)");
+                for (String wRange : weekGroups.keySet()) {
+                    ArrayList<String[]> daysInWeek = weekGroups.get(wRange);
+                    int sumO = 0, sumL = 0, sumP = 0, sumK = 0;
+                    for (String[] dData : daysInWeek) {
+                        sumO += Integer.parseInt(dData[1]);
+                        sumL += Integer.parseInt(dData[2]);
+                        sumP += Integer.parseInt(dData[3]);
+                        sumK += Integer.parseInt(dData[4]);
+                    }
 
-                Cursor tc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= '" + wStart + "'", new String[]{name});
-                if (tc != null && tc.moveToFirst() && (tc.getInt(0) + tc.getInt(2)) > 0) {
-                    content.addView(makeSummaryHeaderCard("📊 Week Total", tc.getInt(0), tc.getInt(1), tc.getInt(2), tc.getInt(3)));
-                }
-                if (tc != null) tc.close();
+                    String[] parts = wRange.split(" to ");
+                    String wHeaderTitle = "📊 Week: " + parts[0] + " ➔ " + parts[1];
+                    content.addView(makeSummaryHeaderCard(wHeaderTitle, sumO, sumL, sumP, sumK));
 
-                Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= '" + wStart + "' ORDER BY dt ASC", new String[]{name});
-                boolean hasData = false;
-                while (c != null && c.moveToNext()) {
-                    hasData = true;
-                    String dStr = c.getString(0);
-                    String dayName = dStr;
-                    try {
-                        Calendar dCal = Calendar.getInstance();
-                        dCal.setTime(sdf.parse(dStr));
-                        dayName = sdfDayName.format(dCal.getTime());
-                    } catch (Exception ignored) {}
-                    content.addView(makeDetailItemCard("📅 " + dayName, c.getInt(1), c.getInt(2), c.getInt(3), c.getInt(4)));
+                    for (String[] dData : daysInWeek) {
+                        String dayTitle = dData[0];
+                        try {
+                            Calendar dCal = Calendar.getInstance();
+                            dCal.setTime(sdf.parse(dData[0]));
+                            dayTitle = sdfDayName.format(dCal.getTime());
+                        } catch (Exception ignored) {}
+                        content.addView(makeDetailItemCard("📅 " + dayTitle, Integer.parseInt(dData[1]), Integer.parseInt(dData[2]), Integer.parseInt(dData[3]), Integer.parseInt(dData[4])));
+                    }
                 }
-                if (!hasData) content.addView(makeEmptyText("No data recorded this week yet."));
-                if (c != null) c.close();
             }
         }
 
@@ -1213,7 +1230,7 @@ public class MainActivity extends Activity {
         card.setBackground(box(Color.parseColor("#1E1B4B"), 12, Color.parseColor("#818CF8"), 1));
         card.setPadding(14, 12, 14, 12);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.setMargins(0, 0, 0, 10);
+        lp.setMargins(0, 8, 0, 8);
         card.setLayoutParams(lp);
 
         int dnp = o + p, dnpc = l + k;
@@ -1224,31 +1241,41 @@ public class MainActivity extends Activity {
         TextView tHead = new TextView(this);
         tHead.setText(title);
         tHead.setTextColor(Color.parseColor("#A5B4FC"));
-        tHead.setTextSize(14f);
+        tHead.setTextSize(13.5f);
         tHead.setTypeface(Typeface.DEFAULT_BOLD);
         card.addView(tHead);
 
         TextView t1 = new TextView(this);
         t1.setText("OFD/DEL = " + o + "/" + l + " = " + String.format(Locale.US, "%.1f%%", ofdC));
         t1.setTextColor(Color.WHITE);
-        t1.setTextSize(13f);
+        t1.setTextSize(12.5f);
         t1.setPadding(0, 4, 0, 0);
         card.addView(t1);
 
         TextView t2 = new TextView(this);
         t2.setText("OFP/PIK = " + p + "/" + k + " = " + String.format(Locale.US, "%.1f%%", ofpC));
         t2.setTextColor(Color.WHITE);
-        t2.setTextSize(13f);
+        t2.setTextSize(12.5f);
         t2.setPadding(0, 2, 0, 0);
         card.addView(t2);
 
         TextView t3 = new TextView(this);
         t3.setText("DNP/DNPC = " + dnp + "/" + dnpc + " = " + String.format(Locale.US, "%.1f%%", totC));
         t3.setTextColor(Color.parseColor("#34D399"));
-        t3.setTextSize(13f);
+        t3.setTextSize(12.5f);
         t3.setTypeface(Typeface.DEFAULT_BOLD);
         t3.setPadding(0, 2, 0, 0);
         card.addView(t3);
+
+        String badgeText = getPerformanceBadge(ofdC, o);
+        int badgeCol = getPerformanceColor(ofdC, o);
+        TextView tBadge = new TextView(this);
+        tBadge.setText("🏆 " + badgeText);
+        tBadge.setTextColor(badgeCol);
+        tBadge.setTextSize(12f);
+        tBadge.setTypeface(Typeface.DEFAULT_BOLD);
+        tBadge.setPadding(0, 4, 0, 0);
+        card.addView(tBadge);
 
         return card;
     }
@@ -1270,47 +1297,41 @@ public class MainActivity extends Activity {
         TextView tTitle = new TextView(this);
         tTitle.setText(title);
         tTitle.setTextColor(Color.parseColor("#38BDF8"));
-        tTitle.setTextSize(13.5f);
+        tTitle.setTextSize(13f);
         tTitle.setTypeface(Typeface.DEFAULT_BOLD);
         item.addView(tTitle);
 
         TextView t1 = new TextView(this);
         t1.setText("OFD/DEL = " + o + "/" + l + " = " + String.format(Locale.US, "%.1f%%", ofdC));
         t1.setTextColor(Color.parseColor("#D1D5DB"));
-        t1.setTextSize(12.5f);
+        t1.setTextSize(12f);
         t1.setPadding(0, 2, 0, 0);
         item.addView(t1);
 
         TextView t2 = new TextView(this);
         t2.setText("OFP/PIK = " + p + "/" + k + " = " + String.format(Locale.US, "%.1f%%", ofpC));
         t2.setTextColor(Color.parseColor("#D1D5DB"));
-        t2.setTextSize(12.5f);
+        t2.setTextSize(12f);
         t2.setPadding(0, 2, 0, 0);
         item.addView(t2);
 
         TextView t3 = new TextView(this);
         t3.setText("DNP/DNPC = " + dnp + "/" + dnpc + " = " + String.format(Locale.US, "%.1f%%", totC));
         t3.setTextColor(Color.parseColor("#34D399"));
-        t3.setTextSize(12.5f);
+        t3.setTextSize(12f);
         t3.setTypeface(Typeface.DEFAULT_BOLD);
         t3.setPadding(0, 2, 0, 0);
         item.addView(t3);
 
-        if (o > 0) {
-                        int gap = (int) Math.ceil(0.92 * o) - l;
-            TextView tGap = new TextView(this);
-            if (gap <= 0) {
-                tGap.setText("✅ 92% Target Hit");
-                tGap.setTextColor(Color.parseColor("#10B981"));
-            } else {
-                tGap.setText("⚠️ Missed 92% (Gap: " + gap + " DEL)");
-                tGap.setTextColor(Color.parseColor("#EF4444"));
-            }
-            tGap.setTextSize(11.5f);
-            tGap.setTypeface(Typeface.DEFAULT_BOLD);
-            tGap.setPadding(0, 2, 0, 0);
-            item.addView(tGap);
-        }
+        String badgeText = getPerformanceBadge(ofdC, o);
+        int badgeCol = getPerformanceColor(ofdC, o);
+        TextView tBadge = new TextView(this);
+        tBadge.setText(badgeText);
+        tBadge.setTextColor(badgeCol);
+        tBadge.setTextSize(11.5f);
+        tBadge.setTypeface(Typeface.DEFAULT_BOLD);
+        tBadge.setPadding(0, 2, 0, 0);
+        item.addView(tBadge);
 
         return item;
     }
@@ -1419,6 +1440,7 @@ public class MainActivity extends Activity {
             }
         }
     }
+
     void loadHubVsHub() {
         try {
             vHubCrd.removeAllViews();
@@ -1498,272 +1520,7 @@ public class MainActivity extends Activity {
             emptyTxt.setPadding(10, 10, 10, 10);
             vCntCrd.addView(emptyTxt);
         }
-        if (c != null) c.close();
-    }
-
-    void addContactHeader(String text) {
-        TextView th = new TextView(this);
-        th.setText(text);
-        th.setTextColor(Color.parseColor("#9CA3AF"));
-        th.setTextSize(12f);
-        th.setTypeface(Typeface.DEFAULT_BOLD);
-        th.setPadding(4, 16, 4, 8);
-        vCntCrd.addView(th);
-    }
-
-    void addContactItem(String name, String role, String phone, String colorHex) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(box(Color.parseColor("#181920"), 12, Color.parseColor("#2A2D3D"), 1));
-        card.setPadding(16, 12, 16, 12);
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(-1, -2);
-        clp.setMargins(0, 0, 0, 8);
-        card.setLayoutParams(clp);
-
-        TextView tN = new TextView(this);
-        tN.setText("👤 " + name);
-        tN.setTextColor(Color.parseColor(colorHex));
-        tN.setTextSize(14.5f);
-        tN.setTypeface(Typeface.DEFAULT_BOLD);
-        card.addView(tN);
-
-        TextView tR = new TextView(this);
-        tR.setText(role + "  •  📞 " + phone);
-        tR.setTextColor(Color.parseColor("#D1D5DB"));
-        tR.setTextSize(12.5f);
-        tR.setPadding(0, 2, 0, 8);
-        card.addView(tR);
-
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-
-        Button bCall = new Button(this);
-        bCall.setText("📞 Call");
-        bCall.setTextSize(11f);
-        bCall.setBackground(box(Color.parseColor("#0284C7"), 8, 0, 0));
-        bCall.setTextColor(Color.WHITE);
-        bCall.setTypeface(Typeface.DEFAULT_BOLD);
-        bCall.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phone));
-            startActivity(intent);
-        });
-
-        Button bWp = new Button(this);
-        bWp.setText("💬 WhatsApp");
-        bWp.setTextSize(11f);
-        bWp.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
-        bWp.setTextColor(Color.BLACK);
-        bWp.setTypeface(Typeface.DEFAULT_BOLD);
-        bWp.setOnClickListener(v -> {
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=91" + phone));
-                startActivity(intent);
-            } catch (Exception e) {
-                Toast.makeText(MainActivity.this, "WhatsApp error", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        bLp.setMargins(0, 0, 6, 0);
-        row.addView(bCall, bLp);
-        row.addView(bWp, new LinearLayout.LayoutParams(0, -2, 1f));
-
-        card.addView(row);
-        vCntCrd.addView(card);
-    }
-
-    void qry(String q) {
-        ords.clear();
-        if (!q.isEmpty()) {
-            Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? LIMIT 50", new String[]{"%" + q + "%"});
-            while (c != null && c.moveToNext()) {
-                ords.add(new String[]{c.getString(0), c.getString(1)});
-            }
-            if (c != null) c.close();
-        }
-        if (adp != null) adp.notifyDataSetChanged();
-    }
-
-    void cnt() {
-        try {
-            Cursor c = db.rawQuery("SELECT COUNT(*) FROM ord", null);
-            if (c != null && c.moveToFirst()) {
-                tCnt.setText("📦 Total Trackable Orders: " + c.getInt(0));
-            }
-            if (c != null) c.close();
-        } catch (Exception ignored) {}
-    }
-
-    ArrayList<String> fastSplitCsv(String line) {
-        ArrayList<String> res = new ArrayList<>();
-        StringBuilder sb = new StringBuilder();
-        boolean inQuotes = false;
-        for (int i = 0; i < line.length(); i++) {
-            char ch = line.charAt(i);
-            if (ch == '\"') {
-                inQuotes = !inQuotes;
-            } else if (ch == ',' && !inQuotes) {
-                res.add(sb.toString());
-                sb.setLength(0);
-            } else {
-                sb.append(ch);
-            }
-        }
-        res.add(sb.toString());
-        return res;
-    }
-
-    void doSync(boolean isAuto) {
-        if (!isAuto) showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
-        try {
-            String targetUrl = CSV;
-            HttpURLConnection conn = null;
-            for (int i = 0; i < 5; i++) {
-                conn = (HttpURLConnection) new URL(targetUrl).openConnection();
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(8000);
-                conn.setInstanceFollowRedirects(false);
-                int code = conn.getResponseCode();
-                if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
-                    targetUrl = conn.getHeaderField("Location");
-                } else {
-                    break;
-                }
-            }
-
-            InputStream is = (conn != null) ? conn.getInputStream() : null;
-            if (is == null) throw new Exception("Unable to connect");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            String line;
-            String opDate = getOperationalDate();
-            int parsedAgentsInSheet = 0;
-
-            db.beginTransaction();
-            db.execSQL("DELETE FROM ord");
-            db.execSQL("DELETE FROM contacts");
-            db.execSQL("DELETE FROM hub_prf WHERE dt = '" + opDate + "'");
-
-            ArrayList<ContentValues> tempAgentData = new ArrayList<>();
-
-            while ((line = reader.readLine()) != null) {
-                ArrayList<String> p = fastSplitCsv(line);
-
-                if (p.size() >= 1) {
-                    String trackId = clean(p.get(0));
-                    String ordId = (p.size() > 1) ? clean(p.get(1)) : "";
-                    if (!trackId.isEmpty() && !trackId.equalsIgnoreCase("TRACKING ID") && !trackId.equalsIgnoreCase("TRACK ID") && !trackId.equalsIgnoreCase("WAYBILL") && !trackId.equalsIgnoreCase("NAME")) {
-                        ContentValues ocv = new ContentValues();
-                        ocv.put("t", trackId);
-                        ocv.put("d", ordId.isEmpty() ? trackId : ordId);
-                        db.insertWithOnConflict("ord", null, ocv, SQLiteDatabase.CONFLICT_REPLACE);
-                    }
-                }
-
-                if (p.size() > 2) {
-                    String name = clean(p.get(2));
-                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("Total") && !name.contains("Total") && !name.equalsIgnoreCase("#N/A") && !name.equalsIgnoreCase("N/A")) {
-                        int o = (p.size() > 3) ? parseInt(p.get(3)) : 0;
-                        int l = (p.size() > 4) ? parseInt(p.get(4)) : 0;
-                        int op = (p.size() > 5) ? parseInt(p.get(5)) : 0;
-                        int k = (p.size() > 6) ? parseInt(p.get(6)) : 0;
-
-                        if (o > 0 || l > 0 || op > 0 || k > 0) {
-                            ContentValues cv = new ContentValues();
-                            cv.put("n", name);
-                            cv.put("o", o);
-                            cv.put("l", l);
-                            cv.put("p", op);
-                            cv.put("k", k);
-                            cv.put("dt", opDate);
-                            tempAgentData.add(cv);
-                            parsedAgentsInSheet++;
-                        }
-                    }
-                }
-
-                if (p.size() > 8) {
-                    String hname = clean(p.get(8));
-                    if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
-                        String o = (p.size() > 9) ? clean(p.get(9)) : "0";
-                        String l = (p.size() > 10) ? clean(p.get(10)) : "0";
-                        String lc = (p.size() > 11) ? clean(p.get(11)) : "0%";
-                        String ofp = (p.size() > 12) ? clean(p.get(12)) : "0";
-                        String pik = (p.size() > 13) ? clean(p.get(13)) : "0";
-                        String kc = (p.size() > 14) ? clean(p.get(14)) : "0%";
-                        String tc = (p.size() > 15) ? clean(p.get(15)) : "0%";
-
-                        int dnp = parseInt(o) + parseInt(ofp);
-                        int dnpc = parseInt(l) + parseInt(pik);
-
-                        ContentValues hcv = new ContentValues();
-                        hcv.put("hname", hname);
-                        hcv.put("o", o);
-                        hcv.put("l", l);
-                        hcv.put("lc", lc);
-                        hcv.put("p", ofp);
-                        hcv.put("k", pik);
-                        hcv.put("kc", kc);
-                        hcv.put("dnp", String.valueOf(dnp));
-                        hcv.put("dnpc", String.valueOf(dnpc));
-                        hcv.put("tc", tc);
-                        hcv.put("dt", opDate);
-                        db.insert("hub_prf", null, hcv);
-                    }
-                }
-
-                if (p.size() > 19) {
-                    String cName = clean(p.get(17));
-                    String cRole = clean(p.get(18));
-                    String cPhone = clean(p.get(19));
-                    if (!cName.isEmpty() && !cName.equalsIgnoreCase("NAME") && !cPhone.equalsIgnoreCase("PHONE") && cPhone.matches(".*\\d+.*")) {
-                        ContentValues cntCv = new ContentValues();
-                        cntCv.put("name", cName);
-                        cntCv.put("role", cRole.isEmpty() ? "Staff" : cRole);
-                        cntCv.put("phone", cPhone);
-                        db.insert("contacts", null, cntCv);
-                    }
-                }
-            }
-
-            SharedPreferences prefs = getSharedPreferences("DeliveryTrackerPrefs", MODE_PRIVATE);
-            if (parsedAgentsInSheet == 0) {
-                Cursor lastDayC = db.rawQuery("SELECT dt FROM prf GROUP BY dt HAVING SUM(o) > 0 ORDER BY dt DESC LIMIT 1", null);
-                if (lastDayC != null && lastDayC.moveToFirst()) {
-                    String completedDay = lastDayC.getString(0);
-                    boolean alreadyReported = prefs.getBoolean("eod_reported_" + completedDay, false);
-                    if (!alreadyReported) {
-                        prefs.edit().putBoolean("eod_reported_" + completedDay, true).apply();
-                        new Handler(Looper.getMainLooper()).post(() -> triggerAutomaticEODReport(completedDay));
-                    }
-                }
-                if (lastDayC != null) lastDayC.close();
-            } else {
-                db.execSQL("DELETE FROM prf WHERE dt = '" + opDate + "'");
-                for (ContentValues cv : tempAgentData) {
-                    db.insert("prf", null, cv);
-                }
-            }
-
-            db.setTransactionSuccessful();
-            db.endTransaction();
-            reader.close();
-            lastSyncTime = System.currentTimeMillis();
-
-            new Handler(Looper.getMainLooper()).post(() -> {
-                load();
-                loadHubVsHub();
-                loadContacts();
-                cnt();
-                qry("");
-                if (!isAuto) {
-                    showLoading(false, null);
-                    Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
-                }
-            });
-        } catch (Exception e) {
-            new Handler(Looper.getMainLooper()).post(() -> {
-                if (!isAuto) {
+        if (!isAuto) {
                     showLoading(false, null);
                     Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
@@ -1784,4 +1541,3 @@ public class MainActivity extends Activity {
         }
     }
 }
-
