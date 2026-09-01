@@ -1786,4 +1786,17 @@ public class MainActivity extends Activity {
             });
         }
     }
-    
+        String clean(String s) {
+        if (s == null) return "";
+        return s.replace("\"", "").trim();
+    }
+
+    int parseInt(String s) {
+        try {
+            return Integer.parseInt(clean(s).replace("%", ""));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+}
+
