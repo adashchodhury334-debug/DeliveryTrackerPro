@@ -45,65 +45,60 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
     SQLiteDatabase db;
     FrameLayout root;
-    LinearLayout vTrk, vPrf, vHub, vCnt, vCrd, vHubCrd, vCntCrd, loadingOverlay;
-    LinearLayout periodFilterRow;
-    Button bT, bP, bH, bC, bSort, bVsBattle, bShareReport, bVoiceOtp;
-    Button bCatAgent, bCatKirana, bCatAll;
-    Button bSubDay, bSubYearly;
+    LinearLayout vTrk, vPrf, vHub, vCnt, vCrd, vHubCrd, vCntCrd, loadingOverlay, periodFilterRow;
+    Button bT, bP, bH, bC, bSort, bVsBattle, bShareReport, bVoiceOtp, bCatAgent, bCatKirana, bCatAll, bSubDay, bSubYearly;
     TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tGapTarget, tPersonalBest;
     ArrayList<String[]> ords = new ArrayList<>();
     ArrayList<String> agentNamesList = new ArrayList<>();
     BaseAdapter adp;
-    
-    String currentCategory = "AGENT";
-    String mode = "daily";
+    String currentCategory = "AGENT", mode = "daily", CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
     boolean isHighToLow = true;
-    String CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
-    static final int REQ_CODE_SPEECH = 101;
     long lastSyncTime = 0;
 
     Handler autoSyncHandler = new Handler(Looper.getMainLooper());
     Runnable autoSyncRunnable = new Runnable() {
-        @Override
-        public void run() {
-            new Thread(() -> doSync(true)).start();
-            autoSyncHandler.postDelayed(this, 120000);
-        }
+        public void run() { new Thread(() -> doSync(true)).start(); autoSyncHandler.postDelayed(this, 120000); }
     };
-        GradientDrawable box(int c, int r, int sCol, int sW) {
+
+    GradientDrawable box(int c, int r, int sCol, int sW) {
         GradientDrawable g = new GradientDrawable();
-        g.setColor(c);
-        g.setCornerRadius(r);
+        g.setColor(c); g.setCornerRadius(r);
         if (sW > 0) g.setStroke(sW, sCol);
         return g;
+    }
+
+    TextView tv(String text, int color, float size, boolean bold) {
+        TextView t = new TextView(this);
+        t.setText(text); t.setTextColor(color); t.setTextSize(size);
+        if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
+        return t;
     }
 
     boolean isKiranaAgent(String name) {
         if (name == null) return false;
         String n = name.toUpperCase(Locale.ROOT).trim();
-        return n.contains("KIRANA") || n.contains("RATAN SARKAR") || n.equals("RATAN SARKAR");
+        return n.contains("KIRANA") || n.contains("RATAN SARKAR");
     }
 
-    String getPerformanceBadge(double delConv, int ofd) {
+    String getPerformanceBadge(double conv, int ofd) {
         if (ofd == 0) return "⚪ NO OFD ASSIGNED";
-        if (delConv >= 96.0) return "🌟 EXCELLENT PERFORMANCE";
-        if (delConv >= 92.0) return "🔥 BEST PERFORMANCE";
-        if (delConv >= 88.0) return "⚠️ FOCUS PERFORMANCE";
-        return "🚨 NOT ACCEPTED - IMPROVE YOUR PERFORMANCE";
+        if (conv >= 96.0) return "🌟 EXCELLENT PERFORMANCE";
+        if (conv >= 92.0) return "🔥 BEST PERFORMANCE (Target Hit)";
+        if (conv >= 88.0) return "⚠️ FOCUS PERFORMANCE";
+        return "🚨 NOT ACCEPTED - IMPROVE PERFORMANCE";
     }
 
-    int getPerformanceColor(double delConv, int ofd) {
+    int getPerformanceColor(double conv, int ofd) {
         if (ofd == 0) return Color.parseColor("#9CA3AF");
-        if (delConv >= 96.0) return Color.parseColor("#38BDF8");
-        if (delConv >= 92.0) return Color.parseColor("#00E676");
-        if (delConv >= 88.0) return Color.parseColor("#FBBF24");
+        if (conv >= 96.0) return Color.parseColor("#38BDF8");
+        if (conv >= 92.0) return Color.parseColor("#00E676");
+        if (conv >= 88.0) return Color.parseColor("#FBBF24");
         return Color.parseColor("#EF4444");
     }
 
@@ -113,105 +108,39 @@ public class MainActivity extends Activity {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
     }
 
-    String getYearStartDate(String opDateStr) {
+    String getYearStartDate(String opDate) {
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
-            cal.setTime(sdf.parse(opDateStr));
+            cal.setTime(new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(opDate));
             cal.set(Calendar.DAY_OF_YEAR, 1);
-            return sdf.format(cal.getTime());
-        } catch (Exception e) {
-            return opDateStr;
-        }
+            return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
+        } catch (Exception e) { return opDate; }
     }
 
     String getWeekStartDate(String dateStr) {
         try {
-            if (dateStr == null) return getOperationalDate();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
             cal.setTime(sdf.parse(dateStr));
             cal.setFirstDayOfWeek(Calendar.MONDAY);
-            int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
-            int diff = (dayOfWeek == Calendar.SUNDAY) ? 6 : (dayOfWeek - Calendar.MONDAY);
+            int dow = cal.get(Calendar.DAY_OF_WEEK);
+            int diff = (dow == Calendar.SUNDAY) ? 6 : (dow - Calendar.MONDAY);
             cal.add(Calendar.DAY_OF_MONTH, -diff);
             return sdf.format(cal.getTime());
-        } catch (Exception e) {
-            return dateStr != null ? dateStr : getOperationalDate();
-        }
+        } catch (Exception e) { return dateStr; }
     }
 
     String getWeekEndDate(String dateStr) {
         try {
-            if (dateStr == null) return getOperationalDate();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
             cal.setTime(sdf.parse(getWeekStartDate(dateStr)));
             cal.add(Calendar.DAY_OF_MONTH, 6);
             return sdf.format(cal.getTime());
-        } catch (Exception e) {
-            return dateStr != null ? dateStr : getOperationalDate();
-        }
-    }
-        void shareSingleAgentReport(String name, int ofd, int del, int ofp, int pik, int dnp, int dnpc, double delConv) {
-        try {
-            String opDate = getOperationalDate();
-            StringBuilder sb = new StringBuilder();
-            sb.append("👤 *DELIVERY PERFORMANCE SCORECARD*\n");
-            sb.append("📛 *Name:* ").append(name).append("\n");
-            sb.append("📅 *Date:* ").append(opDate).append("\n");
-            sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-            sb.append("🚚 *OFD / DEL:* ").append(ofd).append(" / ").append(del).append(" (").append(String.format(Locale.US, "%.1f%%", delConv)).append(")\n");
-            double ofpConv = ofp > 0 ? ((double) pik / ofp) * 100.0 : 0.0;
-            sb.append("📦 *OFP / PIK:* ").append(ofp).append(" / ").append(pik).append(" (").append(String.format(Locale.US, "%.1f%%", ofpConv)).append(")\n");
-            double totConv = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-            sb.append("🔄 *DNP / DNPC:* ").append(dnp).append(" / ").append(dnpc).append(" (").append(String.format(Locale.US, "%.1f%%", totConv)).append(")\n");
-
-            int targetNeeded = (int) Math.ceil(0.92 * ofd);
-            int diff = targetNeeded - del;
-            if (diff <= 0 && ofd > 0) {
-                sb.append("🎯 *Target Status:* 92% Achieved! 🚀\n");
-            } else if (ofd > 0) {
-                sb.append("🎯 *Target Status:* ⚠️ Gap to 92%: ").append(diff).append(" DEL required\n");
-            }
-            sb.append("🏆 *Rating:* ").append(getPerformanceBadge(delConv, ofd)).append("\n");
-            sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-            sb.append("⚡ _Managed by Adarsh | Delivery Tracker Pro_");
-
-            Intent shareIntent = new Intent(Intent.ACTION_SEND);
-            shareIntent.setType("text/plain");
-            shareIntent.putExtra(Intent.EXTRA_TEXT, sb.toString());
-            startActivity(Intent.createChooser(shareIntent, "📢 Share Scorecard"));
-        } catch (Exception e) {
-            Toast.makeText(this, "Error sharing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
+        } catch (Exception e) { return dateStr; }
     }
 
-    void sharePeriodReport(String name, String periodTitle, int ofd, int del, int ofp, int pik, int dnp, int dnpc, double delConv) {
-        try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("📊 *PERIOD PERFORMANCE REPORT*\n");
-            sb.append("👤 *Agent:* ").append(name).append("\n");
-            sb.append("📆 *Period:* ").append(periodTitle).append("\n");
-            sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-            sb.append("🚚 *Total OFD / DEL:* ").append(ofd).append(" / ").append(del).append(" (").append(String.format(Locale.US, "%.1f%%", delConv)).append(")\n");
-            double ofpConv = ofp > 0 ? ((double) pik / ofp) * 100.0 : 0.0;
-            sb.append("📦 *Total OFP / PIK:* ").append(ofp).append(" / ").append(pik).append(" (").append(String.format(Locale.US, "%.1f%%", ofpConv)).append(")\n");
-            double totConv = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-            sb.append("🔄 *Total DNP / DNPC:* ").append(dnp).append(" / ").append(dnpc).append(" (").append(String.format(Locale.US, "%.1f%%", totConv)).append(")\n");
-            sb.append("🏆 *Rating:* ").append(getPerformanceBadge(delConv, ofd)).append("\n");
-            sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-            sb.append("⚡ _Managed by Adarsh | Delivery Tracker Pro_");
-
-            Intent shareIntent = new Intent(Intent.ACTION_SEND);
-            shareIntent.setType("text/plain");
-            shareIntent.putExtra(Intent.EXTRA_TEXT, sb.toString());
-            startActivity(Intent.createChooser(shareIntent, "📢 Share Period Report"));
-        } catch (Exception e) {
-            Toast.makeText(this, "Error sharing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-        @Override
+    @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -221,15 +150,11 @@ public class MainActivity extends Activity {
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
-            try { db.execSQL("ALTER TABLE hub_prf ADD COLUMN dt TEXT;"); } catch (Exception ignored) {}
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_ord_t ON ord(t);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_dt ON prf(dt);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_n ON prf(n);");
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_hub_dt ON hub_prf(dt);");
         } catch (Exception ignored) {}
-
         root = new FrameLayout(this);
-        root.setBackgroundColor(Color.parseColor("#0C0D12"));
+        root.setBackgroundColor(Color.parseColor("#090A0F"));
         setContentView(root);
         buildUI();
         new Thread(() -> doSync(true)).start();
@@ -238,10 +163,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (System.currentTimeMillis() - lastSyncTime > 120000) {
-            new Thread(() -> doSync(true)).start();
-        }
-        autoSyncHandler.removeCallbacks(autoSyncRunnable);
+        if (System.currentTimeMillis() - lastSyncTime > 120000) new Thread(() -> doSync(true)).start();
         autoSyncHandler.postDelayed(autoSyncRunnable, 120000);
     }
 
@@ -250,125 +172,79 @@ public class MainActivity extends Activity {
         super.onPause();
         autoSyncHandler.removeCallbacks(autoSyncRunnable);
     }
-
-    void buildUI() {
+        void buildUI() {
         LinearLayout main = new LinearLayout(this);
         main.setOrientation(LinearLayout.VERTICAL);
 
         LinearLayout h = new LinearLayout(this);
-        h.setBackgroundColor(Color.parseColor("#151722"));
+        h.setBackgroundColor(Color.parseColor("#12141D"));
         h.setPadding(18, 16, 18, 16);
         h.setGravity(Gravity.CENTER_VERTICAL);
 
         LinearLayout titleBox = new LinearLayout(this);
         titleBox.setOrientation(LinearLayout.VERTICAL);
-
-        TextView t = new TextView(this);
-        t.setText("📦 Delivery Tracker Pro");
-        t.setTextColor(Color.WHITE);
-        t.setTextSize(17f);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        titleBox.addView(t);
-
-        TextView tSub = new TextView(this);
-        tSub.setText("⚡ Managed by Adarsh");
-        tSub.setTextColor(Color.parseColor("#38BDF8"));
-        tSub.setTextSize(12f);
-        tSub.setTypeface(Typeface.DEFAULT_BOLD);
-        titleBox.addView(tSub);
-
+        titleBox.addView(tv("📦 Delivery Tracker Pro", Color.WHITE, 17f, true));
+        titleBox.addView(tv("⚡ Managed by Adarsh", Color.parseColor("#38BDF8"), 12f, true));
         h.addView(titleBox, new LinearLayout.LayoutParams(0, -2, 1f));
 
         bVoiceOtp = new Button(this);
         bVoiceOtp.setText("🎙️ OTP");
-        bVoiceOtp.setBackground(box(Color.parseColor("#7C3AED"), 10, 0, 0));
+        bVoiceOtp.setBackground(box(Color.parseColor("#7C3AED"), 8, 0, 0));
         bVoiceOtp.setTextColor(Color.WHITE);
         bVoiceOtp.setTypeface(Typeface.DEFAULT_BOLD);
-        bVoiceOtp.setTextSize(12f);
-        bVoiceOtp.setPadding(14, 8, 14, 8);
+        bVoiceOtp.setTextSize(11.5f);
         bVoiceOtp.setOnClickListener(v -> launchVoiceOTP());
-        LinearLayout.LayoutParams vOtpLp = new LinearLayout.LayoutParams(-2, -2);
-        vOtpLp.setMargins(0, 0, 10, 0);
-        h.addView(bVoiceOtp, vOtpLp);
+        LinearLayout.LayoutParams voLp = new LinearLayout.LayoutParams(-2, -2);
+        voLp.setMargins(0, 0, 8, 0);
+        h.addView(bVoiceOtp, voLp);
 
         Button bRef = new Button(this);
         bRef.setText("🔄 SYNC");
-        bRef.setBackground(box(Color.parseColor("#00E676"), 10, 0, 0));
+        bRef.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
         bRef.setTextColor(Color.BLACK);
         bRef.setTypeface(Typeface.DEFAULT_BOLD);
-        bRef.setTextSize(12f);
-        bRef.setPadding(14, 8, 14, 8);
+        bRef.setTextSize(11.5f);
         bRef.setOnClickListener(v -> new Thread(() -> doSync(false)).start());
         h.addView(bRef);
         main.addView(h);
-                LinearLayout tb = new LinearLayout(this);
-        tb.setPadding(10, 10, 10, 6);
 
-        bT = new Button(this);
-        bT.setText("🔍 ORDER");
-        bT.setBackground(box(Color.parseColor("#00E676"), 10, 0, 0));
-        bT.setTextColor(Color.BLACK);
-        bT.setTypeface(Typeface.DEFAULT_BOLD);
-        bT.setTextSize(11f);
-
-        bP = new Button(this);
-        bP.setText("📈 PERF");
-        bP.setBackground(box(Color.parseColor("#1C1E2A"), 10, 0, 0));
-        bP.setTextColor(Color.parseColor("#8E92A4"));
-        bP.setTextSize(11f);
-
-        bH = new Button(this);
-        bH.setText("⚔️ HUBS");
-        bH.setBackground(box(Color.parseColor("#1C1E2A"), 10, 0, 0));
-        bH.setTextColor(Color.parseColor("#8E92A4"));
-        bH.setTextSize(11f);
-
-        bC = new Button(this);
-        bC.setText("📞 HELPLINE");
-        bC.setBackground(box(Color.parseColor("#1C1E2A"), 10, 0, 0));
-        bC.setTextColor(Color.parseColor("#8E92A4"));
-        bC.setTextSize(11f);
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
-        lp.setMargins(3, 0, 3, 0);
-        tb.addView(bT, lp);
-        tb.addView(bP, new LinearLayout.LayoutParams(lp));
-        tb.addView(bH, new LinearLayout.LayoutParams(lp));
-        tb.addView(bC, new LinearLayout.LayoutParams(lp));
+        LinearLayout tb = new LinearLayout(this);
+        tb.setPadding(8, 8, 8, 4);
+        bT = makeTabBtn("🔍 ORDER", 0);
+        bP = makeTabBtn("📈 PERF", 1);
+        bH = makeTabBtn("⚔️ HUBS", 2);
+        bC = makeTabBtn("📞 HELPLINE", 3);
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        tLp.setMargins(2, 0, 2, 0);
+        tb.addView(bT, tLp); tb.addView(bP, new LinearLayout.LayoutParams(tLp));
+        tb.addView(bH, new LinearLayout.LayoutParams(tLp)); tb.addView(bC, new LinearLayout.LayoutParams(tLp));
         main.addView(tb);
 
         FrameLayout body = new FrameLayout(this);
-        body.setPadding(12, 6, 12, 12);
+        body.setPadding(12, 6, 12, 10);
         main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
-        // 1. ORDER ID TAB
+        // 1. ORDER TAB
         vTrk = new LinearLayout(this);
         vTrk.setOrientation(LinearLayout.VERTICAL);
-        vTrk.setVisibility(View.VISIBLE);
-
         EditText s = new EditText(this);
         s.setHint("🔍 Search last digits of Track ID...");
         s.setHintTextColor(Color.parseColor("#717688"));
         s.setTextColor(Color.WHITE);
-        s.setBackground(box(Color.parseColor("#161824"), 14, Color.parseColor("#00E676"), 1));
-        s.setPadding(20, 16, 20, 16);
-        s.setTextSize(15f);
+        s.setBackground(box(Color.parseColor("#12141D"), 12, Color.parseColor("#00E676"), 1));
+        s.setPadding(16, 14, 16, 14);
         s.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence c, int i, int i1, int i2) {}
             public void onTextChanged(CharSequence c, int i, int i1, int i2) { qry(c.toString().trim()); }
             public void afterTextChanged(Editable e) {}
         });
         vTrk.addView(s);
-
-        tCnt = new TextView(this);
-        tCnt.setTextColor(Color.parseColor("#00E676"));
-        tCnt.setPadding(6, 12, 6, 8);
-        tCnt.setTextSize(13f);
-        tCnt.setTypeface(Typeface.DEFAULT_BOLD);
+        tCnt = tv("📦 Total Trackable Orders: --", Color.parseColor("#00E676"), 12.5f, true);
+        tCnt.setPadding(6, 10, 6, 8);
         vTrk.addView(tCnt);
-                ListView lv = new ListView(this);
-        lv.setDivider(null);
-        lv.setDividerHeight(12);
+
+        ListView lv = new ListView(this);
+        lv.setDivider(null); lv.setDividerHeight(10);
         adp = new BaseAdapter() {
             public int getCount() { return ords.size(); }
             public Object getItem(int i) { return ords.get(i); }
@@ -376,212 +252,119 @@ public class MainActivity extends Activity {
             public View getView(int i, View v, ViewGroup p) {
                 LinearLayout c = new LinearLayout(MainActivity.this);
                 c.setOrientation(LinearLayout.VERTICAL);
-                c.setPadding(18, 16, 18, 16);
-                c.setBackground(box(Color.parseColor("#161824"), 14, Color.parseColor("#2A2D3D"), 1));
+                c.setPadding(16, 14, 16, 14);
+                c.setBackground(box(Color.parseColor("#12141D"), 12, Color.parseColor("#1E2235"), 1));
                 String[] it = ords.get(i);
+                c.addView(tv("📦 Track: " + it[0], Color.parseColor("#38BDF8"), 14.5f, true));
+                c.addView(tv("🛒 Order: " + it[1], Color.parseColor("#00E676"), 13.5f, false));
 
-                TextView t1 = new TextView(MainActivity.this);
-                t1.setText("📦 Track ID: " + it[0]);
-                t1.setTextColor(Color.parseColor("#38BDF8"));
-                t1.setTypeface(Typeface.DEFAULT_BOLD);
-                t1.setTextSize(15f);
-                c.addView(t1);
-
-                TextView t2 = new TextView(MainActivity.this);
-                t2.setText("🛒 Order ID: " + it[1]);
-                t2.setTextColor(Color.parseColor("#00E676"));
-                t2.setTextSize(14f);
-                t2.setPadding(0, 4, 0, 12);
-                c.addView(t2);
-
-                LinearLayout btnRow = new LinearLayout(MainActivity.this);
-                btnRow.setOrientation(LinearLayout.HORIZONTAL);
-
-                Button bCpTrack = new Button(MainActivity.this);
-                bCpTrack.setText("📋 Track");
-                bCpTrack.setTextSize(11.5f);
-                bCpTrack.setBackground(box(Color.parseColor("#0284C7"), 8, 0, 0));
-                bCpTrack.setTextColor(Color.WHITE);
-                bCpTrack.setTypeface(Typeface.DEFAULT_BOLD);
-                bCpTrack.setOnClickListener(vw -> {
-                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(ClipData.newPlainText("TrackID", it[0]));
-                    Toast.makeText(MainActivity.this, "Copied Track ID!", Toast.LENGTH_SHORT).show();
+                LinearLayout row = new LinearLayout(MainActivity.this);
+                row.setPadding(0, 8, 0, 0);
+                Button bCp = new Button(MainActivity.this);
+                bCp.setText("📋 Copy Order");
+                bCp.setBackground(box(Color.parseColor("#1F222E"), 8, Color.parseColor("#00E676"), 1));
+                bCp.setTextColor(Color.parseColor("#00E676"));
+                bCp.setTextSize(11f);
+                bCp.setOnClickListener(vw -> {
+                    String sub = it[1].length() >= 6 ? it[1].substring(it[1].length() - 6) : it[1];
+                    ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("O", sub));
+                    Toast.makeText(MainActivity.this, "Copied: " + sub, Toast.LENGTH_SHORT).show();
                 });
-
-                Button bCpOrder = new Button(MainActivity.this);
-                bCpOrder.setText("📋 Order");
-                bCpOrder.setTextSize(11.5f);
-                bCpOrder.setBackground(box(Color.parseColor("#232634"), 8, Color.parseColor("#00E676"), 1));
-                bCpOrder.setTextColor(Color.parseColor("#00E676"));
-                bCpOrder.setTypeface(Typeface.DEFAULT_BOLD);
-                bCpOrder.setOnClickListener(vw -> {
-                    String toCopy = it[1].length() >= 6 ? it[1].substring(it[1].length() - 6) : it[1];
-                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(ClipData.newPlainText("OrderID", toCopy));
-                    Toast.makeText(MainActivity.this, "Copied: " + toCopy, Toast.LENGTH_SHORT).show();
+                Button bWp = new Button(MainActivity.this);
+                bWp.setText("💬 WhatsApp");
+                bWp.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+                bWp.setTextColor(Color.BLACK);
+                bWp.setTextSize(11f);
+                bWp.setOnClickListener(vw -> {
+                    String msg = "नमस्ते! आपका पार्सल (Track ID: " + it[0] + ") आज डिलीवरी के लिए निकला है। OTP तैयार रखें। - Delivery Executive";
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?text=" + Uri.encode(msg))));
                 });
-
-                Button bWhatsApp = new Button(MainActivity.this);
-                bWhatsApp.setText("💬 Notify");
-                bWhatsApp.setTextSize(11.5f);
-                bWhatsApp.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
-                bWhatsApp.setTextColor(Color.BLACK);
-                bWhatsApp.setTypeface(Typeface.DEFAULT_BOLD);
-                bWhatsApp.setOnClickListener(vw -> {
-                    try {
-                        String msg = "नमस्ते! आपका पार्सल (Track ID: " + it[0] + ") आज डिलीवरी के लिए निकला है। कृपया OTP तैयार रखें। - Delivery Executive";
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?text=" + Uri.encode(msg)));
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        Toast.makeText(MainActivity.this, "WhatsApp not installed", Toast.LENGTH_SHORT).show();
-                    }
-                });
-
                 LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
                 bLp.setMargins(0, 0, 6, 0);
-                btnRow.addView(bCpTrack, bLp);
-                btnRow.addView(bCpOrder, new LinearLayout.LayoutParams(bLp));
-                btnRow.addView(bWhatsApp, new LinearLayout.LayoutParams(0, -2, 1f));
-
-                c.addView(btnRow);
+                row.addView(bCp, bLp); row.addView(bWp, new LinearLayout.LayoutParams(0, -2, 1f));
+                c.addView(row);
                 return c;
             }
         };
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                // 2. PERFORMANCE TAB
+
+        // 2. PERF TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
 
         LinearLayout catRow = new LinearLayout(this);
-        catRow.setPadding(0, 0, 0, 8);
-        
-        bCatAgent = new Button(this);
-        bCatAgent.setText("👥 AGENT");
-        bCatAgent.setTextSize(11.5f);
-        bCatAgent.setTypeface(Typeface.DEFAULT_BOLD);
-        
-        bCatKirana = new Button(this);
-        bCatKirana.setText("🏪 KIRANA");
-        bCatKirana.setTextSize(11.5f);
-        bCatKirana.setTypeface(Typeface.DEFAULT_BOLD);
-
-        bCatAll = new Button(this);
-        bCatAll.setText("🌐 ALL (MIX)");
-        bCatAll.setTextSize(11.5f);
-        bCatAll.setTypeface(Typeface.DEFAULT_BOLD);
-
-        LinearLayout.LayoutParams catLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        catLp.setMargins(2, 0, 2, 0);
-        catRow.addView(bCatAgent, catLp);
-        catRow.addView(bCatKirana, new LinearLayout.LayoutParams(catLp));
-        catRow.addView(bCatAll, new LinearLayout.LayoutParams(catLp));
+        catRow.setPadding(0, 0, 0, 6);
+        bCatAgent = makeCatBtn("👥 AGENT", "AGENT");
+        bCatKirana = makeCatBtn("🏪 KIRANA", "KIRANA");
+        bCatAll = makeCatBtn("🌐 ALL (MIX)", "ALL");
+        catRow.addView(bCatAgent, tLp); catRow.addView(bCatKirana, new LinearLayout.LayoutParams(tLp)); catRow.addView(bCatAll, new LinearLayout.LayoutParams(tLp));
         vPrf.addView(catRow);
 
         periodFilterRow = new LinearLayout(this);
-        periodFilterRow.setPadding(0, 0, 0, 8);
+        periodFilterRow.setPadding(0, 0, 0, 6);
         vPrf.addView(periodFilterRow);
 
-        bCatAgent.setOnClickListener(v -> switchCategory("AGENT"));
-        bCatKirana.setOnClickListener(v -> switchCategory("KIRANA"));
-        bCatAll.setOnClickListener(v -> switchCategory("ALL"));
-
-        tPersonalBest = new TextView(this);
-        tPersonalBest.setText("🏆 Hub Best: -- DEL");
-        tPersonalBest.setTextColor(Color.parseColor("#FBBF24"));
-        tPersonalBest.setBackground(box(Color.parseColor("#1B1E29"), 12, Color.parseColor("#FBBF24"), 1));
-        tPersonalBest.setPadding(16, 12, 16, 12);
-        tPersonalBest.setTextSize(13.5f);
-        tPersonalBest.setTypeface(Typeface.DEFAULT_BOLD);
+        tPersonalBest = tv("🏆 Hub Best: --", Color.parseColor("#FBBF24"), 12.5f, true);
+        tPersonalBest.setBackground(box(Color.parseColor("#1C1E2A"), 10, Color.parseColor("#FBBF24"), 1));
+        tPersonalBest.setPadding(14, 10, 14, 10);
         vPrf.addView(tPersonalBest);
 
         LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
-        hubBox.setBackground(box(Color.parseColor("#151724"), 16, Color.parseColor("#38BDF8"), 1));
-        hubBox.setPadding(18, 14, 18, 14);
+        hubBox.setBackground(box(Color.parseColor("#12141D"), 14, Color.parseColor("#38BDF8"), 1));
+        hubBox.setPadding(16, 12, 16, 12);
         LinearLayout.LayoutParams hbLp = new LinearLayout.LayoutParams(-1, -2);
-        hbLp.setMargins(0, 10, 0, 0);
+        hbLp.setMargins(0, 8, 0, 8);
         hubBox.setLayoutParams(hbLp);
+        hubBox.addView(tv("🏢 MALBAZARHUB_NJP", Color.parseColor("#38BDF8"), 16f, true));
 
-        TextView hTitle = new TextView(this);
-        hTitle.setText("MALBAZARHUB_NJP");
-        hTitle.setTextColor(Color.parseColor("#38BDF8"));
-        hTitle.setTextSize(18f);
-        hTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        hubBox.addView(hTitle);
-
-        tHubOfdDel = new TextView(this);
-        tHubOfdDel.setTextColor(Color.WHITE);
-        tHubOfdDel.setTextSize(14.5f);
-        tHubOfdDel.setPadding(0, 6, 0, 0);
-        hubBox.addView(tHubOfdDel);
-
-        tHubOfpPik = new TextView(this);
-        tHubOfpPik.setTextColor(Color.WHITE);
-        tHubOfpPik.setTextSize(14.5f);
-        tHubOfpPik.setPadding(0, 3, 0, 0);
-        hubBox.addView(tHubOfpPik);
-
-        tHubDnpDnpc = new TextView(this);
-        tHubDnpDnpc.setTextColor(Color.parseColor("#34D399"));
-        tHubDnpDnpc.setTextSize(15f);
-        tHubDnpDnpc.setTypeface(Typeface.DEFAULT_BOLD);
-        tHubDnpDnpc.setPadding(0, 3, 0, 0);
-        hubBox.addView(tHubDnpDnpc);
-
-        tGapTarget = new TextView(this);
-        tGapTarget.setTextColor(Color.parseColor("#FB923C"));
-        tGapTarget.setTextSize(14f);
-        tGapTarget.setTypeface(Typeface.DEFAULT_BOLD);
-        tGapTarget.setPadding(0, 8, 0, 0);
-        hubBox.addView(tGapTarget);
+        tHubOfdDel = tv("OFD/DEL = --", Color.WHITE, 13.5f, false);
+        tHubOfpPik = tv("OFP/PIK = --", Color.WHITE, 13.5f, false);
+        tHubDnpDnpc = tv("DNP/DNPC = --", Color.parseColor("#34D399"), 14f, true);
+        tGapTarget = tv("", Color.parseColor("#FB923C"), 13f, true);
+        hubBox.addView(tHubOfdDel); hubBox.addView(tHubOfpPik); hubBox.addView(tHubDnpDnpc); hubBox.addView(tGapTarget);
         vPrf.addView(hubBox);
 
         LinearLayout sm = new LinearLayout(this);
-        sm.setPadding(0, 10, 0, 8);
-        LinearLayout sc1 = makeSummaryCard("TOP CONVERSION", Color.parseColor("#151724"), Color.parseColor("#00E676"), true);
-        LinearLayout sc2 = makeSummaryCard("TOP DNPC", Color.parseColor("#151724"), Color.parseColor("#FB923C"), false);
-        LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        scLp.setMargins(0, 0, 8, 0);
-        sm.addView(sc1, scLp);
-        sm.addView(sc2, new LinearLayout.LayoutParams(0, -2, 1f));
+        sm.setPadding(0, 0, 0, 8);
+        LinearLayout sc1 = makeSummaryCard("TOP CONVERSION", Color.parseColor("#00E676"), true);
+        LinearLayout sc2 = makeSummaryCard("TOP DNPC", Color.parseColor("#FB923C"), false);
+        sm.addView(sc1, new LinearLayout.LayoutParams(0, -2, 1f));
+        LinearLayout.LayoutParams sc2Lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        sc2Lp.setMargins(8, 0, 0, 0);
+        sm.addView(sc2, sc2Lp);
         vPrf.addView(sm);
 
         LinearLayout actRow = new LinearLayout(this);
         bSort = new Button(this);
         bSort.setText("↕️ Sort");
-        bSort.setBackground(box(Color.parseColor("#1C1E2A"), 10, 0, 0));
+        bSort.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
         bSort.setTextColor(Color.WHITE);
-        bSort.setTextSize(11.5f);
-        bSort.setTypeface(Typeface.DEFAULT_BOLD);
-        bSort.setOnClickListener(v -> {
-            isHighToLow = !isHighToLow;
-            load();
-        });
+        bSort.setTextSize(11f);
+        bSort.setOnClickListener(v -> { isHighToLow = !isHighToLow; load(); });
 
         bVsBattle = new Button(this);
         bVsBattle.setText("⚔️ Arena");
-        bVsBattle.setBackground(box(Color.parseColor("#7C3AED"), 10, 0, 0));
+        bVsBattle.setBackground(box(Color.parseColor("#7C3AED"), 8, 0, 0));
         bVsBattle.setTextColor(Color.WHITE);
-        bVsBattle.setTextSize(11.5f);
+        bVsBattle.setTextSize(11f);
         bVsBattle.setTypeface(Typeface.DEFAULT_BOLD);
         bVsBattle.setOnClickListener(v -> showAgentVsAgentDialog());
 
         bShareReport = new Button(this);
         bShareReport.setText("📢 Share Hub");
-        bShareReport.setBackground(box(Color.parseColor("#25D366"), 10, 0, 0));
+        bShareReport.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
         bShareReport.setTextColor(Color.BLACK);
-        bShareReport.setTextSize(11.5f);
+        bShareReport.setTextSize(11f);
         bShareReport.setTypeface(Typeface.DEFAULT_BOLD);
         bShareReport.setOnClickListener(v -> shareLiveReportToGroup());
 
         LinearLayout.LayoutParams aLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        aLp.setMargins(0, 2, 4, 10);
-        actRow.addView(bSort, aLp);
-        actRow.addView(bVsBattle, new LinearLayout.LayoutParams(aLp));
+        aLp.setMargins(0, 0, 4, 8);
+        actRow.addView(bSort, aLp); actRow.addView(bVsBattle, new LinearLayout.LayoutParams(aLp));
         actRow.addView(bShareReport, new LinearLayout.LayoutParams(0, -2, 1f));
         vPrf.addView(actRow);
 
@@ -591,7 +374,8 @@ public class MainActivity extends Activity {
         sv.addView(vCrd);
         vPrf.addView(sv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vPrf);
-                // 3. HUB VS HUB TAB
+
+        // 3. HUBS TAB
         vHub = new LinearLayout(this);
         vHub.setOrientation(LinearLayout.VERTICAL);
         vHub.setVisibility(View.GONE);
@@ -602,7 +386,7 @@ public class MainActivity extends Activity {
         vHub.addView(svHub, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vHub);
 
-        // 4. CONTACTS / HELPLINE TAB
+        // 4. CONTACTS TAB
         vCnt = new LinearLayout(this);
         vCnt.setOrientation(LinearLayout.VERTICAL);
         vCnt.setVisibility(View.GONE);
@@ -613,512 +397,499 @@ public class MainActivity extends Activity {
         vCnt.addView(svCnt, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vCnt);
 
-        bT.setOnClickListener(v -> switchTab(0));
-        bP.setOnClickListener(v -> switchTab(1));
-        bH.setOnClickListener(v -> switchTab(2));
-        bC.setOnClickListener(v -> switchTab(3));
         root.addView(main);
-
         loadingOverlay = new LinearLayout(this);
-        loadingOverlay.setOrientation(LinearLayout.VERTICAL);
         loadingOverlay.setGravity(Gravity.CENTER);
-        loadingOverlay.setBackgroundColor(Color.parseColor("#EE0F1015"));
-        loadingOverlay.setClickable(true);
+        loadingOverlay.setBackgroundColor(Color.parseColor("#DD090A0F"));
         loadingOverlay.setVisibility(View.GONE);
-        ProgressBar pb = new ProgressBar(this);
-        loadingOverlay.addView(pb);
+        loadingOverlay.addView(new ProgressBar(this));
         root.addView(loadingOverlay, new FrameLayout.LayoutParams(-1, -1));
 
         switchCategory("AGENT");
-        cnt();
         loadContacts();
     }
 
+    Button makeTabBtn(String t, int idx) {
+        Button b = new Button(this);
+        b.setText(t); b.setTextSize(9.5f); b.setTypeface(Typeface.DEFAULT_BOLD);
+        b.setOnClickListener(v -> switchTab(idx));
+        return b;
+    }
+
+    Button makeCatBtn(String t, String cat) {
+        Button b = new Button(this);
+        b.setText(t); b.setTextSize(10.5f); b.setTypeface(Typeface.DEFAULT_BOLD);
+        b.setOnClickListener(v -> switchCategory(cat));
+        return b;
+    }
+
+    LinearLayout makeSummaryCard(String title, int accent, boolean isConv) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setBackground(box(Color.parseColor("#12141D"), 12, Color.parseColor("#1E2235"), 1));
+        c.setPadding(14, 10, 14, 10);
+        c.addView(tv(title, Color.parseColor("#9CA3AF"), 10.5f, true));
+        TextView v = tv("--", accent, 13.5f, true);
+        v.setPadding(0, 4, 0, 0);
+        c.addView(v);
+        if (isConv) tTopConv = v; else tTopDnpc = v;
+        return c;
+    }
+
+    void switchTab(int idx) {
+        vTrk.setVisibility(idx == 0 ? View.VISIBLE : View.GONE);
+        vPrf.setVisibility(idx == 1 ? View.VISIBLE : View.GONE);
+        vHub.setVisibility(idx == 2 ? View.VISIBLE : View.GONE);
+        vCnt.setVisibility(idx == 3 ? View.VISIBLE : View.GONE);
+        bT.setBackground(box(idx == 0 ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bT.setTextColor(idx == 0 ? Color.BLACK : Color.parseColor("#8E92A4"));
+        bP.setBackground(box(idx == 1 ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bP.setTextColor(idx == 1 ? Color.BLACK : Color.parseColor("#8E92A4"));
+        bH.setBackground(box(idx == 2 ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bH.setTextColor(idx == 2 ? Color.BLACK : Color.parseColor("#8E92A4"));
+        bC.setBackground(box(idx == 3 ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bC.setTextColor(idx == 3 ? Color.BLACK : Color.parseColor("#8E92A4"));
+        if (idx == 0) cnt(); else if (idx == 1) load(); else if (idx == 2) loadHubVsHub(); else if (idx == 3) loadContacts();
+    }
+
     void switchCategory(String cat) {
-        currentCategory = cat;
-        mode = "daily";
-
-        bCatAgent.setBackground(box("AGENT".equals(cat) ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
+        currentCategory = cat; mode = "daily";
+        bCatAgent.setBackground(box("AGENT".equals(cat) ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
         bCatAgent.setTextColor("AGENT".equals(cat) ? Color.BLACK : Color.parseColor("#8E92A4"));
-
-        bCatKirana.setBackground(box("KIRANA".equals(cat) ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
+        bCatKirana.setBackground(box("KIRANA".equals(cat) ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
         bCatKirana.setTextColor("KIRANA".equals(cat) ? Color.BLACK : Color.parseColor("#8E92A4"));
-
-        bCatAll.setBackground(box("ALL".equals(cat) ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
+        bCatAll.setBackground(box("ALL".equals(cat) ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
         bCatAll.setTextColor("ALL".equals(cat) ? Color.BLACK : Color.parseColor("#8E92A4"));
-
-        setupPeriodButtons();
-        load();
+        setupPeriodButtons(); load();
     }
 
     void setupPeriodButtons() {
         periodFilterRow.removeAllViews();
         LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        pLp.setMargins(2, 0, 2, 0);
-
+        pLp.setMargins(1, 0, 1, 0);
         bSubDay = new Button(this);
-        bSubDay.setText("📅 Day (Live)");
-        bSubDay.setTextSize(11f);
-        bSubDay.setTypeface(Typeface.DEFAULT_BOLD);
-        bSubDay.setOnClickListener(v -> {
-            mode = "daily";
-            updatePeriodBtnStyles();
-            load();
-        });
-
-        String yearlyTitle = "KIRANA".equals(currentCategory) ? "📊 Yearly (All Cycles)" : "📊 Yearly (All Weeks)";
+        bSubDay.setText("📅 Day (Live)"); bSubDay.setTextSize(10f); bSubDay.setTypeface(Typeface.DEFAULT_BOLD);
+        bSubDay.setOnClickListener(v -> { mode = "daily"; updatePeriodStyles(); load(); });
+        String yTxt = "KIRANA".equals(currentCategory) ? "📊 Yearly (Cycles)" : "📊 Yearly (Weeks)";
         bSubYearly = new Button(this);
-        bSubYearly.setText(yearlyTitle);
-        bSubYearly.setTextSize(11f);
-        bSubYearly.setTypeface(Typeface.DEFAULT_BOLD);
-        bSubYearly.setOnClickListener(v -> {
-            mode = "yearly";
-            updatePeriodBtnStyles();
-            load();
-        });
-
-        periodFilterRow.addView(bSubDay, pLp);
-        periodFilterRow.addView(bSubYearly, new LinearLayout.LayoutParams(pLp));
-        updatePeriodBtnStyles();
+        bSubYearly.setText(yTxt); bSubYearly.setTextSize(10f); bSubYearly.setTypeface(Typeface.DEFAULT_BOLD);
+        bSubYearly.setOnClickListener(v -> { mode = "yearly"; updatePeriodStyles(); load(); });
+        periodFilterRow.addView(bSubDay, pLp); periodFilterRow.addView(bSubYearly, new LinearLayout.LayoutParams(pLp));
+        updatePeriodStyles();
     }
 
-    void updatePeriodBtnStyles() {
-        if (bSubDay != null) {
-            boolean active = "daily".equals(mode);
-            bSubDay.setBackground(box(active ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
-            bSubDay.setTextColor(active ? Color.BLACK : Color.parseColor("#8E92A4"));
-        }
-        if (bSubYearly != null) {
-            boolean active = "yearly".equals(mode);
-            bSubYearly.setBackground(box(active ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
-            bSubYearly.setTextColor(active ? Color.BLACK : Color.parseColor("#8E92A4"));
-        }
-    }
-
-    void showLoading(boolean show, String msg) {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            if (loadingOverlay != null) loadingOverlay.setVisibility(show ? View.VISIBLE : View.GONE);
-        });
-    }
-
-    void switchTab(int index) {
-        vTrk.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
-        vPrf.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
-        vHub.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
-        vCnt.setVisibility(index == 3 ? View.VISIBLE : View.GONE);
-
-        bT.setBackground(box(index == 0 ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
-        bT.setTextColor(index == 0 ? Color.BLACK : Color.parseColor("#8E92A4"));
-
-        bP.setBackground(box(index == 1 ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
-        bP.setTextColor(index == 1 ? Color.BLACK : Color.parseColor("#8E92A4"));
-
-        bH.setBackground(box(index == 2 ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
-        bH.setTextColor(index == 2 ? Color.BLACK : Color.parseColor("#8E92A4"));
-
-        bC.setBackground(box(index == 3 ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 10, 0, 0));
-        bC.setTextColor(index == 3 ? Color.BLACK : Color.parseColor("#8E92A4"));
-
-        if (index == 0) cnt();
-        if (index == 1) load();
-        if (index == 2) loadHubVsHub();
-        if (index == 3) loadContacts();
-    }
-
-    LinearLayout makeSummaryCard(String title, int bgCol, int accent, boolean isConv) {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(LinearLayout.VERTICAL);
-        c.setBackground(box(bgCol, 14, Color.parseColor("#2A2D3D"), 1));
-        c.setPadding(16, 14, 16, 14);
-        TextView h = new TextView(this);
-        h.setText(title);
-        h.setTextColor(Color.parseColor("#9CA3AF"));
-        h.setTextSize(11f);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        c.addView(h);
-        TextView v = new TextView(this);
-        v.setTextColor(accent);
-        v.setTextSize(14f);
-        v.setTypeface(Typeface.DEFAULT_BOLD);
-        v.setPadding(0, 6, 0, 0);
-        c.addView(v);
-        if (isConv) tTopConv = v; else tTopDnpc = v;
-        return c;
+    void updatePeriodStyles() {
+        boolean d = "daily".equals(mode);
+        bSubDay.setBackground(box(d ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bSubDay.setTextColor(d ? Color.BLACK : Color.parseColor("#8E92A4"));
+        bSubYearly.setBackground(box(!d ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bSubYearly.setTextColor(!d ? Color.BLACK : Color.parseColor("#8E92A4"));
     }
         void load() {
         try {
-            vCrd.removeAllViews();
-            agentNamesList.clear();
+            vCrd.removeAllViews(); agentNamesList.clear();
             String opDate = getOperationalDate();
-
             String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : " WHERE dt >= '" + getYearStartDate(opDate) + "' ";
 
             Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, null);
             if (hc != null && hc.moveToFirst()) {
                 int to = hc.getInt(0), tl = hc.getInt(1), tp = hc.getInt(2), tk = hc.getInt(3);
                 int tdnp = to + tp, tdnpc = tl + tk;
-                double ofdConv = to > 0 ? ((double) tl / to) * 100.0 : 0.0;
-                double ofpConv = tp > 0 ? ((double) tk / tp) * 100.0 : 0.0;
-                double dnpConv = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
-
-                tHubOfdDel.setText("OFD/DEL = " + to + "/" + tl + " = " + String.format(Locale.US, "%.1f%%", ofdConv));
-                tHubOfpPik.setText("OFP/PIKED = " + tp + "/" + tk + " = " + String.format(Locale.US, "%.1f%%", ofpConv));
-                tHubDnpDnpc.setText("DNP/DNPC = " + tdnp + "/" + tdnpc + " = " + String.format(Locale.US, "%.1f%%", dnpConv));
-
-                int targetNeeded = (int) Math.ceil(0.92 * to);
-                int diff = targetNeeded - tl;
+                double ofdC = to > 0 ? ((double) tl / to) * 100.0 : 0.0;
+                double ofpC = tp > 0 ? ((double) tk / tp) * 100.0 : 0.0;
+                double dnpC = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
+                tHubOfdDel.setText("OFD/DEL = " + to + "/" + tl + " = " + String.format(Locale.US, "%.1f%%", ofdC));
+                tHubOfpPik.setText("OFP/PIK = " + tp + "/" + tk + " = " + String.format(Locale.US, "%.1f%%", ofpC));
+                tHubDnpDnpc.setText("DNP/DNPC = " + tdnp + "/" + tdnpc + " = " + String.format(Locale.US, "%.1f%%", dnpC));
+                int diff = (int) Math.ceil(0.92 * to) - tl;
                 if (diff <= 0 && to > 0) {
                     tGapTarget.setText("🎯 92% Target Achieved! 🚀");
                     tGapTarget.setTextColor(Color.parseColor("#00E676"));
                 } else if (to > 0) {
                     tGapTarget.setText("🎯 Gap to 92%: " + diff + " more DEL required");
                     tGapTarget.setTextColor(Color.parseColor("#FB923C"));
-                } else {
-                    tGapTarget.setText("");
-                }
+                } else tGapTarget.setText("");
             }
             if (hc != null) hc.close();
-
             updatePersonalBest();
 
             Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
             ArrayList<String[]> list = new ArrayList<>();
             String bestConvName = "--", bestDnpcName = "--";
-            double maxConv = -1;
-            int maxDnpc = -1;
+            double maxConv = -1; int maxDnpc = -1;
 
             while (ac != null && ac.moveToNext()) {
                 String name = ac.getString(0);
-                boolean isKirana = isKiranaAgent(name);
-
-                if ("AGENT".equals(currentCategory) && isKirana) continue;
-                if ("KIRANA".equals(currentCategory) && !isKirana) continue;
-
+                boolean isK = isKiranaAgent(name);
+                if ("AGENT".equals(currentCategory) && isK) continue;
+                if ("KIRANA".equals(currentCategory) && !isK) continue;
                 agentNamesList.add(name);
                 int o = ac.getInt(1), l = ac.getInt(2), p = ac.getInt(3), k = ac.getInt(4);
                 int dnp = o + p, dnpc = l + k;
                 double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
                 double ofdC = o > 0 ? ((double) l / o) * 100.0 : 0.0;
-                double ofpC = p > 0 ? ((double) k / p) * 100.0 : 0.0;
-
-                list.add(new String[]{name, String.valueOf(o), String.valueOf(l), String.valueOf(p), String.valueOf(k), String.valueOf(dnp), String.valueOf(dnpc), String.format(Locale.US, "%.1f", r), String.valueOf(r), String.format(Locale.US, "%.1f", ofdC), String.format(Locale.US, "%.1f", ofpC)});
-
-                if (r > maxConv && dnp > 0) {
-                    maxConv = r;
-                    bestConvName = name + "\n" + String.format(Locale.US, "%.1f%%", r);
-                }
-                if (dnpc > maxDnpc) {
-                    maxDnpc = dnpc;
-                    bestDnpcName = name + "\n" + dnpc + " Done";
-                }
+                list.add(new String[]{name, String.valueOf(o), String.valueOf(l), String.valueOf(p), String.valueOf(k), String.valueOf(dnp), String.valueOf(dnpc), String.format(Locale.US, "%.1f", ofdC), String.valueOf(r)});
+                if (r > maxConv && dnp > 0) { maxConv = r; bestConvName = name + "\n" + String.format(Locale.US, "%.1f%%", r); }
+                if (dnpc > maxDnpc) { maxDnpc = dnpc; bestDnpcName = name + "\n" + dnpc + " Done"; }
             }
             if (ac != null) ac.close();
-
-            tTopConv.setText(bestConvName);
-            tTopDnpc.setText(bestDnpcName);
+            tTopConv.setText(bestConvName); tTopDnpc.setText(bestDnpcName);
 
             Collections.sort(list, (a, b) -> isHighToLow ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
 
             int currentRank = 1;
             for (String[] ag : list) {
-                int[] strkInfo = getStreakInfo(ag[0]);
-                int curStrk = strkInfo[0];
-                int prevStrk = strkInfo[1];
-
-                double ofdRate = Double.parseDouble(ag[9]);
-                int ofdVal = Integer.parseInt(ag[1]);
-                int delVal = Integer.parseInt(ag[2]);
-                int ofpVal = Integer.parseInt(ag[3]);
-                int pikVal = Integer.parseInt(ag[4]);
-                int dnpVal = Integer.parseInt(ag[5]);
-                int dnpcVal = Integer.parseInt(ag[6]);
-
-                int badgeColor = getPerformanceColor(ofdRate, ofdVal);
+                int[] strk = getStreakInfo(ag[0]);
+                int curStrk = strk[0], prevStrk = strk[1];
+                int o = Integer.parseInt(ag[1]), l = Integer.parseInt(ag[2]);
+                int p = Integer.parseInt(ag[3]), k = Integer.parseInt(ag[4]);
+                int dnp = Integer.parseInt(ag[5]), dnpc = Integer.parseInt(ag[6]);
+                double ofdConv = Double.parseDouble(ag[7]);
+                int badgeColor = getPerformanceColor(ofdConv, o);
 
                 LinearLayout card = new LinearLayout(this);
                 card.setOrientation(LinearLayout.VERTICAL);
-                card.setBackground(box(Color.parseColor("#151724"), 16, Color.parseColor("#2A2D3D"), 1));
-                card.setPadding(18, 16, 18, 16);
+                card.setBackground(box(Color.parseColor("#12141D"), 14, Color.parseColor("#1E2235"), 1));
+                card.setPadding(16, 14, 16, 14);
                 LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(-1, -2);
-                clp.setMargins(0, 0, 0, 14);
+                clp.setMargins(0, 0, 0, 10);
                 card.setLayoutParams(clp);
 
-                // Top Header Row
+                // Top Line: Rank, Name, Streak
                 LinearLayout nameRow = new LinearLayout(this);
-                nameRow.setOrientation(LinearLayout.HORIZONTAL);
                 nameRow.setGravity(Gravity.CENTER_VERTICAL);
-
-                String rankBadge = (currentRank == 1) ? "🥇 #1" : ((currentRank == 2) ? "🥈 #2" : ((currentRank == 3) ? "🥉 #3" : "#" + currentRank));
-                int rankBg = (currentRank == 1) ? Color.parseColor("#EAB308") : ((currentRank == 2) ? Color.parseColor("#94A3B8") : ((currentRank == 3) ? Color.parseColor("#B45309") : Color.parseColor("#374151")));
-
-                TextView tRnk = new TextView(this);
-                tRnk.setText(rankBadge);
-                tRnk.setTextColor(Color.WHITE);
-                tRnk.setTextSize(11.5f);
-                tRnk.setTypeface(Typeface.DEFAULT_BOLD);
-                tRnk.setBackground(box(rankBg, 8, 0, 0));
-                tRnk.setPadding(10, 4, 10, 4);
+                String rBadge = (currentRank == 1) ? "🥇 #1" : ((currentRank == 2) ? "🥈 #2" : ((currentRank == 3) ? "🥉 #3" : "#" + currentRank));
+                int rBg = (currentRank == 1) ? Color.parseColor("#EAB308") : ((currentRank == 2) ? Color.parseColor("#94A3B8") : ((currentRank == 3) ? Color.parseColor("#B45309") : Color.parseColor("#374151")));
+                TextView tRnk = tv(rBadge, Color.WHITE, 11f, true);
+                tRnk.setBackground(box(rBg, 6, 0, 0));
+                tRnk.setPadding(8, 2, 8, 2);
                 nameRow.addView(tRnk);
 
-                TextView n = new TextView(this);
-                n.setText("  " + ag[0]);
-                n.setTextColor(badgeColor);
-                n.setTypeface(Typeface.DEFAULT_BOLD);
-                n.setTextSize(17f);
-                LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(0, -2, 1f);
-                nameRow.addView(n, nLp);
+                TextView tName = tv(" " + ag[0], badgeColor, 16f, true);
+                nameRow.addView(tName, new LinearLayout.LayoutParams(0, -2, 1f));
 
-                // FIXED PREVIOUS STREAK (Properly Displays Current + Previous Streak)
-                String streakDisplay = "🔥 " + curStrk + "D (Prev: " + (prevStrk > 0 ? prevStrk + "D" : "--") + ")";
-                TextView st = new TextView(this);
-                st.setText(streakDisplay);
-                st.setTextColor(Color.parseColor("#FBBF24"));
-                st.setTextSize(11f);
-                st.setTypeface(Typeface.DEFAULT_BOLD);
-                st.setBackground(box(Color.parseColor("#1F222E"), 8, 0, 0));
-                st.setPadding(10, 5, 10, 5);
-                nameRow.addView(st);
+                String sText = (prevStrk > 0) ? "🔥 " + curStrk + "D (Prev: " + prevStrk + "D)" : "🔥 " + curStrk + "D";
+                TextView tSt = tv(sText, Color.parseColor("#FBBF24"), 11f, true);
+                tSt.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+                tSt.setPadding(8, 3, 8, 3);
+                nameRow.addView(tSt);
                 card.addView(nameRow);
 
-                // Stats Block
-                LinearLayout statsBox = new LinearLayout(this);
-                statsBox.setOrientation(LinearLayout.VERTICAL);
-                statsBox.setBackground(box(Color.parseColor("#1B1D2C"), 12, Color.parseColor("#26293B"), 1));
-                statsBox.setPadding(14, 12, 14, 12);
-                LinearLayout.LayoutParams sbLp = new LinearLayout.LayoutParams(-1, -2);
-                sbLp.setMargins(0, 10, 0, 8);
-                statsBox.setLayoutParams(sbLp);
+                // Main Metric Strip
+                LinearLayout mBox = new LinearLayout(this);
+                mBox.setOrientation(LinearLayout.VERTICAL);
+                mBox.setBackground(box(Color.parseColor("#171926"), 10, Color.parseColor("#222638"), 1));
+                mBox.setPadding(12, 10, 12, 10);
+                LinearLayout.LayoutParams mbLp = new LinearLayout.LayoutParams(-1, -2);
+                mbLp.setMargins(0, 8, 0, 8);
+                mBox.setLayoutParams(mbLp);
 
-                TextView t1 = new TextView(this);
-                t1.setText("🚚 OFD / DEL = " + ofdVal + " / " + delVal + "  ➔  " + ag[9] + "% DEL");
-                t1.setTextColor(badgeColor);
-                t1.setTextSize(14.5f);
-                t1.setTypeface(Typeface.DEFAULT_BOLD);
-                statsBox.addView(t1);
+                mBox.addView(tv("🚚 OFD / DEL = " + o + " / " + l + " ➔ " + ag[7] + "% DEL", badgeColor, 14.5f, true));
+                mBox.addView(tv("📦 OFP / PIK = " + p + "/" + k + "  •  DNP = " + dnp + "/" + dnpc, Color.parseColor("#9CA3AF"), 12.5f, false));
 
-                TextView t2 = new TextView(this);
-                t2.setText("📦 OFP / PIK = " + ofpVal + " / " + pikVal + " (" + ag[10] + "%)  •  DNP = " + dnpVal + "/" + dnpcVal + " (" + ag[7] + "%)");
-                t2.setTextColor(Color.parseColor("#9CA3AF"));
-                t2.setTextSize(12.5f);
-                t2.setPadding(0, 4, 0, 0);
-                statsBox.addView(t2);
-
-                int agTargetNeeded = (int) Math.ceil(0.92 * ofdVal);
-                int agDiff = agTargetNeeded - delVal;
-
-                TextView tAgGap = new TextView(this);
-                if (agDiff <= 0 && ofdVal > 0) {
-                    tAgGap.setText("🎯 92% Target Achieved! 🚀");
-                    tAgGap.setTextColor(Color.parseColor("#00E676"));
-                } else if (ofdVal > 0) {
-                    tAgGap.setText("🎯 Gap to 92%: " + diff + " more DEL required");
-                    tAgGap.setTextColor(Color.parseColor("#FB923C"));
-                } else {
-                    tAgGap.setText("");
+                int diff = (int) Math.ceil(0.92 * o) - l;
+                if (diff <= 0 && o > 0) {
+                    mBox.addView(tv("🎯 92% Target Achieved! 🚀", Color.parseColor("#00E676"), 12f, true));
+                } else if (o > 0) {
+                    mBox.addView(tv("🎯 Gap to 92%: " + diff + " more DEL required", Color.parseColor("#FB923C"), 12f, true));
                 }
-                tAgGap.setTextSize(13f);
-                tAgGap.setTypeface(Typeface.DEFAULT_BOLD);
-                tAgGap.setPadding(0, 4, 0, 0);
-                statsBox.addView(tAgGap);
-                card.addView(statsBox);
+                card.addView(mBox);
 
-                // Previous Working Day Status
-                Cursor yc = db.rawQuery("SELECT dt, o, l, (CAST(l AS REAL)*100.0/CASE WHEN o>0 THEN o ELSE 1 END) FROM prf WHERE n = ? AND dt < ? AND o > 0 ORDER BY dt DESC LIMIT 1", new String[]{ag[0], opDate});
-                if (yc != null && yc.moveToFirst()) {
-                    String yDt = yc.getString(0);
-                    int yO = yc.getInt(1);
-                    int yL = yc.getInt(2);
-                    double yConv = yc.getDouble(3);
-                    int yGap = (int) Math.ceil(0.92 * yO) - yL;
-
-                                    TextView tPrevMiss = new TextView(this);
-                if (yConv < 92.0) {
-                    tPrevMiss.setText("⚠️ Prev Day (" + yDt + "): " + String.format(Locale.US, "%.1f%%", yConv) + " (Missed 92% by " + yGap + " DEL)");
-                    tPrevMiss.setTextColor(Color.parseColor("#EF4444"));
-                } else {
-                    tPrevMiss.setText("✅ Prev Day (" + yDt + "): " + String.format(Locale.US, "%.1f%%", yConv) + " (92% Achieved)");
-                    tPrevMiss.setTextColor(Color.parseColor("#10B981"));
+                // Previous Day Miss / Problem Status (Always in Daily Mode)
+                if ("daily".equals(mode)) {
+                    Cursor yc = db.rawQuery("SELECT dt, o, l, (CAST(l AS REAL)*100.0/CASE WHEN o>0 THEN o ELSE 1 END) FROM prf WHERE n = ? AND dt < ? AND o > 0 ORDER BY dt DESC LIMIT 1", new String[]{ag[0], opDate});
+                    if (yc != null && yc.moveToFirst()) {
+                        String yDt = yc.getString(0);
+                        int yO = yc.getInt(1), yL = yc.getInt(2);
+                        double yConv = yc.getDouble(3);
+                        int yGap = (int) Math.ceil(0.92 * yO) - yL;
+                        TextView tPrev = tv(yConv < 92.0 ? "⚠️ Yesterday (" + yDt + "): Missed 92% by " + yGap + " DEL (" + String.format(Locale.US, "%.1f%%", yConv) + ")" : "✅ Yesterday (" + yDt + "): 92% Achieved", yConv < 92.0 ? Color.parseColor("#EF4444") : Color.parseColor("#10B981"), 11.5f, true);
+                        tPrev.setPadding(0, 0, 0, 8);
+                        card.addView(tPrev);
+                    }
+                    if (yc != null) yc.close();
                 }
-                tPrevMiss.setTextSize(12f);
-                tPrevMiss.setTypeface(Typeface.DEFAULT_BOLD);
-                tPrevMiss.setPadding(0, 0, 0, 6);
-                card.addView(tPrevMiss);
+
+                // Card Actions (Daily: Share Card Only | Yearly: View Weeks/Cycles + Share Card)
+                LinearLayout bRow = new LinearLayout(this);
+                if ("yearly".equals(mode)) {
+                    Button bView = new Button(this);
+                    bView.setText("KIRANA".equals(currentCategory) ? "📊 View Cycles" : "📊 View Weeks");
+                    bView.setBackground(box(Color.parseColor("#1F2232"), 8, Color.parseColor("#38BDF8"), 1));
+                    bView.setTextColor(Color.parseColor("#38BDF8"));
+                    bView.setTextSize(11f);
+                    bView.setTypeface(Typeface.DEFAULT_BOLD);
+                    final String agN = ag[0];
+                    bView.setOnClickListener(v -> showYearlyDetails(agN));
+                    LinearLayout.LayoutParams vLp = new LinearLayout.LayoutParams(0, -2, 1.2f);
+                    vLp.setMargins(0, 0, 6, 0);
+                    bRow.addView(bView, vLp);
+                }
+
+                Button bShr = new Button(this);
+                bShr.setText("📢 Share Card");
+                bShr.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+                bShr.setTextColor(Color.BLACK);
+                bShr.setTextSize(11f);
+                bShr.setTypeface(Typeface.DEFAULT_BOLD);
+                final String agN = ag[0];
+                bShr.setOnClickListener(v -> shareSingleAgentReport(agN, o, l, p, k, dnp, dnpc, ofdConv));
+                bRow.addView(bShr, new LinearLayout.LayoutParams(0, -2, 0.8f));
+                card.addView(bRow);
+
+                vCrd.addView(card);
+                currentRank++;
             }
-            if (yc != null) yc.close();
+        } catch (Exception ignored) {}
+    }
 
-            LinearLayout btnRow = new LinearLayout(this);
-            btnRow.setOrientation(LinearLayout.HORIZONTAL);
+    void shareSingleAgentReport(String name, int ofd, int del, int ofp, int pik, int dnp, int dnpc, double conv) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("👤 *DELIVERY SCORECARD*\n📛 *Name:* ").append(name).append("\n📅 *Date:* ").append(getOperationalDate()).append("\n━━━━━━━━━━━━━━━━━━━━\n");
+        sb.append("🚚 *OFD / DEL:* ").append(ofd).append(" / ").append(del).append(" (").append(String.format(Locale.US, "%.1f%%", conv)).append(")\n");
+        sb.append("📦 *OFP / PIK:* ").append(ofp).append(" / ").append(pik).append("\n🔄 *DNP / DNPC:* ").append(dnp).append(" / ").append(dnpc).append("\n");
+        int diff = (int) Math.ceil(0.92 * ofd) - del;
+        sb.append(diff <= 0 && ofd > 0 ? "🎯 *Target:* 92% Achieved! 🚀\n" : "🎯 *Target Gap:* " + diff + " more DEL required\n");
+        sb.append("🏆 *Rating:* ").append(getPerformanceBadge(conv, ofd)).append("\n━━━━━━━━━━━━━━━━━━━━\n⚡ _Managed by Adarsh_");
+        Intent it = new Intent(Intent.ACTION_SEND);
+        it.setType("text/plain"); it.putExtra(Intent.EXTRA_TEXT, sb.toString());
+        startActivity(Intent.createChooser(it, "📢 Share Scorecard"));
+    }
 
-            Button bDetails = new Button(this);
-            bDetails.setText("📊 View Weeks / Days");
-            bDetails.setBackground(box(Color.parseColor("#1F2232"), 8, Color.parseColor("#38BDF8"), 1));
-            bDetails.setTextColor(Color.parseColor("#38BDF8"));
-            bDetails.setTextSize(11.5f);
-            bDetails.setTypeface(Typeface.DEFAULT_BOLD);
-            final String agName = ag[0];
-            bDetails.setOnClickListener(v -> showDetails(agName));
-
-            Button bSingleShare = new Button(this);
-            bSingleShare.setText("📢 Share Card");
-            bSingleShare.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
-            bSingleShare.setTextColor(Color.BLACK);
-            bSingleShare.setTextSize(11.5f);
-            bSingleShare.setTypeface(Typeface.DEFAULT_BOLD);
-            bSingleShare.setOnClickListener(v -> shareSingleAgentReport(agName, ofdVal, delVal, ofpVal, pikVal, dnpVal, dnpcVal, ofdRate));
-
-            LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(0, -2, 1.2f);
-            dLp.setMargins(0, 0, 6, 0);
-            btnRow.addView(bDetails, dLp);
-            btnRow.addView(bSingleShare, new LinearLayout.LayoutParams(0, -2, 0.8f));
-            card.addView(btnRow);
-
-            vCrd.addView(card);
-            currentRank++;
-        }
-    } catch (Exception ignored) {}
-}
     void shareLiveReportToGroup() {
-        try {
-            String opDate = getOperationalDate();
-            StringBuilder sb = new StringBuilder();
-            sb.append("📊 *MALBAZARHUB_NJP - LIVE PERFORMANCE REPORT*\n");
-            sb.append("📅 *Date:* ").append(opDate).append(" | *Category:* ").append(currentCategory).append("\n");
-            sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-
-            String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : " WHERE dt >= '" + getYearStartDate(opDate) + "' ";
-            Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, null);
-            if (hc != null && hc.moveToFirst()) {
-                int to = hc.getInt(0), tl = hc.getInt(1), tp = hc.getInt(2), tk = hc.getInt(3);
-                int tdnp = to + tp, tdnpc = tl + tk;
-                double ofdConv = to > 0 ? ((double) tl / to) * 100.0 : 0.0;
-                double ofpConv = tp > 0 ? ((double) tk / tp) * 100.0 : 0.0;
-                double dnpConv = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
-
-                sb.append("🚚 *Total OFD / DEL:* ").append(to).append(" / ").append(tl).append(" (").append(String.format(Locale.US, "%.1f%%", ofdConv)).append(")\n");
-                sb.append("📦 *Total OFP / PIK:* ").append(tp).append(" / ").append(tk).append(" (").append(String.format(Locale.US, "%.1f%%", ofpConv)).append(")\n");
-                sb.append("🔄 *Total DNP / DNPC:* ").append(tdnp).append(" / ").append(tdnpc).append(" (").append(String.format(Locale.US, "%.1f%%", dnpConv)).append(")\n");
-
-                int targetNeeded = (int) Math.ceil(0.92 * to);
-                int diff = targetNeeded - tl;
-                if (diff <= 0 && to > 0) {
-                    sb.append("🎯 *Target Status:* 92% Achieved! 🚀\n");
-                } else if (to > 0) {
-                    sb.append("🎯 *Target Status:* ⚠️ Gap to 92%: ").append(diff).append(" DEL required\n");
-                }
-            }
-            if (hc != null) hc.close();
-
-            sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-            sb.append("🏆 *AGENT SCORECARD (RANK-WISE):*\n\n");
-
-            Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
-            ArrayList<String[]> list = new ArrayList<>();
-            while (ac != null && ac.moveToNext()) {
-                String name = ac.getString(0);
-                boolean isKirana = isKiranaAgent(name);
-                if ("AGENT".equals(currentCategory) && isKirana) continue;
-                if ("KIRANA".equals(currentCategory) && !isKirana) continue;
-
-                int o = ac.getInt(1), l = ac.getInt(2), p = ac.getInt(3), k = ac.getInt(4);
-                int dnp = o + p, dnpc = l + k;
-                double r = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-                double ofdC = o > 0 ? ((double) l / o) * 100.0 : 0.0;
-                list.add(new String[]{name, String.valueOf(o), String.valueOf(l), String.format(Locale.US, "%.1f", ofdC), String.valueOf(r)});
-            }
-            if (ac != null) ac.close();
-
-            Collections.sort(list, (a, b) -> Double.compare(Double.parseDouble(b[4]), Double.parseDouble(a[4])));
-
-            int rank = 1;
-            for (String[] ag : list) {
-                double conv = Double.parseDouble(ag[3]);
-                String badgeIcon = (conv >= 96.0) ? "🌟" : ((conv >= 92.0) ? "🔥" : ((conv >= 88.0) ? "⚠️" : "🚨"));
-                String medal = (rank == 1) ? "🥇" : ((rank == 2) ? "🥈" : ((rank == 3) ? "🥉" : rank + "."));
-
-                sb.append(medal).append(" ").append(badgeIcon).append(" *").append(ag[0]).append("*\n");
-                sb.append("   ➔ DEL: ").append(ag[2]).append("/").append(ag[1]).append(" (").append(ag[3]).append("%)\n\n");
-                rank++;
-            }
-
-            sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-            sb.append("⚡ _Generated via Delivery Tracker Pro | Managed by Adarsh_");
-
-            Intent shareIntent = new Intent(Intent.ACTION_SEND);
-            shareIntent.setType("text/plain");
-            shareIntent.putExtra(Intent.EXTRA_TEXT, sb.toString());
-            startActivity(Intent.createChooser(shareIntent, "📢 Share Live Report to Group"));
-        } catch (Exception e) {
-            Toast.makeText(this, "Error sharing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        String opDate = getOperationalDate();
+        StringBuilder sb = new StringBuilder();
+        sb.append("📊 *MALBAZARHUB_NJP - LIVE REPORT*\n📅 *Date:* ").append(opDate).append(" | *Category:* ").append(currentCategory).append("\n━━━━━━━━━━━━━━━━━━━━\n");
+        String w = "daily".equals(mode) ? " WHERE dt = (SELECT MAX(dt) FROM prf) " : " WHERE dt >= '" + getYearStartDate(opDate) + "' ";
+        Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, null);
+        if (hc != null && hc.moveToFirst()) {
+            int to = hc.getInt(0), tl = hc.getInt(1), tp = hc.getInt(2), tk = hc.getInt(3);
+            double conv = to > 0 ? ((double) tl / to) * 100.0 : 0.0;
+            sb.append("🚚 *Hub OFD / DEL:* ").append(to).append(" / ").append(tl).append(" (").append(String.format(Locale.US, "%.1f%%", conv)).append(")\n");
+            sb.append("📦 *Hub OFP / PIK:* ").append(tp).append(" / ").append(tk).append("\n🔄 *Hub DNP / DNPC:* ").append(to + tp).append(" / ").append(tl + tk).append("\n");
+            int diff = (int) Math.ceil(0.92 * to) - tl;
+            sb.append(diff <= 0 && to > 0 ? "🎯 *Target:* 92% Achieved! 🚀\n" : "🎯 *Target Gap:* " + diff + " more DEL needed\n");
         }
+        if (hc != null) hc.close();
+        sb.append("━━━━━━━━━━━━━━━━━━━━\n🏆 *RANK-WISE SCORECARD:*\n\n");
+
+        Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l) FROM prf " + w + " GROUP BY n", null);
+        ArrayList<String[]> list = new ArrayList<>();
+        while (ac != null && ac.moveToNext()) {
+            String name = ac.getString(0);
+            boolean isK = isKiranaAgent(name);
+            if ("AGENT".equals(currentCategory) && isK) continue;
+            if ("KIRANA".equals(currentCategory) && !isK) continue;
+            int o = ac.getInt(1), l = ac.getInt(2);
+            double c = o > 0 ? ((double) l / o) * 100.0 : 0.0;
+            list.add(new String[]{name, String.valueOf(o), String.valueOf(l), String.format(Locale.US, "%.1f", c), String.valueOf(c)});
+        }
+        if (ac != null) ac.close();
+        Collections.sort(list, (a, b) -> Double.compare(Double.parseDouble(b[4]), Double.parseDouble(a[4])));
+
+        int rank = 1;
+        for (String[] ag : list) {
+            double c = Double.parseDouble(ag[4]);
+            String icon = (c >= 96.0) ? "🌟" : ((c >= 92.0) ? "🔥" : ((c >= 88.0) ? "⚠️" : "🚨"));
+            sb.append(rank).append(". ").append(icon).append(" *").append(ag[0]).append("* ➔ DEL: ").append(ag[2]).append("/").append(ag[1]).append(" (").append(ag[3]).append("%)\n");
+            rank++;
+        }
+        sb.append("━━━━━━━━━━━━━━━━━━━━\n⚡ _Generated via Delivery Tracker Pro | Managed by Adarsh_");
+        Intent it = new Intent(Intent.ACTION_SEND);
+        it.setType("text/plain"); it.putExtra(Intent.EXTRA_TEXT, sb.toString());
+        startActivity(Intent.createChooser(it, "📢 Share Live Report"));
+    }
+        void showYearlyDetails(String name) {
+        boolean isK = isKiranaAgent(name);
+        LinearLayout pop = new LinearLayout(this);
+        pop.setOrientation(LinearLayout.VERTICAL);
+        pop.setPadding(18, 18, 18, 18);
+        pop.setBackgroundColor(Color.parseColor("#090A0F"));
+
+        pop.addView(tv((isK ? "🏪 " : "👤 ") + name + " (Tap Period for Day Logs)", Color.parseColor("#00E676"), 15f, true));
+        ScrollView sv = new ScrollView(this);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(0, 10, 0, 0);
+
+        if (isK) {
+            Cursor mc = db.rawQuery("SELECT DISTINCT SUBSTR(dt, 1, 7) FROM prf WHERE n = ? ORDER BY dt DESC", new String[]{name});
+            while (mc != null && mc.moveToNext()) {
+                String ym = mc.getString(0);
+                try {
+                    Calendar mCal = Calendar.getInstance();
+                    mCal.setTime(new SimpleDateFormat("yyyy-MM", Locale.US).parse(ym));
+                    int maxD = mCal.getActualMaximum(Calendar.DAY_OF_MONTH);
+                    String mName = new SimpleDateFormat("MMMM yyyy", Locale.US).format(mCal.getTime());
+                    String d2S = ym + "-16", d2E = ym + String.format(Locale.US, "-%02d", maxD);
+                    Cursor c2 = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= ? AND dt <= ?", new String[]{name, d2S, d2E});
+                    if (c2 != null && c2.moveToFirst() && (c2.getInt(0) + c2.getInt(2)) > 0) {
+                        content.addView(makeInteractivePeriodCard(name, "🏪 " + mName + " Cyc 2 (16-" + maxD + ")", c2.getInt(0), c2.getInt(1), c2.getInt(2), c2.getInt(3), d2S, d2E));
+                    }
+                    if (c2 != null) c2.close();
+                    String d1S = ym + "-01", d1E = ym + "-15";
+                    Cursor c1 = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= ? AND dt <= ?", new String[]{name, d1S, d1E});
+                    if (c1 != null && c1.moveToFirst() && (c1.getInt(0) + c1.getInt(2)) > 0) {
+                        content.addView(makeInteractivePeriodCard(name, "🏪 " + mName + " Cyc 1 (1-15)", c1.getInt(0), c1.getInt(1), c1.getInt(2), c1.getInt(3), d1S, d1E));
+                    }
+                    if (c1 != null) c1.close();
+                } catch (Exception ignored) {}
+            }
+            if (mc != null) mc.close();
+        } else {
+            Cursor allC = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? ORDER BY dt DESC LIMIT 90", new String[]{name});
+            LinkedHashMap<String, ArrayList<String[]>> weeks = new LinkedHashMap<>();
+            while (allC != null && allC.moveToNext()) {
+                String d = allC.getString(0);
+                String k = getWeekStartDate(d) + " to " + getWeekEndDate(d);
+                if (!weeks.containsKey(k)) weeks.put(k, new ArrayList<>());
+                weeks.get(k).add(new String[]{d, String.valueOf(allC.getInt(1)), String.valueOf(allC.getInt(2)), String.valueOf(allC.getInt(3)), String.valueOf(allC.getInt(4))});
+            }
+            if (allC != null) allC.close();
+
+            for (String wR : weeks.keySet()) {
+                int sumO = 0, sumL = 0, sumP = 0, sumK = 0;
+                for (String[] day : weeks.get(wR)) {
+                    sumO += Integer.parseInt(day[1]); sumL += Integer.parseInt(day[2]);
+                    sumP += Integer.parseInt(day[3]); sumK += Integer.parseInt(day[4]);
+                }
+                String[] p = wR.split(" to ");
+                content.addView(makeInteractivePeriodCard(name, "📊 Week: " + p[0] + " ➔ " + p[1], sumO, sumL, sumP, sumK, p[0], p[1]));
+            }
+        }
+        sv.addView(content); pop.addView(sv);
+        new AlertDialog.Builder(this).setView(pop).setPositiveButton("Close", null).show();
+    }
+
+    LinearLayout makeInteractivePeriodCard(String name, String title, int o, int l, int p, int k, String dS, String dE) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(box(Color.parseColor("#12141D"), 12, Color.parseColor("#38BDF8"), 1));
+        card.setPadding(14, 12, 14, 12);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 0, 0, 10);
+        card.setLayoutParams(lp);
+
+        double conv = o > 0 ? ((double) l / o) * 100.0 : 0.0;
+        card.addView(tv(title, Color.parseColor("#38BDF8"), 14f, true));
+        card.addView(tv("OFD/DEL: " + o + "/" + l + " (" + String.format(Locale.US, "%.1f%%", conv) + ")", Color.WHITE, 13f, false));
+
+        LinearLayout r = new LinearLayout(this);
+        r.setPadding(0, 8, 0, 0);
+        Button bLogs = new Button(this);
+        bLogs.setText("📅 Day Logs");
+        bLogs.setBackground(box(Color.parseColor("#1F222E"), 8, Color.parseColor("#00E676"), 1));
+        bLogs.setTextColor(Color.parseColor("#00E676"));
+        bLogs.setTextSize(11f);
+        bLogs.setOnClickListener(v -> showDayByDayDialog(name, title, dS, dE));
+
+        Button bShr = new Button(this);
+        bShr.setText("📢 Share");
+        bShr.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+        bShr.setTextColor(Color.BLACK);
+        bShr.setTextSize(11f);
+        bShr.setOnClickListener(v -> shareSingleAgentReport(name + " (" + title + ")", o, l, p, k, o + p, l + k, conv));
+
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        bLp.setMargins(0, 0, 6, 0);
+        r.addView(bLogs, bLp); r.addView(bShr, new LinearLayout.LayoutParams(0, -2, 1f));
+        card.addView(r);
+        return card;
+    }
+
+    void showDayByDayDialog(String name, String pTitle, String dS, String dE) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        SimpleDateFormat sdfD = new SimpleDateFormat("EEE, dd MMM yyyy", Locale.US);
+        LinearLayout pop = new LinearLayout(this);
+        pop.setOrientation(LinearLayout.VERTICAL);
+        pop.setPadding(18, 18, 18, 18);
+        pop.setBackgroundColor(Color.parseColor("#090A0F"));
+        pop.addView(tv("📅 " + name + "\n" + pTitle, Color.parseColor("#38BDF8"), 14.5f, true));
+
+        ScrollView sv = new ScrollView(this);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(0, 10, 0, 0);
+
+        Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= ? AND dt <= ? ORDER BY dt DESC", new String[]{name, dS, dE});
+        while (c != null && c.moveToNext()) {
+            String dt = c.getString(0);
+            int o = c.getInt(1), l = c.getInt(2), p = c.getInt(3), k = c.getInt(4);
+            double conv = o > 0 ? ((double) l / o) * 100.0 : 0.0;
+            String dayName = dt;
+            try { Calendar cal = Calendar.getInstance(); cal.setTime(sdf.parse(dt)); dayName = sdfD.format(cal.getTime()); } catch (Exception ignored) {}
+
+            LinearLayout dayCard = new LinearLayout(this);
+            dayCard.setOrientation(LinearLayout.VERTICAL);
+            dayCard.setBackground(box(Color.parseColor("#12141D"), 10, Color.parseColor("#1E2235"), 1));
+            dayCard.setPadding(12, 10, 12, 10);
+            LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(-1, -2);
+            dLp.setMargins(0, 0, 0, 8);
+            dayCard.setLayoutParams(dLp);
+
+            dayCard.addView(tv("📅 " + dayName, Color.parseColor("#38BDF8"), 13f, true));
+            dayCard.addView(tv("OFD/DEL = " + o + "/" + l + " (" + String.format(Locale.US, "%.1f%%", conv) + ")", Color.WHITE, 12f, false));
+
+            Button bDayShr = new Button(this);
+            bDayShr.setText("📢 Share This Day");
+            bDayShr.setBackground(box(Color.parseColor("#25D366"), 6, 0, 0));
+            bDayShr.setTextColor(Color.BLACK);
+            bDayShr.setTextSize(10.5f);
+            final String fD = dayName;
+            bDayShr.setOnClickListener(v -> shareSingleAgentReport(name + " (" + fD + ")", o, l, p, k, o + p, l + k, conv));
+            dayCard.addView(bDayShr);
+            content.addView(dayCard);
+        }
+        if (c != null) c.close();
+        sv.addView(content); pop.addView(sv);
+        new AlertDialog.Builder(this).setView(pop).setPositiveButton("Close", null).show();
     }
 
     void showAgentVsAgentDialog() {
-        if (agentNamesList.size() < 2) {
-            Toast.makeText(this, "Need at least 2 agents to compare", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (agentNamesList.size() < 2) return;
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(20, 20, 20, 20);
+        d.setBackgroundColor(Color.parseColor("#090A0F"));
+        d.addView(tv("⚔️ AGENT BATTLE ARENA", Color.parseColor("#A855F7"), 16f, true));
 
-        LinearLayout dLayout = new LinearLayout(this);
-        dLayout.setOrientation(LinearLayout.VERTICAL);
-        dLayout.setPadding(24, 20, 24, 20);
-        dLayout.setBackgroundColor(Color.parseColor("#0F1015"));
-
-        TextView title = new TextView(this);
-        title.setText("⚔️ AGENT BATTLE ARENA");
-        title.setTextColor(Color.parseColor("#A855F7"));
-        title.setTextSize(17f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        dLayout.addView(title);
-
-        Spinner sp1 = new Spinner(this);
-        Spinner sp2 = new Spinner(this);
+        Spinner sp1 = new Spinner(this), sp2 = new Spinner(this);
         ArrayAdapter<String> ad = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, agentNamesList);
-        sp1.setAdapter(ad);
-        sp2.setAdapter(ad);
-        if (agentNamesList.size() > 1) sp2.setSelection(1);
-
-        dLayout.addView(sp1);
-        dLayout.addView(sp2);
+        sp1.setAdapter(ad); sp2.setAdapter(ad); sp2.setSelection(1);
+        d.addView(sp1); d.addView(sp2);
 
         LinearLayout resBox = new LinearLayout(this);
         resBox.setOrientation(LinearLayout.VERTICAL);
-        resBox.setPadding(0, 16, 0, 0);
-        dLayout.addView(resBox);
+        resBox.setPadding(0, 10, 0, 10);
+        d.addView(resBox);
 
         Button bComp = new Button(this);
         bComp.setText("⚡ COMPARE NOW");
         bComp.setBackground(box(Color.parseColor("#7C3AED"), 8, 0, 0));
         bComp.setTextColor(Color.WHITE);
-        bComp.setTypeface(Typeface.DEFAULT_BOLD);
         bComp.setOnClickListener(v -> {
-            String ag1 = (String) sp1.getSelectedItem();
-            String ag2 = (String) sp2.getSelectedItem();
+            String a1 = (String) sp1.getSelectedItem(), a2 = (String) sp2.getSelectedItem();
             resBox.removeAllViews();
-
-            TextView vsTitle = new TextView(MainActivity.this);
-            vsTitle.setText("📊 " + ag1 + "  VS  " + ag2);
-            vsTitle.setTextColor(Color.parseColor("#38BDF8"));
-            vsTitle.setTypeface(Typeface.DEFAULT_BOLD);
-            vsTitle.setTextSize(15f);
-            resBox.addView(vsTitle);
-
-            String r1 = getAgentStats(ag1);
-            String r2 = getAgentStats(ag2);
-
-            TextView stats = new TextView(MainActivity.this);
-            stats.setText("\n👤 " + ag1 + ":\n" + r1 + "\n\n👤 " + ag2 + ":\n" + r2);
-            stats.setTextColor(Color.WHITE);
-            stats.setTextSize(14f);
-            resBox.addView(stats);
+            resBox.addView(tv("📊 " + a1 + "  VS  " + a2, Color.parseColor("#38BDF8"), 14f, true));
+            resBox.addView(tv("\n👤 " + a1 + ":\n" + getAgentStats(a1) + "\n\n👤 " + a2 + ":\n" + getAgentStats(a2), Color.WHITE, 13f, false));
         });
-        dLayout.addView(bComp);
-
-        new AlertDialog.Builder(this)
-                .setView(dLayout)
-                .setPositiveButton("Close", null)
-                .show();
+        d.addView(bComp);
+        new AlertDialog.Builder(this).setView(d).setPositiveButton("Close", null).show();
     }
-        int[] getStreakInfo(String name) {
+
+    String getAgentStats(String name) {
+        String w = "daily".equals(mode) ? " WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf) " : " WHERE n = ? AND dt >= '" + getYearStartDate(getOperationalDate()) + "' ";
+        Cursor c = db.rawQuery("SELECT SUM(o), SUM(l) FROM prf " + w, new String[]{name});
+        String res = "No data";
+        if (c != null && c.moveToFirst()) {
+            int o = c.getInt(0), l = c.getInt(1);
+            res = "• OFD: " + o + " | DEL: " + l + "\n• Conv: " + String.format(Locale.US, "%.1f%%", o > 0 ? ((double) l / o) * 100.0 : 0.0);
+        }
+        if (c != null) c.close();
+        return res;
+    }
+
+    int[] getStreakInfo(String name) {
         int cur = 0, prev = 0;
         try {
             Cursor c = db.rawQuery("SELECT DISTINCT dt FROM prf WHERE n = ? AND (o+p) > 0 ORDER BY dt DESC", new String[]{name});
@@ -1132,32 +903,22 @@ public class MainActivity extends Activity {
             if (c != null) c.close();
 
             if (!dates.isEmpty()) {
-                cur = 1;
-                int i = 1;
+                cur = 1; int i = 1;
                 while (i < dates.size()) {
                     Calendar prevCal = (Calendar) dates.get(i - 1).clone();
                     prevCal.add(Calendar.DAY_OF_YEAR, -1);
-                    if (prevCal.get(Calendar.YEAR) == dates.get(i).get(Calendar.YEAR) &&
-                        prevCal.get(Calendar.DAY_OF_YEAR) == dates.get(i).get(Calendar.DAY_OF_YEAR)) {
-                        cur++;
-                        i++;
-                    } else {
-                        break;
-                    }
+                    if (prevCal.get(Calendar.YEAR) == dates.get(i).get(Calendar.YEAR) && prevCal.get(Calendar.DAY_OF_YEAR) == dates.get(i).get(Calendar.DAY_OF_YEAR)) {
+                        cur++; i++;
+                    } else break;
                 }
                 while (i < dates.size()) {
-                    prev = 1;
-                    i++;
+                    prev = 1; i++;
                     while (i < dates.size()) {
                         Calendar prevCal = (Calendar) dates.get(i - 1).clone();
                         prevCal.add(Calendar.DAY_OF_YEAR, -1);
-                        if (prevCal.get(Calendar.YEAR) == dates.get(i).get(Calendar.YEAR) &&
-                            prevCal.get(Calendar.DAY_OF_YEAR) == dates.get(i).get(Calendar.DAY_OF_YEAR)) {
-                            prev++;
-                            i++;
-                        } else {
-                            break;
-                        }
+                        if (prevCal.get(Calendar.YEAR) == dates.get(i).get(Calendar.YEAR) && prevCal.get(Calendar.DAY_OF_YEAR) == dates.get(i).get(Calendar.DAY_OF_YEAR)) {
+                            prev++; i++;
+                        } else break;
                     }
                     break;
                 }
@@ -1168,462 +929,56 @@ public class MainActivity extends Activity {
 
     void updatePersonalBest() {
         try {
-            Cursor c = db.rawQuery(
-                "SELECT dt, SUM(o), SUM(l), (CAST(SUM(l) AS REAL) * 100.0 / SUM(o)) as conv " +
-                "FROM prf GROUP BY dt HAVING SUM(o) > 0 " +
-                "ORDER BY conv DESC, SUM(l) DESC LIMIT 1", null);
+            Cursor c = db.rawQuery("SELECT dt, SUM(o), SUM(l), (CAST(SUM(l) AS REAL)*100.0/SUM(o)) as conv FROM prf GROUP BY dt HAVING SUM(o)>0 ORDER BY conv DESC LIMIT 1", null);
             if (c != null && c.moveToFirst()) {
-                String bestDt = c.getString(0);
-                int bestOfd = c.getInt(1);
-                int bestDel = c.getInt(2);
-                double bestConv = c.getDouble(3);
-                tPersonalBest.setText("🏆 Hub Best: " + String.format(Locale.US, "%.1f%%", bestConv) + " DEL (" + bestDel + "/" + bestOfd + ") (" + bestDt + ")");
+                tPersonalBest.setText("🏆 Hub Best: " + String.format(Locale.US, "%.1f%%", c.getDouble(3)) + " DEL (" + c.getInt(2) + "/" + c.getInt(1) + ") (" + c.getString(0) + ")");
             }
             if (c != null) c.close();
         } catch (Exception ignored) {}
     }
 
-    void triggerAutomaticEODReport(String completedDate) {
-        try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("🏁 *MALBAZARHUB_NJP DELIVERY COMPLETED REPORT*\n");
-            sb.append("📅 *Completed Date:* ").append(completedDate).append("\n");
-            sb.append("━━━━━━━━━━━━━━━━━━━\n");
-
-            Cursor hc = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE dt = ?", new String[]{completedDate});
-            if (hc != null && hc.moveToFirst()) {
-                int to = hc.getInt(0), tl = hc.getInt(1), tp = hc.getInt(2), tk = hc.getInt(3);
-                int tdnp = to + tp, tdnpc = tl + tk;
-                double ofdConv = to > 0 ? ((double) tl / to) * 100.0 : 0.0;
-                double ofpConv = tp > 0 ? ((double) tk / tp) * 100.0 : 0.0;
-                double dnpConv = tdnp > 0 ? ((double) tdnpc / tdnp) * 100.0 : 0.0;
-
-                sb.append("🚚 *Total OFD / DEL:* ").append(to).append(" / ").append(tl).append(" (").append(String.format(Locale.US, "%.1f%%", ofdConv)).append(")\n");
-                sb.append("📦 *Total OFP / PIK:* ").append(tp).append(" / ").append(tk).append(" (").append(String.format(Locale.US, "%.1f%%", ofpConv)).append(")\n");
-                sb.append("🔄 *Total DNP / DNPC:* ").append(tdnp).append(" / ").append(tdnpc).append(" (").append(String.format(Locale.US, "%.1f%%", dnpConv)).append(")\n");
-
-                int targetNeeded = (int) Math.ceil(0.92 * to);
-                int diff = targetNeeded - tl;
-                if (diff <= 0 && to > 0) {
-                    sb.append("🎯 *Target 92%:* Achieved! 🚀\n");
-                } else if (to > 0) {
-                    sb.append("🎯 *Target 92%:* Gap ").append(diff).append(" DEL required\n");
-                }
-            }
-            if (hc != null) hc.close();
-
-            sb.append("━━━━━━━━━━━━━━━━━━━\n");
-            sb.append("📊 *ALL AGENTS (LOW TO HIGH DEL CONV):*\n");
-
-            Cursor ac = db.rawQuery(
-                "SELECT n, SUM(o), SUM(l), (CAST(SUM(l) AS REAL) * 100.0 / CASE WHEN SUM(o) > 0 THEN SUM(o) ELSE 1 END) as del_conv " +
-                "FROM prf WHERE dt = ? GROUP BY n HAVING (SUM(o) + SUM(p)) > 0 " +
-                "ORDER BY del_conv ASC, SUM(l) ASC", new String[]{completedDate});
-
-            int rank = 1;
-            while (ac != null && ac.moveToNext()) {
-                String agN = ac.getString(0);
-                int agOfd = ac.getInt(1);
-                int agDel = ac.getInt(2);
-                double agConv = ac.getDouble(3);
-                String tag = (agConv < 75.0) ? "⚠️" : ((agConv >= 92.0) ? "✅" : "⚡");
-
-                sb.append(rank).append(". ").append(tag).append(" ").append(agN)
-                  .append(" ➔ ").append(String.format(Locale.US, "%.1f%%", agConv))
-                  .append(" (DEL: ").append(agDel).append("/").append(agOfd).append(")\n");
-                rank++;
-            }
-            if (ac != null) ac.close();
-
-            sb.append("━━━━━━━━━━━━━━━━━━━\n");
-            sb.append("⚡ _Auto-Generated EOD Report | Managed by Adarsh_");
-
-            String url = "https://api.whatsapp.com/send?phone=918337868714&text=" + Uri.encode(sb.toString());
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            startActivity(intent);
-        } catch (Exception ignored) {}
-    }
-
-    String getAgentStats(String name) {
-        String opDate = getOperationalDate();
-        String w = "daily".equals(mode) ? " WHERE n = ? AND dt = (SELECT MAX(dt) FROM prf) " : " WHERE n = ? AND dt >= '" + getYearStartDate(opDate) + "' ";
-
-        Cursor c = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w, new String[]{name});
-        String res = "No data";
-        if (c != null && c.moveToFirst()) {
-            int o = c.getInt(0), l = c.getInt(1), p = c.getInt(2), k = c.getInt(3);
-            int dnp = o + p, dnpc = l + k;
-            double cr = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-            res = "• OFD: " + o + " | DEL: " + l + "\n• Conv: " + String.format(Locale.US, "%.1f%%", cr);
-        }
-        if (c != null) c.close();
-        return res;
-    }
-        void showDetails(String name) {
-        boolean isKirana = isKiranaAgent(name);
-
+    void showHubDetails(String hname) {
+        Cursor c = db.rawQuery("SELECT dt, o, l, lc, p, k, kc, tc FROM hub_prf WHERE hname = ? ORDER BY dt DESC LIMIT 30", new String[]{hname});
         LinearLayout pop = new LinearLayout(this);
         pop.setOrientation(LinearLayout.VERTICAL);
-        pop.setPadding(20, 20, 20, 20);
-        pop.setBackgroundColor(Color.parseColor("#0F1015"));
-
-        TextView h = new TextView(this);
-        h.setText((isKirana ? "🏪 " : "👤 ") + name + " (Click Week / Cycle for Days)");
-        h.setTextColor(Color.parseColor("#00E676"));
-        h.setTextSize(16f);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        h.setPadding(0, 0, 0, 12);
-        pop.addView(h);
-
-        ScrollView sv = new ScrollView(this);
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-
-        if (isKirana) {
-            Cursor mc = db.rawQuery("SELECT DISTINCT SUBSTR(dt, 1, 7) FROM prf WHERE n = ? ORDER BY dt DESC", new String[]{name});
-            boolean foundAny = false;
-            while (mc != null && mc.moveToNext()) {
-                foundAny = true;
-                String ym = mc.getString(0);
-                try {
-                    Calendar mCal = Calendar.getInstance();
-                    mCal.setTime(new SimpleDateFormat("yyyy-MM", Locale.US).parse(ym));
-                    int maxD = mCal.getActualMaximum(Calendar.DAY_OF_MONTH);
-                    String mName = new SimpleDateFormat("MMMM yyyy", Locale.US).format(mCal.getTime());
-
-                    String d2Start = ym + "-16", d2End = ym + String.format(Locale.US, "-%02d", maxD);
-                    Cursor c2 = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= ? AND dt <= ?", new String[]{name, d2Start, d2End});
-                    if (c2 != null && c2.moveToFirst() && (c2.getInt(0) + c2.getInt(2)) > 0) {
-                        String tTitle = "🏪 " + mName + " Cyc 2 (16-" + maxD + ")";
-                        final int oVal = c2.getInt(0), lVal = c2.getInt(1), pVal = c2.getInt(2), kVal = c2.getInt(3);
-                        content.addView(makeInteractivePeriodCard(name, tTitle, oVal, lVal, pVal, kVal, d2Start, d2End));
-                    }
-                    if (c2 != null) c2.close();
-
-                    String d1Start = ym + "-01", d1End = ym + "-15";
-                    Cursor c1 = db.rawQuery("SELECT SUM(o), SUM(l), SUM(p), SUM(k) FROM prf WHERE n = ? AND dt >= ? AND dt <= ?", new String[]{name, d1Start, d1End});
-                    if (c1 != null && c1.moveToFirst() && (c1.getInt(0) + c1.getInt(2)) > 0) {
-                        String tTitle = "🏪 " + mName + " Cyc 1 (1-15)";
-                        final int oVal = c1.getInt(0), lVal = c1.getInt(1), pVal = c1.getInt(2), kVal = c1.getInt(3);
-                        content.addView(makeInteractivePeriodCard(name, tTitle, oVal, lVal, pVal, kVal, d1Start, d1End));
-                    }
-                    if (c1 != null) c1.close();
-                } catch (Exception ignored) {}
-            }
-            if (mc != null) mc.close();
-            if (!foundAny) content.addView(makeEmptyText("No Kirana records found."));
-        } else {
-            Cursor allDaysC = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? ORDER BY dt DESC LIMIT 90", new String[]{name});
-            LinkedHashMap<String, ArrayList<String[]>> weekGroups = new LinkedHashMap<>();
-
-            while (allDaysC != null && allDaysC.moveToNext()) {
-                String dStr = allDaysC.getString(0);
-                String wStart = getWeekStartDate(dStr);
-                String wEnd = getWeekEndDate(dStr);
-                String wKey = wStart + " to " + wEnd;
-
-                if (!weekGroups.containsKey(wKey)) {
-                    weekGroups.put(wKey, new ArrayList<>());
-                }
-                weekGroups.get(wKey).add(new String[]{dStr, String.valueOf(allDaysC.getInt(1)), String.valueOf(allDaysC.getInt(2)), String.valueOf(allDaysC.getInt(3)), String.valueOf(allDaysC.getInt(4))});
-            }
-            if (allDaysC != null) allDaysC.close();
-
-            if (weekGroups.isEmpty()) {
-                content.addView(makeEmptyText("No records found for this agent."));
-            } else {
-                for (String wRange : weekGroups.keySet()) {
-                    ArrayList<String[]> daysInWeek = weekGroups.get(wRange);
-                    int sumO = 0, sumL = 0, sumP = 0, sumK = 0;
-                    for (String[] dData : daysInWeek) {
-                        sumO += Integer.parseInt(dData[1]);
-                        sumL += Integer.parseInt(dData[2]);
-                        sumP += Integer.parseInt(dData[3]);
-                        sumK += Integer.parseInt(dData[4]);
-                    }
-
-                    String[] parts = wRange.split(" to ");
-                    String wHeaderTitle = "📊 Week: " + parts[0] + " ➔ " + parts[1];
-                    content.addView(makeInteractivePeriodCard(name, wHeaderTitle, sumO, sumL, sumP, sumK, parts[0], parts[1]));
-                }
-            }
-        }
-
-        pop.addView(h);
-        sv.addView(content);
-        pop.addView(sv);
-
-        new AlertDialog.Builder(this)
-            .setView(pop)
-            .setPositiveButton("Close", null)
-            .show();
-        }
-        LinearLayout makeInteractivePeriodCard(String agentName, String title, int o, int l, int p, int k, String dStart, String dEnd) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(box(Color.parseColor("#171927"), 14, Color.parseColor("#38BDF8"), 1));
-        card.setPadding(16, 14, 16, 14);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.setMargins(0, 0, 0, 12);
-        card.setLayoutParams(lp);
-
-        int dnp = o + p, dnpc = l + k;
-        double ofdC = o > 0 ? ((double) l / o) * 100.0 : 0.0;
-        double totC = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-
-        TextView tHead = new TextView(this);
-        tHead.setText(title);
-        tHead.setTextColor(Color.parseColor("#38BDF8"));
-        tHead.setTextSize(14.5f);
-        tHead.setTypeface(Typeface.DEFAULT_BOLD);
-        card.addView(tHead);
-
-        TextView t1 = new TextView(this);
-        t1.setText("OFD/DEL = " + o + "/" + l + " (" + String.format(Locale.US, "%.1f%%", ofdC) + ")  •  DNP = " + dnp + "/" + dnpc + " (" + String.format(Locale.US, "%.1f%%", totC) + ")");
-        t1.setTextColor(Color.WHITE);
-        t1.setTextSize(13f);
-        t1.setPadding(0, 4, 0, 0);
-        card.addView(t1);
-
-        String badgeText = getPerformanceBadge(ofdC, o);
-        int badgeCol = getPerformanceColor(ofdC, o);
-        TextView tBadge = new TextView(this);
-        tBadge.setText("🏆 " + badgeText);
-        tBadge.setTextColor(badgeCol);
-        tBadge.setTextSize(12f);
-        tBadge.setTypeface(Typeface.DEFAULT_BOLD);
-        tBadge.setPadding(0, 4, 0, 10);
-        card.addView(tBadge);
-
-        LinearLayout bRow = new LinearLayout(this);
-        bRow.setOrientation(LinearLayout.HORIZONTAL);
-
-        Button bDays = new Button(this);
-        bDays.setText("📅 View Day Logs");
-        bDays.setBackground(box(Color.parseColor("#1F2232"), 8, Color.parseColor("#00E676"), 1));
-        bDays.setTextColor(Color.parseColor("#00E676"));
-        bDays.setTextSize(11.5f);
-        bDays.setTypeface(Typeface.DEFAULT_BOLD);
-        bDays.setOnClickListener(v -> showDayByDayDialog(agentName, title, dStart, dEnd));
-
-        Button bShare = new Button(this);
-        bShare.setText("📢 Share");
-        bShare.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
-        bShare.setTextColor(Color.BLACK);
-        bShare.setTextSize(11.5f);
-        bShare.setTypeface(Typeface.DEFAULT_BOLD);
-        bShare.setOnClickListener(v -> sharePeriodReport(agentName, title, o, l, p, k, dnp, dnpc, ofdC));
-
-        LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(0, -2, 1.2f);
-        dLp.setMargins(0, 0, 6, 0);
-        bRow.addView(bDays, dLp);
-        bRow.addView(bShare, new LinearLayout.LayoutParams(0, -2, 0.8f));
-        card.addView(bRow);
-
-        return card;
-    }
-
-    void showDayByDayDialog(String name, String periodTitle, String dStart, String dEnd) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        SimpleDateFormat sdfDayName = new SimpleDateFormat("EEEE, dd MMM yyyy", Locale.US);
-
-        LinearLayout pop = new LinearLayout(this);
-        pop.setOrientation(LinearLayout.VERTICAL);
-        pop.setPadding(20, 20, 20, 20);
-        pop.setBackgroundColor(Color.parseColor("#0F1015"));
-
-        TextView h = new TextView(this);
-        h.setText("📅 Day-by-Day Logs: " + name + "\n" + periodTitle);
-        h.setTextColor(Color.parseColor("#38BDF8"));
-        h.setTextSize(15f);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        h.setPadding(0, 0, 0, 12);
-        pop.addView(h);
-
-        ScrollView sv = new ScrollView(this);
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-
-        Cursor c = db.rawQuery("SELECT dt, o, l, p, k FROM prf WHERE n = ? AND dt >= ? AND dt <= ? ORDER BY dt DESC", new String[]{name, dStart, dEnd});
-        boolean hasData = false;
-        while (c != null && c.moveToNext()) {
-            hasData = true;
-            String dStr = c.getString(0);
-            int o = c.getInt(1), l = c.getInt(2), p = c.getInt(3), k = c.getInt(4);
-            int dnp = o + p, dnpc = l + k;
-            double ofdC = o > 0 ? ((double) l / o) * 100.0 : 0.0;
-            double totC = dnp > 0 ? ((double) dnpc / dnp) * 100.0 : 0.0;
-
-            String dayTitle = dStr;
-            try {
-                Calendar dCal = Calendar.getInstance();
-                dCal.setTime(sdf.parse(dStr));
-                dayTitle = sdfDayName.format(dCal.getTime());
-            } catch (Exception ignored) {}
-
-            LinearLayout dayCard = new LinearLayout(this);
-            dayCard.setOrientation(LinearLayout.VERTICAL);
-            dayCard.setBackground(box(Color.parseColor("#151724"), 12, Color.parseColor("#2A2D3D"), 1));
-            dayCard.setPadding(14, 12, 14, 12);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-            lp.setMargins(0, 0, 0, 8);
-            dayCard.setLayoutParams(lp);
-
-            TextView tD = new TextView(this);
-            tD.setText("📅 " + dayTitle);
-            tD.setTextColor(Color.parseColor("#38BDF8"));
-            tD.setTextSize(13.5f);
-            tD.setTypeface(Typeface.DEFAULT_BOLD);
-            dayCard.addView(tD);
-
-            TextView t1 = new TextView(this);
-            t1.setText("OFD/DEL = " + o + "/" + l + " (" + String.format(Locale.US, "%.1f%%", ofdC) + ")  •  DNP = " + dnp + "/" + dnpc + " (" + String.format(Locale.US, "%.1f%%", totC) + ")");
-            t1.setTextColor(Color.WHITE);
-            t1.setTextSize(12.5f);
-            t1.setPadding(0, 2, 0, 0);
-            dayCard.addView(t1);
-
-            int badgeCol = getPerformanceColor(ofdC, o);
-            TextView tB = new TextView(this);
-            tB.setText(getPerformanceBadge(ofdC, o));
-            tB.setTextColor(badgeCol);
-            tB.setTextSize(11.5f);
-            tB.setTypeface(Typeface.DEFAULT_BOLD);
-            tB.setPadding(0, 2, 0, 6);
-            dayCard.addView(tB);
-
-            Button bDayShare = new Button(this);
-            bDayShare.setText("📢 Share This Day");
-            bDayShare.setBackground(box(Color.parseColor("#25D366"), 6, 0, 0));
-            bDayShare.setTextColor(Color.BLACK);
-            bDayShare.setTextSize(11f);
-            bDayShare.setTypeface(Typeface.DEFAULT_BOLD);
-            final String fDayTitle = dayTitle;
-            bDayShare.setOnClickListener(v -> shareSingleAgentReport(name + " (" + fDayTitle + ")", o, l, p, k, dnp, dnpc, ofdC));
-            dayCard.addView(bDayShare);
-
-            content.addView(dayCard);
-        }
-        if (c != null) c.close();
-
-        if (!hasData) content.addView(makeEmptyText("No days recorded for this period."));
-        sv.addView(content);
-        pop.addView(sv);
-
-        new AlertDialog.Builder(this)
-            .setView(pop)
-            .setPositiveButton("Close", null)
-            .show();
-    }
-
-    TextView makeEmptyText(String text) {
-        TextView tv = new TextView(this);
-        tv.setText(text);
-        tv.setTextColor(Color.parseColor("#9CA3AF"));
-        tv.setPadding(10, 10, 10, 10);
-        return tv;
-    }
-        void showHubDetails(String hname) {
-        String opDate = getOperationalDate();
-        Cursor c = db.rawQuery("SELECT dt, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf WHERE hname = ? ORDER BY dt DESC LIMIT 30", new String[]{hname});
-        LinearLayout pop = new LinearLayout(this);
-        pop.setOrientation(LinearLayout.VERTICAL);
-        pop.setPadding(20, 20, 20, 20);
-        pop.setBackgroundColor(Color.parseColor("#0F1015"));
-
-        TextView h = new TextView(this);
-        h.setText("🏢 " + hname + " (History)");
-        h.setTextColor(Color.parseColor("#38BDF8"));
-        h.setTextSize(16f);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        h.setPadding(0, 0, 0, 10);
-        pop.addView(h);
-
+        pop.setPadding(18, 18, 18, 18);
+        pop.setBackgroundColor(Color.parseColor("#090A0F"));
+        pop.addView(tv("🏢 " + hname + " History", Color.parseColor("#38BDF8"), 15f, true));
         ScrollView sv = new ScrollView(this);
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
 
         while (c != null && c.moveToNext()) {
-            String dt = c.getString(0) != null ? c.getString(0) : opDate;
-            String o = c.getString(1), l = c.getString(2), lc = c.getString(3);
-            String p = c.getString(4), k = c.getString(5), kc = c.getString(6);
-            String tc = c.getString(9);
-
-            TextView item = new TextView(this);
-            item.setText("📅 " + dt + "  |  Overall Conv: " + tc + "\nOFD/DEL = " + o + "/" + l + " (" + lc + ")\nOFP/PIK = " + p + "/" + k + " (" + kc + ")");
-            item.setTextColor(Color.WHITE);
-            item.setTextSize(13.5f);
-            item.setPadding(14, 12, 14, 12);
-            item.setBackground(box(Color.parseColor("#181920"), 10, Color.parseColor("#2A2D3D"), 1));
+            TextView it = tv("📅 " + c.getString(0) + " | Conv: " + c.getString(7) + "\nOFD/DEL = " + c.getString(1) + "/" + c.getString(2) + " (" + c.getString(3) + ")\nOFP/PIK = " + c.getString(4) + "/" + c.getString(5) + " (" + c.getString(6) + ")", Color.WHITE, 12.5f, false);
+            it.setBackground(box(Color.parseColor("#12141D"), 8, Color.parseColor("#1E2235"), 1));
+            it.setPadding(12, 10, 12, 10);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.setMargins(0, 0, 0, 8);
-            item.setLayoutParams(lp);
-            content.addView(item);
+            it.setLayoutParams(lp);
+            content.addView(it);
         }
         if (c != null) c.close();
-        sv.addView(content);
-        pop.addView(sv);
-
-        new AlertDialog.Builder(this)
-            .setView(pop)
-            .setPositiveButton("Close", null)
-            .show();
+        sv.addView(content); pop.addView(sv);
+        new AlertDialog.Builder(this).setView(pop).setPositiveButton("Close", null).show();
     }
 
     void launchVoiceOTP() {
         try {
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "🗣️ Speak Customer OTP (e.g. 5 4 8 2)...");
-            startActivityForResult(intent, REQ_CODE_SPEECH);
-        } catch (Exception e) {
-            Toast.makeText(this, "Voice recognition not supported on this device", Toast.LENGTH_SHORT).show();
-        }
+            Intent it = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            it.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            startActivityForResult(it, 101);
+        } catch (Exception e) { Toast.makeText(this, "Voice recognition not available", Toast.LENGTH_SHORT).show(); }
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQ_CODE_SPEECH && resultCode == RESULT_OK && data != null) {
-            ArrayList<String> res = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            if (res != null && !res.isEmpty()) {
-                String spoken = res.get(0).replaceAll("[^0-9]", "");
-                if (spoken.isEmpty()) spoken = res.get(0);
-
-                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                cm.setPrimaryClip(ClipData.newPlainText("OTP", spoken));
-
-                LinearLayout d = new LinearLayout(this);
-                d.setOrientation(LinearLayout.VERTICAL);
-                d.setPadding(24, 20, 24, 20);
-                d.setBackgroundColor(Color.parseColor("#0F1015"));
-
-                TextView h = new TextView(this);
-                h.setText("🎙️ CAPTURED OTP");
-                h.setTextColor(Color.parseColor("#A855F7"));
-                h.setTypeface(Typeface.DEFAULT_BOLD);
-                h.setTextSize(15f);
-                d.addView(h);
-
-                TextView otpVal = new TextView(this);
-                otpVal.setText(spoken);
-                otpVal.setTextColor(Color.parseColor("#00E676"));
-                otpVal.setTextSize(34f);
-                otpVal.setTypeface(Typeface.DEFAULT_BOLD);
-                otpVal.setGravity(Gravity.CENTER);
-                otpVal.setPadding(0, 16, 0, 16);
-                d.addView(otpVal);
-
-                TextView note = new TextView(this);
-                note.setText("✅ Copied to Clipboard! Ready to paste in FieldX.");
-                note.setTextColor(Color.parseColor("#9CA3AF"));
-                note.setTextSize(13f);
-                d.addView(note);
-
-                new AlertDialog.Builder(this)
-                        .setView(d)
-                        .setPositiveButton("OK", null)
-                        .show();
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req == 101 && res == RESULT_OK && data != null) {
+            ArrayList<String> r = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (r != null && !r.isEmpty()) {
+                String otp = r.get(0).replaceAll("[^0-9]", "");
+                ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("OTP", otp));
+                new AlertDialog.Builder(this).setTitle("🎙️ CAPTURED OTP").setMessage(otp + "\n\n✅ Copied to Clipboard!").setPositiveButton("OK", null).show();
             }
         }
     }
@@ -1633,160 +988,67 @@ public class MainActivity extends Activity {
             vHubCrd.removeAllViews();
             Cursor c = db.rawQuery("SELECT hname, o, l, lc, p, k, kc, dnp, dnpc, tc FROM hub_prf WHERE dt = (SELECT MAX(dt) FROM hub_prf) OR dt IS NULL", null);
             while (c != null && c.moveToNext()) {
-                String name = c.getString(0);
-                String o = c.getString(1), l = c.getString(2), lc = c.getString(3);
-                String p = c.getString(4), k = c.getString(5), kc = c.getString(6);
-                String dnp = c.getString(7), dnpc = c.getString(8), tc = c.getString(9);
-
                 LinearLayout card = new LinearLayout(this);
                 card.setOrientation(LinearLayout.VERTICAL);
-                card.setBackground(box(Color.parseColor("#151724"), 14, Color.parseColor("#2A2D3D"), 1));
-                card.setPadding(18, 14, 18, 14);
+                card.setBackground(box(Color.parseColor("#12141D"), 12, Color.parseColor("#1E2235"), 1));
+                card.setPadding(16, 12, 16, 12);
                 LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(-1, -2);
                 clp.setMargins(0, 0, 0, 10);
                 card.setLayoutParams(clp);
-
-                TextView hName = new TextView(this);
-                hName.setText("🏢 " + name);
-                hName.setTextColor(Color.parseColor("#60A5FA"));
-                hName.setTypeface(Typeface.DEFAULT_BOLD);
-                hName.setTextSize(16f);
-                card.addView(hName);
-
-                TextView t1 = new TextView(this);
-                t1.setText("OFD/DEL = " + o + "/" + l + " = " + lc);
-                t1.setTextColor(Color.parseColor("#D1D5DB"));
-                t1.setTextSize(13.5f);
-                t1.setPadding(0, 4, 0, 0);
-                card.addView(t1);
-
-                TextView t2 = new TextView(this);
-                t2.setText("OFP/PIKED = " + p + "/" + k + " = " + kc);
-                t2.setTextColor(Color.parseColor("#D1D5DB"));
-                t2.setTextSize(13.5f);
-                t2.setPadding(0, 2, 0, 0);
-                card.addView(t2);
-
-                TextView t3 = new TextView(this);
-                t3.setText("DNP/DNPC = " + dnp + "/" + dnpc + " = " + tc);
-                t3.setTextColor(Color.parseColor("#34D399"));
-                t3.setTextSize(13.5f);
-                t3.setTypeface(Typeface.DEFAULT_BOLD);
-                t3.setPadding(0, 2, 0, 0);
-                card.addView(t3);
-
-                final String hubName = name;
-                card.setOnClickListener(v -> showHubDetails(hubName));
-
+                String hname = c.getString(0);
+                card.addView(tv("🏢 " + hname, Color.parseColor("#60A5FA"), 15f, true));
+                card.addView(tv("OFD/DEL = " + c.getString(1) + "/" + c.getString(2) + " = " + c.getString(3), Color.parseColor("#D1D5DB"), 13f, false));
+                card.addView(tv("OFP/PIK = " + c.getString(4) + "/" + c.getString(5) + " = " + c.getString(6), Color.parseColor("#D1D5DB"), 13f, false));
+                card.addView(tv("DNP/DNPC = " + c.getString(7) + "/" + c.getString(8) + " = " + c.getString(9), Color.parseColor("#34D399"), 13f, true));
+                card.setOnClickListener(v -> showHubDetails(hname));
                 vHubCrd.addView(card);
             }
             if (c != null) c.close();
         } catch (Exception ignored) {}
     }
+
         void loadContacts() {
         vCntCrd.removeAllViews();
         Cursor c = db.rawQuery("SELECT name, role, phone FROM contacts", null);
         if (c != null && c.getCount() > 0) {
-            addContactHeader("📋 LIVE CONTACT DIRECTORY (FROM SHEET)");
             while (c.moveToNext()) {
-                String name = c.getString(0);
-                String role = c.getString(1);
+                LinearLayout card = new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setBackground(box(Color.parseColor("#12141D"), 12, Color.parseColor("#1E2235"), 1));
+                card.setPadding(16, 12, 16, 12);
+                LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(-1, -2);
+                clp.setMargins(0, 0, 0, 8);
+                card.setLayoutParams(clp);
                 String phone = c.getString(2);
-                String colorHex = "#00E676";
-                String rLower = role.toLowerCase(Locale.ROOT);
-                if (rLower.contains("manager") || rLower.contains("tl") || rLower.contains("lead")) colorHex = "#38BDF8";
-                else if (rLower.contains("office") || rLower.contains("return") || rLower.contains("gate")) colorHex = "#FBBF24";
-                addContactItem(name, role, phone, colorHex);
+                card.addView(tv("👤 " + c.getString(0), Color.parseColor("#00E676"), 15f, true));
+                card.addView(tv(c.getString(1) + " • 📞 " + phone, Color.parseColor("#D1D5DB"), 13f, false));
+                LinearLayout r = new LinearLayout(this);
+                r.setPadding(0, 6, 0, 0);
+                Button bCall = new Button(this); bCall.setText("📞 Call");
+                bCall.setBackground(box(Color.parseColor("#0284C7"), 6, 0, 0));
+                bCall.setTextColor(Color.WHITE); bCall.setTextSize(11f);
+                bCall.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phone))));
+                Button bWp = new Button(this); bWp.setText("💬 WhatsApp");
+                bWp.setBackground(box(Color.parseColor("#25D366"), 6, 0, 0));
+                bWp.setTextColor(Color.BLACK); bWp.setTextSize(11f);
+                bWp.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=91" + phone))));
+                LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                bLp.setMargins(0, 0, 6, 0);
+                r.addView(bCall, bLp); r.addView(bWp, new LinearLayout.LayoutParams(0, -2, 1f));
+                card.addView(r);
+                vCntCrd.addView(card);
             }
         } else {
-            addContactHeader("ℹ️ NO CONTACTS FOUND");
-            TextView emptyTxt = new TextView(this);
-            emptyTxt.setText("Sheet में Column R (Name), S (Role), T (Phone) भरें और SYNC दबाएं।");
-            emptyTxt.setTextColor(Color.parseColor("#9CA3AF"));
-            emptyTxt.setPadding(10, 10, 10, 10);
-            vCntCrd.addView(emptyTxt);
+            vCntCrd.addView(tv("Sheet Column R (Name), S (Role), T (Phone) भरें और SYNC दबाएं।", Color.parseColor("#9CA3AF"), 13f, false));
         }
         if (c != null) c.close();
-    }
-
-    void addContactHeader(String text) {
-        TextView th = new TextView(this);
-        th.setText(text);
-        th.setTextColor(Color.parseColor("#9CA3AF"));
-        th.setTextSize(13f);
-        th.setTypeface(Typeface.DEFAULT_BOLD);
-        th.setPadding(4, 16, 4, 8);
-        vCntCrd.addView(th);
-    }
-
-    void addContactItem(String name, String role, String phone, String colorHex) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(box(Color.parseColor("#151724"), 14, Color.parseColor("#2A2D3D"), 1));
-        card.setPadding(18, 14, 18, 14);
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(-1, -2);
-        clp.setMargins(0, 0, 0, 10);
-        card.setLayoutParams(clp);
-
-        TextView tN = new TextView(this);
-        tN.setText("👤 " + name);
-        tN.setTextColor(Color.parseColor(colorHex));
-        tN.setTextSize(15.5f);
-        tN.setTypeface(Typeface.DEFAULT_BOLD);
-        card.addView(tN);
-
-        TextView tR = new TextView(this);
-        tR.setText(role + "  •  📞 " + phone);
-        tR.setTextColor(Color.parseColor("#D1D5DB"));
-        tR.setTextSize(13.5f);
-        tR.setPadding(0, 2, 0, 10);
-        card.addView(tR);
-
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-
-        Button bCall = new Button(this);
-        bCall.setText("📞 Call");
-        bCall.setTextSize(11.5f);
-        bCall.setBackground(box(Color.parseColor("#0284C7"), 8, 0, 0));
-        bCall.setTextColor(Color.WHITE);
-        bCall.setTypeface(Typeface.DEFAULT_BOLD);
-        bCall.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phone));
-            startActivity(intent);
-        });
-
-        Button bWp = new Button(this);
-        bWp.setText("💬 WhatsApp");
-        bWp.setTextSize(11.5f);
-        bWp.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
-        bWp.setTextColor(Color.BLACK);
-        bWp.setTypeface(Typeface.DEFAULT_BOLD);
-        bWp.setOnClickListener(v -> {
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=91" + phone));
-                startActivity(intent);
-            } catch (Exception e) {
-                Toast.makeText(MainActivity.this, "WhatsApp error", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        bLp.setMargins(0, 0, 6, 0);
-        row.addView(bCall, bLp);
-        row.addView(bWp, new LinearLayout.LayoutParams(0, -2, 1f));
-
-        card.addView(row);
-        vCntCrd.addView(card);
     }
 
     void qry(String q) {
         ords.clear();
         if (!q.isEmpty()) {
             Cursor c = db.rawQuery("SELECT t, d FROM ord WHERE t LIKE ? LIMIT 50", new String[]{"%" + q + "%"});
-            while (c != null && c.moveToNext()) {
-                ords.add(new String[]{c.getString(0), c.getString(1)});
-            }
+            while (c != null && c.moveToNext()) ords.add(new String[]{c.getString(0), c.getString(1)});
             if (c != null) c.close();
         }
         if (adp != null) adp.notifyDataSetChanged();
@@ -1795,199 +1057,115 @@ public class MainActivity extends Activity {
     void cnt() {
         try {
             Cursor c = db.rawQuery("SELECT COUNT(*) FROM ord", null);
-            if (c != null && c.moveToFirst()) {
-                tCnt.setText("📦 Total Trackable Orders: " + c.getInt(0));
-            }
+            if (c != null && c.moveToFirst()) tCnt.setText("📦 Total Trackable Orders: " + c.getInt(0));
             if (c != null) c.close();
         } catch (Exception ignored) {}
     }
-        ArrayList<String> fastSplitCsv(String line) {
+
+    ArrayList<String> fastSplitCsv(String line) {
         ArrayList<String> res = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
         boolean inQuotes = false;
         for (int i = 0; i < line.length(); i++) {
             char ch = line.charAt(i);
-            if (ch == '\"') {
-                inQuotes = !inQuotes;
-            } else if (ch == ',' && !inQuotes) {
-                res.add(sb.toString());
-                sb.setLength(0);
-            } else {
-                sb.append(ch);
-            }
+            if (ch == '\"') inQuotes = !inQuotes;
+            else if (ch == ',' && !inQuotes) { res.add(sb.toString()); sb.setLength(0); }
+            else sb.append(ch);
         }
         res.add(sb.toString());
         return res;
     }
-
     void doSync(boolean isAuto) {
-        if (!isAuto) showLoading(true, "⏳ Syncing Live Data...\nPlease wait");
+        new Handler(Looper.getMainLooper()).post(() -> { if (!isAuto && loadingOverlay != null) loadingOverlay.setVisibility(View.VISIBLE); });
         try {
             String targetUrl = CSV;
             HttpURLConnection conn = null;
             for (int i = 0; i < 5; i++) {
                 conn = (HttpURLConnection) new URL(targetUrl).openConnection();
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(8000);
+                conn.setConnectTimeout(8000); conn.setReadTimeout(8000);
                 conn.setInstanceFollowRedirects(false);
                 int code = conn.getResponseCode();
-                if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
-                    targetUrl = conn.getHeaderField("Location");
-                } else {
-                    break;
-                }
+                if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) targetUrl = conn.getHeaderField("Location");
+                else break;
             }
-
             InputStream is = (conn != null) ? conn.getInputStream() : null;
-            if (is == null) throw new Exception("Unable to connect");
+            if (is == null) throw new Exception("Connect failed");
             BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            String line;
-            String opDate = getOperationalDate();
-            int parsedAgentsInSheet = 0;
+            String line, opDate = getOperationalDate();
+            int parsed = 0;
 
             db.beginTransaction();
-            db.execSQL("DELETE FROM ord");
-            db.execSQL("DELETE FROM contacts");
+            db.execSQL("DELETE FROM ord"); db.execSQL("DELETE FROM contacts");
             db.execSQL("DELETE FROM hub_prf WHERE dt = '" + opDate + "'");
-
-            ArrayList<ContentValues> tempAgentData = new ArrayList<>();
+            ArrayList<ContentValues> temp = new ArrayList<>();
 
             while ((line = reader.readLine()) != null) {
                 ArrayList<String> p = fastSplitCsv(line);
-
                 if (p.size() >= 1) {
-                    String trackId = clean(p.get(0));
-                    String ordId = (p.size() > 1) ? clean(p.get(1)) : "";
-                    if (!trackId.isEmpty() && !trackId.equalsIgnoreCase("TRACKING ID") && !trackId.equalsIgnoreCase("TRACK ID") && !trackId.equalsIgnoreCase("WAYBILL") && !trackId.equalsIgnoreCase("NAME")) {
+                    String tId = clean(p.get(0)), oId = (p.size() > 1) ? clean(p.get(1)) : "";
+                    if (!tId.isEmpty() && !tId.equalsIgnoreCase("TRACKING ID") && !tId.equalsIgnoreCase("TRACK ID")) {
                         ContentValues ocv = new ContentValues();
-                        ocv.put("t", trackId);
-                        ocv.put("d", ordId.isEmpty() ? trackId : ordId);
+                        ocv.put("t", tId); ocv.put("d", oId.isEmpty() ? tId : oId);
                         db.insertWithOnConflict("ord", null, ocv, SQLiteDatabase.CONFLICT_REPLACE);
                     }
                 }
-
                 if (p.size() > 2) {
                     String name = clean(p.get(2));
-                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.equalsIgnoreCase("Total") && !name.contains("Total") && !name.equalsIgnoreCase("#N/A") && !name.equalsIgnoreCase("N/A")) {
-                        int o = (p.size() > 3) ? parseInt(p.get(3)) : 0;
-                        int l = (p.size() > 4) ? parseInt(p.get(4)) : 0;
-                        int op = (p.size() > 5) ? parseInt(p.get(5)) : 0;
-                        int k = (p.size() > 6) ? parseInt(p.get(6)) : 0;
-
+                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.contains("Total") && !name.contains("#N/A")) {
+                        int o = p.size() > 3 ? parseInt(p.get(3)) : 0, l = p.size() > 4 ? parseInt(p.get(4)) : 0;
+                        int op = p.size() > 5 ? parseInt(p.get(5)) : 0, k = p.size() > 6 ? parseInt(p.get(6)) : 0;
                         if (o > 0 || l > 0 || op > 0 || k > 0) {
                             ContentValues cv = new ContentValues();
-                            cv.put("n", name);
-                            cv.put("o", o);
-                            cv.put("l", l);
-                            cv.put("p", op);
-                            cv.put("k", k);
-                            cv.put("dt", opDate);
-                            tempAgentData.add(cv);
-                            parsedAgentsInSheet++;
+                            cv.put("n", name); cv.put("o", o); cv.put("l", l); cv.put("p", op); cv.put("k", k); cv.put("dt", opDate);
+                            temp.add(cv); parsed++;
                         }
                     }
                 }
-
                 if (p.size() > 8) {
                     String hname = clean(p.get(8));
                     if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
-                        String o = (p.size() > 9) ? clean(p.get(9)) : "0";
-                        String l = (p.size() > 10) ? clean(p.get(10)) : "0";
-                        String lc = (p.size() > 11) ? clean(p.get(11)) : "0%";
-                        String ofp = (p.size() > 12) ? clean(p.get(12)) : "0";
-                        String pik = (p.size() > 13) ? clean(p.get(13)) : "0";
-                        String kc = (p.size() > 14) ? clean(p.get(14)) : "0%";
-                        String tc = (p.size() > 15) ? clean(p.get(15)) : "0%";
-
-                        int dnp = parseInt(o) + parseInt(ofp);
-                        int dnpc = parseInt(l) + parseInt(pik);
-
                         ContentValues hcv = new ContentValues();
-                        hcv.put("hname", hname);
-                        hcv.put("o", o);
-                        hcv.put("l", l);
-                        hcv.put("lc", lc);
-                        hcv.put("p", ofp);
-                        hcv.put("k", pik);
-                        hcv.put("kc", kc);
-                        hcv.put("dnp", String.valueOf(dnp));
-                        hcv.put("dnpc", String.valueOf(dnpc));
-                        hcv.put("tc", tc);
+                        hcv.put("hname", hname); hcv.put("o", p.size() > 9 ? clean(p.get(9)) : "0");
+                        hcv.put("l", p.size() > 10 ? clean(p.get(10)) : "0"); hcv.put("lc", p.size() > 11 ? clean(p.get(11)) : "0%");
+                        hcv.put("p", p.size() > 12 ? clean(p.get(12)) : "0"); hcv.put("k", p.size() > 13 ? clean(p.get(13)) : "0");
+                        hcv.put("kc", p.size() > 14 ? clean(p.get(14)) : "0%"); hcv.put("tc", p.size() > 15 ? clean(p.get(15)) : "0%");
+                        hcv.put("dnp", String.valueOf(parseInt(p.get(9)) + parseInt(p.get(12))));
+                        hcv.put("dnpc", String.valueOf(parseInt(p.get(10)) + parseInt(p.get(13))));
                         hcv.put("dt", opDate);
                         db.insert("hub_prf", null, hcv);
                     }
                 }
-
                 if (p.size() > 19) {
-                    String cName = clean(p.get(17));
-                    String cRole = clean(p.get(18));
-                    String cPhone = clean(p.get(19));
-                    if (!cName.isEmpty() && !cName.equalsIgnoreCase("NAME") && !cPhone.equalsIgnoreCase("PHONE") && cPhone.matches(".*\\d+.*")) {
+                    String cN = clean(p.get(17)), cR = clean(p.get(18)), cP = clean(p.get(19));
+                    if (!cN.isEmpty() && !cN.equalsIgnoreCase("NAME") && cP.matches(".*\\d+.*")) {
                         ContentValues cntCv = new ContentValues();
-                        cntCv.put("name", cName);
-                        cntCv.put("role", cRole.isEmpty() ? "Staff" : cRole);
-                        cntCv.put("phone", cPhone);
+                        cntCv.put("name", cN); cntCv.put("role", cR.isEmpty() ? "Staff" : cR); cntCv.put("phone", cP);
                         db.insert("contacts", null, cntCv);
                     }
                 }
             }
 
-            SharedPreferences prefs = getSharedPreferences("DeliveryTrackerPrefs", MODE_PRIVATE);
-            if (parsedAgentsInSheet == 0) {
-                Cursor lastDayC = db.rawQuery("SELECT dt FROM prf GROUP BY dt HAVING SUM(o) > 0 ORDER BY dt DESC LIMIT 1", null);
-                if (lastDayC != null && lastDayC.moveToFirst()) {
-                    String completedDay = lastDayC.getString(0);
-                    boolean alreadyReported = prefs.getBoolean("eod_reported_" + completedDay, false);
-                    if (!alreadyReported) {
-                        prefs.edit().putBoolean("eod_reported_" + completedDay, true).apply();
-                        new Handler(Looper.getMainLooper()).post(() -> triggerAutomaticEODReport(completedDay));
-                    }
-                }
-                if (lastDayC != null) lastDayC.close();
-            } else {
+            if (parsed > 0) {
                 db.execSQL("DELETE FROM prf WHERE dt = '" + opDate + "'");
-                for (ContentValues cv : tempAgentData) {
-                    db.insert("prf", null, cv);
-                }
+                for (ContentValues cv : temp) db.insert("prf", null, cv);
             }
-
-            db.setTransactionSuccessful();
-            db.endTransaction();
-            reader.close();
-            lastSyncTime = System.currentTimeMillis();
+            db.setTransactionSuccessful(); db.endTransaction();
+            reader.close(); lastSyncTime = System.currentTimeMillis();
 
             new Handler(Looper.getMainLooper()).post(() -> {
-                load();
-                loadHubVsHub();
-                loadContacts();
-                cnt();
-                qry("");
-                if (!isAuto) {
-                    showLoading(false, null);
-                    Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
-                }
+                load(); loadHubVsHub(); loadContacts(); cnt(); qry("");
+                if (loadingOverlay != null) loadingOverlay.setVisibility(View.GONE);
+                if (!isAuto) Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
             });
         } catch (Exception e) {
             new Handler(Looper.getMainLooper()).post(() -> {
-                if (!isAuto) {
-                    showLoading(false, null);
-                    Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
+                if (loadingOverlay != null) loadingOverlay.setVisibility(View.GONE);
+                if (!isAuto) Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
         }
     }
 
-    String clean(String s) {
-        if (s == null) return "";
-        return s.replace("\"", "").trim();
-    }
-
-    int parseInt(String s) {
-        try {
-            return Integer.parseInt(clean(s).replace("%", ""));
-        } catch (Exception e) {
-            return 0;
-        }
-    }
+    String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
+    int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
 }
