@@ -94,7 +94,7 @@ public class MainActivity extends Activity {
     String getPerformanceBadge(double delConv, int ofd) {
         if (ofd == 0) return "⚪ NO OFD ASSIGNED";
         if (delConv >= 96.0) return "🌟 EXCELLENT PERFORMANCE";
-        if (delConv >= 92.0) return "🔥 BEST PERFORMANCE (Target Met)";
+        if (delConv >= 92.0) return "🔥 BEST PERFORMANCE";
         if (delConv >= 88.0) return "⚠️ FOCUS PERFORMANCE";
         return "🚨 NOT ACCEPTED - IMPROVE YOUR PERFORMANCE";
     }
@@ -127,6 +127,7 @@ public class MainActivity extends Activity {
 
     String getWeekStartDate(String dateStr) {
         try {
+            if (dateStr == null) return getOperationalDate();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
             cal.setTime(sdf.parse(dateStr));
@@ -136,19 +137,20 @@ public class MainActivity extends Activity {
             cal.add(Calendar.DAY_OF_MONTH, -diff);
             return sdf.format(cal.getTime());
         } catch (Exception e) {
-            return dateStr;
+            return dateStr != null ? dateStr : getOperationalDate();
         }
     }
 
     String getWeekEndDate(String dateStr) {
         try {
+            if (dateStr == null) return getOperationalDate();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
             cal.setTime(sdf.parse(getWeekStartDate(dateStr)));
             cal.add(Calendar.DAY_OF_MONTH, 6);
             return sdf.format(cal.getTime());
         } catch (Exception e) {
-            return dateStr;
+            return dateStr != null ? dateStr : getOperationalDate();
         }
     }
         void shareSingleAgentReport(String name, int ofd, int del, int ofp, int pik, int dnp, int dnpc, double delConv) {
@@ -179,7 +181,7 @@ public class MainActivity extends Activity {
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
             shareIntent.setType("text/plain");
             shareIntent.putExtra(Intent.EXTRA_TEXT, sb.toString());
-            startActivity(Intent.createChooser(shareIntent, "📢 Share Agent Report"));
+            startActivity(Intent.createChooser(shareIntent, "📢 Share Scorecard"));
         } catch (Exception e) {
             Toast.makeText(this, "Error sharing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -866,18 +868,19 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(0, -2, 1f);
                 nameRow.addView(n, nLp);
 
-                String streakDisplay = (prevStrk > 0) ? "🔥 " + curStrk + "D (Prev: " + prevStrk + "D)" : "🔥 " + curStrk + "D";
+                // FIXED PREVIOUS STREAK (Properly Displays Current + Previous Streak)
+                String streakDisplay = "🔥 " + curStrk + "D (Prev: " + (prevStrk > 0 ? prevStrk + "D" : "--") + ")";
                 TextView st = new TextView(this);
                 st.setText(streakDisplay);
                 st.setTextColor(Color.parseColor("#FBBF24"));
-                st.setTextSize(11.5f);
+                st.setTextSize(11f);
                 st.setTypeface(Typeface.DEFAULT_BOLD);
                 st.setBackground(box(Color.parseColor("#1F222E"), 8, 0, 0));
                 st.setPadding(10, 5, 10, 5);
                 nameRow.addView(st);
                 card.addView(nameRow);
 
-                // Stats Section
+                // Stats Block
                 LinearLayout statsBox = new LinearLayout(this);
                 statsBox.setOrientation(LinearLayout.VERTICAL);
                 statsBox.setBackground(box(Color.parseColor("#1B1D2C"), 12, Color.parseColor("#26293B"), 1));
@@ -908,7 +911,7 @@ public class MainActivity extends Activity {
                     tAgGap.setText("🎯 92% Target Achieved! 🚀");
                     tAgGap.setTextColor(Color.parseColor("#00E676"));
                 } else if (ofdVal > 0) {
-                    tAgGap.setText("🎯 Gap to 92%: " + agDiff + " more DEL required");
+                    tAgGap.setText("🎯 Gap to 92%: " + diff + " more DEL required");
                     tAgGap.setTextColor(Color.parseColor("#FB923C"));
                 } else {
                     tAgGap.setText("");
@@ -919,7 +922,7 @@ public class MainActivity extends Activity {
                 statsBox.addView(tAgGap);
                 card.addView(statsBox);
 
-                // Previous Miss Notification
+                // Previous Working Day Status
                 Cursor yc = db.rawQuery("SELECT dt, o, l, (CAST(l AS REAL)*100.0/CASE WHEN o>0 THEN o ELSE 1 END) FROM prf WHERE n = ? AND dt < ? AND o > 0 ORDER BY dt DESC LIMIT 1", new String[]{ag[0], opDate});
                 if (yc != null && yc.moveToFirst()) {
                     String yDt = yc.getString(0);
@@ -928,54 +931,53 @@ public class MainActivity extends Activity {
                     double yConv = yc.getDouble(3);
                     int yGap = (int) Math.ceil(0.92 * yO) - yL;
 
-                    TextView tPrevMiss = new TextView(this);
-                    if (yConv < 92.0) {
-                        tPrevMiss.setText("⚠️ Prev Day (" + yDt + "): " + String.format(Locale.US, "%.1f%%", yConv) + " (Missed 92% by " + yGap + " DEL)");
-                        tPrevMiss.setTextColor(Color.parseColor("#EF4444"));
-                    } else {
-                        tPrevMiss.setText("✅ Prev Day (" + yDt + "): " + String.format(Locale.US, "%.1f%%", yConv) + " (92% Achieved)");
-                        tPrevMiss.setTextColor(Color.parseColor("#10B981"));
-                    }
-                    tPrevMiss.setTextSize(12f);
-                    tPrevMiss.setTypeface(Typeface.DEFAULT_BOLD);
-                    tPrevMiss.setPadding(0, 0, 0, 6);
-                    card.addView(tPrevMiss);
+                                    TextView tPrevMiss = new TextView(this);
+                if (yConv < 92.0) {
+                    tPrevMiss.setText("⚠️ Prev Day (" + yDt + "): " + String.format(Locale.US, "%.1f%%", yConv) + " (Missed 92% by " + yGap + " DEL)");
+                    tPrevMiss.setTextColor(Color.parseColor("#EF4444"));
+                } else {
+                    tPrevMiss.setText("✅ Prev Day (" + yDt + "): " + String.format(Locale.US, "%.1f%%", yConv) + " (92% Achieved)");
+                    tPrevMiss.setTextColor(Color.parseColor("#10B981"));
                 }
-                if (yc != null) yc.close();
-
-                // Card Action Row: Details & Single Share
-                LinearLayout btnRow = new LinearLayout(this);
-                btnRow.setOrientation(LinearLayout.HORIZONTAL);
-
-                Button bDetails = new Button(this);
-                bDetails.setText("📊 View Weeks / Day Logs");
-                bDetails.setBackground(box(Color.parseColor("#1F2232"), 8, Color.parseColor("#38BDF8"), 1));
-                bDetails.setTextColor(Color.parseColor("#38BDF8"));
-                bDetails.setTextSize(11.5f);
-                bDetails.setTypeface(Typeface.DEFAULT_BOLD);
-                final String agName = ag[0];
-                bDetails.setOnClickListener(v -> showDetails(agName));
-
-                Button bSingleShare = new Button(this);
-                bSingleShare.setText("📢 Share Card");
-                bSingleShare.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
-                bSingleShare.setTextColor(Color.BLACK);
-                bSingleShare.setTextSize(11.5f);
-                bSingleShare.setTypeface(Typeface.DEFAULT_BOLD);
-                bSingleShare.setOnClickListener(v -> shareSingleAgentReport(agName, ofdVal, delVal, ofpVal, pikVal, dnpVal, dnpcVal, ofdRate));
-
-                LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(0, -2, 1.2f);
-                dLp.setMargins(0, 0, 6, 0);
-                btnRow.addView(bDetails, dLp);
-                btnRow.addView(bSingleShare, new LinearLayout.LayoutParams(0, -2, 0.8f));
-                card.addView(btnRow);
-
-                vCrd.addView(card);
-                currentRank++;
+                tPrevMiss.setTextSize(12f);
+                tPrevMiss.setTypeface(Typeface.DEFAULT_BOLD);
+                tPrevMiss.setPadding(0, 0, 0, 6);
+                card.addView(tPrevMiss);
             }
-        } catch (Exception ignored) {}
+            if (yc != null) yc.close();
+
+            LinearLayout btnRow = new LinearLayout(this);
+            btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+            Button bDetails = new Button(this);
+            bDetails.setText("📊 View Weeks / Days");
+            bDetails.setBackground(box(Color.parseColor("#1F2232"), 8, Color.parseColor("#38BDF8"), 1));
+            bDetails.setTextColor(Color.parseColor("#38BDF8"));
+            bDetails.setTextSize(11.5f);
+            bDetails.setTypeface(Typeface.DEFAULT_BOLD);
+            final String agName = ag[0];
+            bDetails.setOnClickListener(v -> showDetails(agName));
+
+            Button bSingleShare = new Button(this);
+            bSingleShare.setText("📢 Share Card");
+            bSingleShare.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+            bSingleShare.setTextColor(Color.BLACK);
+            bSingleShare.setTextSize(11.5f);
+            bSingleShare.setTypeface(Typeface.DEFAULT_BOLD);
+            bSingleShare.setOnClickListener(v -> shareSingleAgentReport(agName, ofdVal, delVal, ofpVal, pikVal, dnpVal, dnpcVal, ofdRate));
+
+            LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(0, -2, 1.2f);
+            dLp.setMargins(0, 0, 6, 0);
+            btnRow.addView(bDetails, dLp);
+            btnRow.addView(bSingleShare, new LinearLayout.LayoutParams(0, -2, 0.8f));
+            card.addView(btnRow);
+
+            vCrd.addView(card);
+            currentRank++;
         }
-        void shareLiveReportToGroup() {
+    } catch (Exception ignored) {}
+}
+    void shareLiveReportToGroup() {
         try {
             String opDate = getOperationalDate();
             StringBuilder sb = new StringBuilder();
@@ -1257,8 +1259,7 @@ public class MainActivity extends Activity {
         if (c != null) c.close();
         return res;
     }
-
-    void showDetails(String name) {
+        void showDetails(String name) {
         boolean isKirana = isKiranaAgent(name);
 
         LinearLayout pop = new LinearLayout(this);
@@ -1356,7 +1357,7 @@ public class MainActivity extends Activity {
             .setView(pop)
             .setPositiveButton("Close", null)
             .show();
-    }
+        }
         LinearLayout makeInteractivePeriodCard(String agentName, String title, int o, int l, int p, int k, String dStart, String dEnd) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -1394,7 +1395,6 @@ public class MainActivity extends Activity {
         tBadge.setPadding(0, 4, 0, 10);
         card.addView(tBadge);
 
-        // Buttons: Day logs & Share
         LinearLayout bRow = new LinearLayout(this);
         bRow.setOrientation(LinearLayout.HORIZONTAL);
 
@@ -1683,8 +1683,7 @@ public class MainActivity extends Activity {
             if (c != null) c.close();
         } catch (Exception ignored) {}
     }
-
-    void loadContacts() {
+        void loadContacts() {
         vCntCrd.removeAllViews();
         Cursor c = db.rawQuery("SELECT name, role, phone FROM contacts", null);
         if (c != null && c.getCount() > 0) {
@@ -1802,8 +1801,7 @@ public class MainActivity extends Activity {
             if (c != null) c.close();
         } catch (Exception ignored) {}
     }
-
-    ArrayList<String> fastSplitCsv(String line) {
+        ArrayList<String> fastSplitCsv(String line) {
         ArrayList<String> res = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
         boolean inQuotes = false;
@@ -1959,7 +1957,7 @@ public class MainActivity extends Activity {
             reader.close();
             lastSyncTime = System.currentTimeMillis();
 
-                        new Handler(Looper.getMainLooper()).post(() -> {
+            new Handler(Looper.getMainLooper()).post(() -> {
                 load();
                 loadHubVsHub();
                 loadContacts();
