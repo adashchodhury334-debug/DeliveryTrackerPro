@@ -1440,14 +1440,323 @@ public class MainActivity extends Activity {
                 StringBuilder sb = new StringBuilder();
                 sb.append("🧮 *CONVERSION & TARGET REPORT*\n");
                 sb.append("👤 *Name:* ").append(agentTitle).append("\n");
+    void doSync(boolean isAuto) {
+        new Handler(Looper.getMainLooper()).post(() -> { if (!isAuto && loadingOverlay != null) loadingOverlay.setVisibility(View.VISIBLE); });
+        try {
+            String targetUrl = CSV;
+            HttpURLConnection conn = null;
+            for (int i = 0; i < 5; i++) {
+                conn = (HttpURLConnection) new URL(targetUrl).openConnection();
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+                conn.setConnectTimeout(8000); conn.setReadTimeout(8000);
+                conn.setInstanceFollowRedirects(false);
+                int code = conn.getResponseCode();
+                if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                    targetUrl = conn.getHeaderField("Location");
+                } else {
+                    break;
+                }
+            }
+            InputStream is = (conn != null) ? conn.getInputStream() : null;
+            if (is == null) throw new Exception("Connect failed");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            String line, opDate = getOperationalDate();
+            int parsed = 0;
+
+            ArrayList<ContentValues> tempOrd = new ArrayList<>();
+            ArrayList<ContentValues> tempContacts = new ArrayList<>();
+            ArrayList<ContentValues> tempHub = new ArrayList<>();
+            ArrayList<ContentValues> temp = new ArrayList<>();
+
+            while ((line = reader.readLine()) != null) {
+                ArrayList<String> p = fastSplitCsv(line);
+                if (p.size() >= 1) {
+                    String tId = clean(p.get(0)), oId = (p.size() > 1) ? clean(p.get(1)) : "";
+                    if (!tId.isEmpty() && !tId.equalsIgnoreCase("TRACKING ID") && !tId.equalsIgnoreCase("TRACK ID")) {
+                        ContentValues ocv = new ContentValues();
+                        ocv.put("t", tId); ocv.put("d", oId.isEmpty() ? tId : oId);
+                        tempOrd.add(ocv);
+                    }
+                }
+                if (p.size() > 2) {
+                    String name = clean(p.get(2));
+                    if (!name.isEmpty() && !name.equalsIgnoreCase("NAME") && !name.contains("Total") && !name.contains("#N/A")) {
+                        int o = p.size() > 3 ? parseInt(p.get(3)) : 0, l = p.size() > 4 ? parseInt(p.get(4)) : 0;
+                        int op = p.size() > 5 ? parseInt(p.get(5)) : 0, k = p.size() > 6 ? parseInt(p.get(6)) : 0;
+                        if (o > 0 || l > 0 || op > 0 || k > 0) {
+                            ContentValues cv = new ContentValues();
+                            cv.put("n", name); cv.put("o", o); cv.put("l", l); cv.put("p", op); cv.put("k", k); cv.put("dt", opDate);
+                            temp.add(cv); parsed++;
+                        }
+                    }
+                }
+                if (p.size() > 8) {
+                    String hname = clean(p.get(8));
+                    if (!hname.isEmpty() && !hname.equalsIgnoreCase("HUB NAME")) {
+                        ContentValues hcv = new ContentValues();
+                        hcv.put("hname", hname); hcv.put("o", p.size() > 9 ? clean(p.get(9)) : "0");
+                        hcv.put("l", p.size() > 10 ? clean(p.get(10)) : "0"); hcv.put("lc", p.size() > 11 ? clean(p.get(11)) : "0%");
+                        hcv.put("p", p.size() > 12 ? clean(p.get(12)) : "0"); hcv.put("k", p.size() > 13 ? clean(p.get(13)) : "0");
+                        hcv.put("kc", p.size() > 14 ? clean(p.get(14)) : "0%"); hcv.put("tc", p.size() > 15 ? clean(p.get(15)) : "0%");
+                        hcv.put("dnp", String.valueOf(parseInt(p.get(9)) + parseInt(p.get(12))));
+                        hcv.put("dnpc", String.valueOf(parseInt(p.get(10)) + parseInt(p.get(13))));
+                        hcv.put("dt", opDate);
+                        tempHub.add(hcv);
+                    }
+                }
+                if (p.size() > 19) {
+                    String cN = clean(p.get(17)), cR = clean(p.get(18)), cP = clean(p.get(19));
+                    if (!cN.isEmpty() && !cN.equalsIgnoreCase("NAME") && cP.matches(".*\\d+.*")) {
+                        ContentValues cntCv = new ContentValues();
+                        cntCv.put("name", cN); cntCv.put("role", cR.isEmpty() ? "Staff" : cR); cntCv.put("phone", cP);
+                        tempContacts.add(cntCv);
+                    }
+                }
+            }
+
+            db.beginTransaction();
+            if (!tempOrd.isEmpty()) {
+                db.execSQL("DELETE FROM ord");
+                for (ContentValues cv : tempOrd) db.insertWithOnConflict("ord", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+            }
+            if (!tempContacts.isEmpty()) {
+                db.execSQL("DELETE FROM contacts");
+                for (ContentValues cv : tempContacts) db.insert("contacts", null, cv);
+            }
+            if (!tempHub.isEmpty()) {
+                db.execSQL("DELETE FROM hub_prf WHERE dt = '" + opDate + "'");
+                for (ContentValues cv : tempHub) db.insert("hub_prf", null, cv);
+            }
+            if (parsed > 0) {
+                db.execSQL("DELETE FROM prf WHERE dt = '" + opDate + "'");
+                for (ContentValues cv : temp) db.insert("prf", null, cv);
+            }
+            db.setTransactionSuccessful();
+            db.endTransaction();
+            reader.close();
+            lastSyncTime = System.currentTimeMillis();
+
+            new Handler(Looper.getMainLooper()).post(() -> {
+                load(); loadHubVsHub(); loadContacts(); cnt(); qry("");
+                if (loadingOverlay != null) loadingOverlay.setVisibility(View.GONE);
+                if (!isAuto) Toast.makeText(MainActivity.this, "✅ Synced Successfully!", Toast.LENGTH_SHORT).show();
+            });
+        } catch (Exception e) {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (loadingOverlay != null) loadingOverlay.setVisibility(View.GONE);
+                if (!isAuto) Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
+    void showConversionCalculatorDialog() {
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(20, 18, 20, 18);
+        d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        d.addView(tv("🧮 CONV & TARGET CALCULATOR", Color.parseColor("#38BDF8"), 15f, true));
+
+        EditText etSearch = new EditText(this);
+        etSearch.setHint("🔍 Search Agent / Kirana (A-Z)...");
+        etSearch.setHintTextColor(Color.parseColor("#717688"));
+        etSearch.setTextColor(Color.WHITE);
+        etSearch.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etSearch.setPadding(14, 10, 14, 10);
+        etSearch.setTextSize(13f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 8, 0, 6);
+        etSearch.setLayoutParams(lp);
+        d.addView(etSearch);
+
+        Spinner spNames = new Spinner(this);
+        ArrayList<String> namesList = new ArrayList<>();
+        namesList.add("-- Select Active Agent / Kirana --");
+        
+        Cursor c = db.rawQuery("SELECT DISTINCT n FROM prf ORDER BY n ASC", null);
+        while (c != null && c.moveToNext()) {
+            String n = c.getString(0);
+            if (n != null && !n.isEmpty()) namesList.add(n);
+        }
+        if (c != null) c.close();
+
+        ArrayAdapter<String> nameAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, namesList);
+        spNames.setAdapter(nameAdapter);
+        d.addView(spNames);
+
+        EditText etOfdTotal = new EditText(this);
+        etOfdTotal.setHint("OFD Total (Assigned)");
+        etOfdTotal.setHintTextColor(Color.parseColor("#717688"));
+        etOfdTotal.setTextColor(Color.WHITE);
+        etOfdTotal.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etOfdTotal.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etOfdTotal.setPadding(14, 10, 14, 10);
+        etOfdTotal.setLayoutParams(lp);
+        d.addView(etOfdTotal);
+
+        EditText etDelDone = new EditText(this);
+        etDelDone.setHint("DEL Done (Delivered)");
+        etDelDone.setHintTextColor(Color.parseColor("#717688"));
+        etDelDone.setTextColor(Color.WHITE);
+        etDelDone.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etDelDone.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etDelDone.setPadding(14, 10, 14, 10);
+        etDelDone.setLayoutParams(lp);
+        d.addView(etDelDone);
+
+        EditText etOfpTotal = new EditText(this);
+        etOfpTotal.setHint("OFP Total (Assigned)");
+        etOfpTotal.setHintTextColor(Color.parseColor("#717688"));
+        etOfpTotal.setTextColor(Color.WHITE);
+        etOfpTotal.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etOfpTotal.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etOfpTotal.setPadding(14, 10, 14, 10);
+        etOfpTotal.setLayoutParams(lp);
+        d.addView(etOfpTotal);
+
+        EditText etPikDone = new EditText(this);
+        etPikDone.setHint("PIK Done (Picked)");
+        etPikDone.setHintTextColor(Color.parseColor("#717688"));
+        etPikDone.setTextColor(Color.WHITE);
+        etPikDone.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etPikDone.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etPikDone.setPadding(14, 10, 14, 10);
+        etPikDone.setLayoutParams(lp);
+        d.addView(etPikDone);
+
+        etSearch.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+                ArrayList<String> filtered = new ArrayList<>();
+                filtered.add("-- Select Active Agent / Kirana --");
+                Cursor fc = db.rawQuery("SELECT DISTINCT n FROM prf WHERE n LIKE ? ORDER BY n ASC", new String[]{"%" + query + "%"});
+                while (fc != null && fc.moveToNext()) {
+                    String n = fc.getString(0);
+                    if (n != null && !n.isEmpty()) filtered.add(n);
+                }
+                if (fc != null) fc.close();
+                ArrayAdapter<String> fAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, filtered);
+                spNames.setAdapter(fAdapter);
+            }
+            public void afterTextChanged(Editable s) {}
+        });
+
+        spNames.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                String selectedName = (String) spNames.getSelectedItem();
+                if (selectedName != null && !selectedName.startsWith("--")) {
+                    Cursor sc = db.rawQuery("SELECT o, l, p, k FROM prf WHERE n = ? ORDER BY dt DESC LIMIT 1", new String[]{selectedName});
+                    if (sc != null && sc.moveToFirst()) {
+                        etOfdTotal.setText(String.valueOf(sc.getInt(0)));
+                        etDelDone.setText(String.valueOf(sc.getInt(1)));
+                        etOfpTotal.setText(String.valueOf(sc.getInt(2)));
+                        etPikDone.setText(String.valueOf(sc.getInt(3)));
+                    }
+                    if (sc != null) sc.close();
+                }
+            }
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+
+        ScrollView sv = new ScrollView(this);
+        LinearLayout resBox = new LinearLayout(this);
+        resBox.setOrientation(LinearLayout.VERTICAL);
+        resBox.setPadding(0, 8, 0, 8);
+        sv.addView(resBox);
+        d.addView(sv, new LinearLayout.LayoutParams(-1, 240));
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button bCalcRes = new Button(this);
+        bCalcRes.setText("⚡ CALCULATE");
+        bCalcRes.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bCalcRes.setTextColor(Color.BLACK);
+        bCalcRes.setTypeface(Typeface.DEFAULT_BOLD);
+        bCalcRes.setTextSize(11f);
+
+        Button bShareCalc = new Button(this);
+        bShareCalc.setText("📢 SHARE RESULT");
+        bShareCalc.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+        bShareCalc.setTextColor(Color.BLACK);
+        bShareCalc.setTypeface(Typeface.DEFAULT_BOLD);
+        bShareCalc.setTextSize(11f);
+
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        bLp.setMargins(0, 4, 4, 0);
+        btnRow.addView(bCalcRes, bLp);
+        btnRow.addView(bShareCalc, new LinearLayout.LayoutParams(0, -2, 1f));
+        d.addView(btnRow);
+
+        bCalcRes.setOnClickListener(v -> {
+            try {
+                int ofd = parseInt(etOfdTotal.getText().toString());
+                int del = parseInt(etDelDone.getText().toString());
+                int ofp = parseInt(etOfpTotal.getText().toString());
+                int pik = parseInt(etPikDone.getText().toString());
+
+                resBox.removeAllViews();
+                if (ofd <= 0 && ofp <= 0) {
+                    resBox.addView(tv("⚠️ Please enter valid totals", Color.parseColor("#EF4444"), 13f, true));
+                    return;
+                }
+
+                double ofdC = ofd > 0 ? ((double) del / ofd) * 100.0 : 0.0;
+                double ofpC = ofp > 0 ? ((double) pik / ofp) * 100.0 : 0.0;
+                int totDnp = ofd + ofp;
+                int totDnpc = del + pik;
+                double totC = totDnp > 0 ? ((double) totDnpc / totDnp) * 100.0 : 0.0;
+
+                int targetNeeded = (int) Math.ceil(0.92 * ofd);
+                int gap = targetNeeded - del;
+
+                resBox.addView(tv("📊 Calculation Results:", Color.parseColor("#38BDF8"), 13f, true));
+                resBox.addView(tv("• OFD/DEL Conv: " + String.format(Locale.US, "%.1f%%", ofdC), Color.parseColor("#00E676"), 13.5f, true));
+                resBox.addView(tv("• OFP/PIK Conv: " + String.format(Locale.US, "%.1f%%", ofpC), Color.parseColor("#38BDF8"), 13.5f, true));
+                resBox.addView(tv("• Total DNP Conv: " + String.format(Locale.US, "%.1f%%", totC), Color.parseColor("#34D399"), 13.5f, true));
+
+                if (ofd > 0) {
+                    if (gap <= 0) {
+                        resBox.addView(tv("• 92% Target: Achieved! 🚀", Color.parseColor("#00E676"), 13f, true));
+                    } else {
+                        resBox.addView(tv("• 92% Target Gap: Need " + gap + " more DEL", Color.parseColor("#FB923C"), 13f, true));
+                    }
+                }
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Enter valid numbers", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        bShareCalc.setOnClickListener(v -> {
+            try {
+                int ofd = parseInt(etOfdTotal.getText().toString());
+                int del = parseInt(etDelDone.getText().toString());
+                int ofp = parseInt(etOfpTotal.getText().toString());
+                int pik = parseInt(etPikDone.getText().toString());
+                double ofdC = ofd > 0 ? ((double) del / ofd) * 100.0 : 0.0;
+                double ofpC = ofp > 0 ? ((double) pik / ofp) * 100.0 : 0.0;
+                int totDnp = ofd + ofp;
+                int totDnpc = del + pik;
+                double totC = totDnp > 0 ? ((double) totDnpc / totDnp) * 100.0 : 0.0;
+                int gap = (int) Math.ceil(0.92 * ofd) - del;
+
+                String selName = (String) spNames.getSelectedItem();
+                String agentTitle = (selName != null && !selName.startsWith("--")) ? selName : "Manual Calculation";
+                String badge = getPerformanceBadge(ofdC, ofd);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("🧮 *CONVERSION & TARGET REPORT*\n");
+                sb.append("👤 *Name:* ").append(agentTitle).append("\n");
                 sb.append("📅 *Date:* ").append(getOperationalDate()).append("\n");
                 sb.append("━━━━━━━━━━━━━━━━━━━━\n");
                 sb.append("🚚 *OFD / DEL:* ").append(ofd).append(" / ").append(del).append(" (").append(String.format(Locale.US, "%.1f%%", ofdC)).append(")\n");
                 sb.append("📦 *OFP / PIK:* ").append(ofp).append(" / ").append(pik).append(" (").append(String.format(Locale.US, "%.1f%%", ofpC)).append(")\n");
                 sb.append("🔄 *Total DNP:* ").append(totDnp).append(" / ").append(totDnpc).append(" (").append(String.format(Locale.US, "%.1f%%", totC)).append(")\n");
                 sb.append(gap <= 0 && ofd > 0 ? "🎯 *Target:* 92% Achieved! 🚀\n" : "🎯 *Target Gap:* " + gap + " more DEL required\n");
+                sb.append("🏆 *Rating:* ").append(badge).append("\n");
                 sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-                sb.append("⚡ _Calculated via Delivery Tracker Pro_");
+                sb.append("⚡ _Calculated via LIVE (Delivery Tracker Pro)_");
 
                 Intent it = new Intent(Intent.ACTION_SEND);
                 it.setType("text/plain");
@@ -1466,4 +1775,4 @@ public class MainActivity extends Activity {
 
     String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
-                                                                                                                  }
+}
