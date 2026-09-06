@@ -1227,3 +1227,232 @@ public class MainActivity extends Activity {
     String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
 }
+    void showConversionCalculatorDialog() {
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(20, 18, 20, 18);
+        d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        d.addView(tv("🧮 CONV & TARGET CALCULATOR", Color.parseColor("#38BDF8"), 15f, true));
+
+        // 1. Search Box for Names
+        EditText etSearch = new EditText(this);
+        etSearch.setHint("🔍 Search Agent / Kirana (A-Z)...");
+        etSearch.setHintTextColor(Color.parseColor("#717688"));
+        etSearch.setTextColor(Color.WHITE);
+        etSearch.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etSearch.setPadding(14, 10, 14, 10);
+        etSearch.setTextSize(13f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 8, 0, 6);
+        etSearch.setLayoutParams(lp);
+        d.addView(etSearch);
+
+        // 2. A-to-Z Sorted Spinner for Active Agents & Kirana
+        Spinner spNames = new Spinner(this);
+        ArrayList<String> namesList = new ArrayList<>();
+        namesList.add("-- Select Active Agent / Kirana --");
+        
+        Cursor c = db.rawQuery("SELECT DISTINCT n FROM prf ORDER BY n ASC", null);
+        while (c != null && c.moveToNext()) {
+            String n = c.getString(0);
+            if (n != null && !n.isEmpty()) namesList.add(n);
+        }
+        if (c != null) c.close();
+
+        ArrayAdapter<String> nameAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, namesList);
+        spNames.setAdapter(nameAdapter);
+        d.addView(spNames);
+
+        // 3. Input fields for OFD/DEL and OFP/PIK
+        EditText etOfdTotal = new EditText(this);
+        etOfdTotal.setHint("OFD Total (Assigned)");
+        etOfdTotal.setHintTextColor(Color.parseColor("#717688"));
+        etOfdTotal.setTextColor(Color.WHITE);
+        etOfdTotal.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etOfdTotal.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etOfdTotal.setPadding(14, 10, 14, 10);
+        etOfdTotal.setLayoutParams(lp);
+        d.addView(etOfdTotal);
+
+        EditText etDelDone = new EditText(this);
+        etDelDone.setHint("DEL Done (Delivered)");
+        etDelDone.setHintTextColor(Color.parseColor("#717688"));
+        etDelDone.setTextColor(Color.WHITE);
+        etDelDone.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etDelDone.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etDelDone.setPadding(14, 10, 14, 10);
+        etDelDone.setLayoutParams(lp);
+        d.addView(etDelDone);
+
+        EditText etOfpTotal = new EditText(this);
+        etOfpTotal.setHint("OFP Total (Assigned)");
+        etOfpTotal.setHintTextColor(Color.parseColor("#717688"));
+        etOfpTotal.setTextColor(Color.WHITE);
+        etOfpTotal.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etOfpTotal.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etOfpTotal.setPadding(14, 10, 14, 10);
+        etOfpTotal.setLayoutParams(lp);
+        d.addView(etOfpTotal);
+
+        EditText etPikDone = new EditText(this);
+        etPikDone.setHint("PIK Done (Picked)");
+        etPikDone.setHintTextColor(Color.parseColor("#717688"));
+        etPikDone.setTextColor(Color.WHITE);
+        etPikDone.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etPikDone.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etPikDone.setPadding(14, 10, 14, 10);
+        etPikDone.setLayoutParams(lp);
+        d.addView(etPikDone);
+
+        // Real-time Search Filter for Names A-Z
+        etSearch.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().toLowerCase(Locale.ROOT).trim();
+                ArrayList<String> filtered = new ArrayList<>();
+                filtered.add("-- Select Active Agent / Kirana --");
+                Cursor fc = db.rawQuery("SELECT DISTINCT n FROM prf ORDER BY n ASC", null);
+                while (fc != null && fc.moveToNext()) {
+                    String n = fc.getString(0);
+                    if (n != null && n.toLowerCase(Locale.ROOT).contains(query)) {
+                        filtered.add(n);
+                    }
+                }
+                if (fc != null) fc.close();
+                ArrayAdapter<String> fAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, filtered);
+                spNames.setAdapter(fAdapter);
+            }
+            public void afterTextChanged(Editable s) {}
+        });
+
+        // Auto-fill values when a name is selected from list
+        spNames.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                String selectedName = (String) spNames.getSelectedItem();
+                if (selectedName != null && !selectedName.startsWith("--")) {
+                    Cursor sc = db.rawQuery("SELECT o, l, p, k FROM prf WHERE n = ? ORDER BY dt DESC LIMIT 1", new String[]{selectedName});
+                    if (sc != null && sc.moveToFirst()) {
+                        etOfdTotal.setText(String.valueOf(sc.getInt(0)));
+                        etDelDone.setText(String.valueOf(sc.getInt(1)));
+                        etOfpTotal.setText(String.valueOf(sc.getInt(2)));
+                        etPikDone.setText(String.valueOf(sc.getInt(3)));
+                    }
+                    if (sc != null) sc.close();
+                }
+            }
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+
+        ScrollView sv = new ScrollView(this);
+        LinearLayout resBox = new LinearLayout(this);
+        resBox.setOrientation(LinearLayout.VERTICAL);
+        resBox.setPadding(0, 8, 0, 8);
+        sv.addView(resBox);
+        d.addView(sv, new LinearLayout.LayoutParams(-1, 240));
+
+        // Action Buttons Row (Calculate & Share)
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button bCalc = new Button(this);
+        bCalc.setText("⚡ CALCULATE");
+        bCalc.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bCalc.setTextColor(Color.BLACK);
+        bCalc.setTypeface(Typeface.DEFAULT_BOLD);
+        bCalc.setTextSize(11f);
+
+        Button bShareCalc = new Button(this);
+        bShareCalc.setText("📢 SHARE RESULT");
+        bShareCalc.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+        bShareCalc.setTextColor(Color.BLACK);
+        bShareCalc.setTypeface(Typeface.DEFAULT_BOLD);
+        bShareCalc.setTextSize(11f);
+
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        bLp.setMargins(0, 4, 4, 0);
+        btnRow.addView(bCalc, bLp);
+        btnRow.addView(bShareCalc, new LinearLayout.LayoutParams(0, -2, 1f));
+        d.addView(btnRow);
+
+        bCalc.setOnClickListener(v -> {
+            try {
+                int ofd = parseInt(etOfdTotal.getText().toString());
+                int del = parseInt(etDelDone.getText().toString());
+                int ofp = parseInt(etOfpTotal.getText().toString());
+                int pik = parseInt(etPikDone.getText().toString());
+
+                resBox.removeAllViews();
+                if (ofd <= 0 && ofp <= 0) {
+                    resBox.addView(tv("⚠️ Please enter valid totals", Color.parseColor("#EF4444"), 13f, true));
+                    return;
+                }
+
+                double ofdC = ofd > 0 ? ((double) del / ofd) * 100.0 : 0.0;
+                double ofpC = ofp > 0 ? ((double) pik / ofp) * 100.0 : 0.0;
+                int totDnp = ofd + ofp;
+                int totDnpc = del + pik;
+                double totC = totDnp > 0 ? ((double) totDnpc / totDnp) * 100.0 : 0.0;
+
+                int targetNeeded = (int) Math.ceil(0.92 * ofd);
+                int gap = targetNeeded - del;
+
+                resBox.addView(tv("📊 Calculation Results:", Color.parseColor("#38BDF8"), 13f, true));
+                resBox.addView(tv("• OFD/DEL Conv: " + String.format(Locale.US, "%.1f%%", ofdC), Color.parseColor("#00E676"), 13.5f, true));
+                resBox.addView(tv("• OFP/PIK Conv: " + String.format(Locale.US, "%.1f%%", ofpC), Color.parseColor("#38BDF8"), 13.5f, true));
+                resBox.addView(tv("• Total DNP Conv: " + String.format(Locale.US, "%.1f%%", totC), Color.parseColor("#34D399"), 13.5f, true));
+
+                if (ofd > 0) {
+                    if (gap <= 0) {
+                        resBox.addView(tv("• 92% Target: Achieved! 🚀", Color.parseColor("#00E676"), 13f, true));
+                    } else {
+                        resBox.addView(tv("• 92% Target Gap: Need " + gap + " more DEL", Color.parseColor("#FB923C"), 13f, true));
+                    }
+                }
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Enter valid numbers", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        bShareCalc.setOnClickListener(v -> {
+            try {
+                int ofd = parseInt(etOfdTotal.getText().toString());
+                int del = parseInt(etDelDone.getText().toString());
+                int ofp = parseInt(etOfpTotal.getText().toString());
+                int pik = parseInt(etPikDone.getText().toString());
+                double ofdC = ofd > 0 ? ((double) del / ofd) * 100.0 : 0.0;
+                double ofpC = ofp > 0 ? ((double) pik / ofp) * 100.0 : 0.0;
+                int totDnp = ofd + ofp;
+                int totDnpc = del + pik;
+                double totC = totDnp > 0 ? ((double) totDnpc / totDnp) * 100.0 : 0.0;
+                int gap = (int) Math.ceil(0.92 * ofd) - del;
+
+                String selName = (String) spNames.getSelectedItem();
+                String agentTitle = (selName != null && !selName.startsWith("--")) ? selName : "Manual Calculation";
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("🧮 *CONVERSION & TARGET REPORT*\n");
+                sb.append("👤 *Name:* ").append(agentTitle).append("\n");
+                sb.append("📅 *Date:* ").append(getOperationalDate()).append("\n");
+                sb.append("━━━━━━━━━━━━━━━━━━━━\n");
+                sb.append("🚚 *OFD / DEL:* ").append(ofd).append(" / ").append(del).append(" (").append(String.format(Locale.US, "%.1f%%", ofdC)).append(")\n");
+                sb.append("📦 *OFP / PIK:* ").append(ofp).append(" / ").append(pik).append(" (").append(String.format(Locale.US, "%.1f%%", ofpC)).append(")\n");
+                sb.append("🔄 *Total DNP:* ").append(totDnp).append(" / ").append(totDnpc).append(" (").append(String.format(Locale.US, "%.1f%%", totC)).append(")\n");
+                sb.append(gap <= 0 && ofd > 0 ? "🎯 *Target:* 92% Achieved! 🚀\n" : "🎯 *Target Gap:* " + gap + " more DEL required\n");
+                sb.append("━━━━━━━━━━━━━━━━━━━━\n");
+                sb.append("⚡ _Calculated via Delivery Tracker Pro_");
+
+                Intent it = new Intent(Intent.ACTION_SEND);
+                it.setType("text/plain");
+                it.putExtra(Intent.EXTRA_TEXT, sb.toString());
+                startActivity(Intent.createChooser(it, "📢 Share Calculation"));
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Please calculate first", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        new AlertDialog.Builder(this)
+            .setView(d)
+            .setPositiveButton("Close", null)
+            .show();
+    }
