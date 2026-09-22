@@ -1719,6 +1719,6 @@ public class MainActivity extends Activity {
             .show();
     }
 
-    String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
+        String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
 }
