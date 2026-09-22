@@ -7,6 +7,7 @@ import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
@@ -51,7 +52,7 @@ public class MainActivity extends Activity {
     SQLiteDatabase db;
     FrameLayout root;
     LinearLayout vTrk, vPrf, vHub, vCnt, vCrd, vHubCrd, vCntCrd, loadingOverlay, periodFilterRow;
-    Button bT, bP, bH, bC, bSort, bShareHub, bVoiceOtp, bCalc, bCatAgent, bCatKirana, bCatAll, bSubDay, bSubYearly;
+    Button bT, bP, bH, bC, bSort, bShareHub, bVoiceOtp, bCalc, bPay, bCatAgent, bCatKirana, bCatAll, bSubDay, bSubYearly;
     TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tGapTarget, tPersonalBest;
     ArrayList<String[]> ords = new ArrayList<>();
     BaseAdapter adp;
@@ -63,7 +64,8 @@ public class MainActivity extends Activity {
     Runnable autoSyncRunnable = new Runnable() {
         public void run() { new Thread(() -> doSync(true)).start(); autoSyncHandler.postDelayed(this, 120000); }
     };
-        GradientDrawable box(int c, int r, int sCol, int sW) {
+
+    GradientDrawable box(int c, int r, int sCol, int sW) {
         GradientDrawable g = new GradientDrawable();
         g.setColor(c); g.setCornerRadius(r);
         if (sW > 0) g.setStroke(sW, sCol);
@@ -136,7 +138,8 @@ public class MainActivity extends Activity {
             return sdf.format(cal.getTime());
         } catch (Exception e) { return dateStr; }
     }
-        @Override
+
+    @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -146,14 +149,24 @@ public class MainActivity extends Activity {
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
+            db.execSQL("CREATE TABLE IF NOT EXISTS users (mobile TEXT PRIMARY KEY, name TEXT, password TEXT, upi TEXT);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_dt ON prf(dt);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_n ON prf(n);");
         } catch (Exception ignored) {}
+
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#090A0F"));
         setContentView(root);
-        buildUI();
-        new Thread(() -> doSync(true)).start();
+
+        SharedPreferences prefs = getSharedPreferences("TrackerPrefs", MODE_PRIVATE);
+        String loggedMobile = prefs.getString("logged_mobile", null);
+
+        if (loggedMobile == null) {
+            showAuthDialog();
+        } else {
+            buildUI();
+            new Thread(() -> doSync(true)).start();
+        }
     }
 
     @Override
@@ -183,6 +196,17 @@ public class MainActivity extends Activity {
         titleBox.addView(tv("📦 Delivery Tracker Pro", Color.WHITE, 17f, true));
         titleBox.addView(tv("⚡ Managed by Adarsh", Color.parseColor("#38BDF8"), 12f, true));
         h.addView(titleBox, new LinearLayout.LayoutParams(0, -2, 1f));
+
+        bPay = new Button(this);
+        bPay.setText("💸 PAY");
+        bPay.setBackground(box(Color.parseColor("#F59E0B"), 8, 0, 0));
+        bPay.setTextColor(Color.BLACK);
+        bPay.setTypeface(Typeface.DEFAULT_BOLD);
+        bPay.setTextSize(11f);
+        bPay.setOnClickListener(v -> showUpiPaymentDialog());
+        LinearLayout.LayoutParams payLp = new LinearLayout.LayoutParams(-2, -2);
+        payLp.setMargins(0, 0, 6, 0);
+        h.addView(bPay, payLp);
 
         bCalc = new Button(this);
         bCalc.setText("🧮 CALC");
@@ -215,7 +239,8 @@ public class MainActivity extends Activity {
         bRef.setOnClickListener(v -> new Thread(() -> doSync(false)).start());
         h.addView(bRef);
         main.addView(h);
-                LinearLayout tb = new LinearLayout(this);
+
+        LinearLayout tb = new LinearLayout(this);
         tb.setPadding(8, 8, 8, 4);
         bT = makeTabBtn("🔍 ORDER", 0);
         bP = makeTabBtn("📈 PERF", 1);
@@ -296,7 +321,8 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                // 2. PERF TAB
+
+        // 2. PERF TAB
         vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
@@ -373,7 +399,8 @@ public class MainActivity extends Activity {
         sv.addView(vCrd);
         vPrf.addView(sv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vPrf);
-                // 3. HUBS TAB
+
+        // 3. HUBS TAB
         vHub = new LinearLayout(this);
         vHub.setOrientation(LinearLayout.VERTICAL);
         vHub.setVisibility(View.GONE);
@@ -422,6 +449,7 @@ public class MainActivity extends Activity {
     }
 
     LinearLayout makeSummaryCard(String title, int accent, boolean isConv) {
+            LinearLayout makeSummaryCard(String title, int accent, boolean isConv) {
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackground(box(Color.parseColor("#12141D"), 12, Color.parseColor("#1E2235"), 1));
@@ -460,8 +488,7 @@ public class MainActivity extends Activity {
         bCatAll.setTextColor("ALL".equals(cat) ? Color.BLACK : Color.parseColor("#8E92A4"));
         setupPeriodButtons(); load();
     }
-
-    void setupPeriodButtons() {
+        void setupPeriodButtons() {
         periodFilterRow.removeAllViews();
         LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(0, -2, 1f);
         pLp.setMargins(1, 0, 1, 0);
@@ -483,7 +510,8 @@ public class MainActivity extends Activity {
         bSubYearly.setBackground(box(!d ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
         bSubYearly.setTextColor(!d ? Color.BLACK : Color.parseColor("#8E92A4"));
     }
-        void load() {
+
+    void load() {
         try {
             vCrd.removeAllViews();
             String opDate = getOperationalDate();
@@ -687,9 +715,8 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
-    }
-
-    void showHubShareChooserDialog() {
+                    }
+                        void showHubShareChooserDialog() {
         String[] options = {
             "👥 ALL AGENT (Sabhi Agent + Kirana Data)",
             "🏪 KIRANA (Sirf Kirana Data)",
@@ -787,7 +814,7 @@ public class MainActivity extends Activity {
         Intent it = new Intent(Intent.ACTION_SEND);
         it.setType("text/plain"); it.putExtra(Intent.EXTRA_TEXT, sb.toString());
         startActivity(Intent.createChooser(it, "📢 Share Scorecard"));
-                    }
+    }
         int[] getStreakInfo(String name) {
         int cur = 0, prev = 0;
         try {
@@ -932,7 +959,8 @@ public class MainActivity extends Activity {
 
         return card;
     }
-        void showDayByDayDialog(String name, String pTitle, String dS, String dE) {
+
+    void showDayByDayDialog(String name, String pTitle, String dS, String dE) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
         SimpleDateFormat sdfD = new SimpleDateFormat("EEE, dd MMM yyyy", Locale.US);
         LinearLayout pop = new LinearLayout(this);
@@ -1012,8 +1040,7 @@ public class MainActivity extends Activity {
         sv.addView(content); pop.addView(sv);
         new AlertDialog.Builder(this).setView(pop).setPositiveButton("Close", null).show();
     }
-
-    void launchVoiceOTP() {
+        void launchVoiceOTP() {
         try {
             Intent it = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             it.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -1126,7 +1153,8 @@ public class MainActivity extends Activity {
         res.add(sb.toString());
         return res;
     }
-        void doSync(boolean isAuto) {
+
+    void doSync(boolean isAuto) {
         new Handler(Looper.getMainLooper()).post(() -> { if (!isAuto && loadingOverlay != null) loadingOverlay.setVisibility(View.VISIBLE); });
         try {
             String targetUrl = CSV;
@@ -1233,6 +1261,238 @@ public class MainActivity extends Activity {
                 if (!isAuto) Toast.makeText(MainActivity.this, "Sync Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
         }
+    }
+
+    void showAuthDialog() {
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(22, 20, 22, 20);
+        d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        d.addView(tv("🔐 USER AUTHENTICATION", Color.parseColor("#00E676"), 16f, true));
+
+        LinearLayout tabRow = new LinearLayout(this);
+        tabRow.setPadding(0, 10, 0, 10);
+        Button bTabLogin = new Button(this);
+        bTabLogin.setText("🔑 Login");
+        bTabLogin.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bTabLogin.setTextColor(Color.BLACK);
+        bTabLogin.setTypeface(Typeface.DEFAULT_BOLD);
+
+        Button bTabSignup = new Button(this);
+        bTabSignup.setText("📝 Signup");
+        bTabSignup.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bTabSignup.setTextColor(Color.parseColor("#8E92A4"));
+        bTabSignup.setTypeface(Typeface.DEFAULT_BOLD);
+
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        tLp.setMargins(2, 0, 2, 0);
+        tabRow.addView(bTabLogin, tLp);
+        tabRow.addView(bTabSignup, new LinearLayout.LayoutParams(tLp));
+        d.addView(tabRow);
+
+        LinearLayout formContainer = new LinearLayout(this);
+        formContainer.setOrientation(LinearLayout.VERTICAL);
+        formContainer.setPadding(0, 10, 0, 0);
+
+        EditText etName = new EditText(this);
+        etName.setHint("Full Name");
+        etName.setHintTextColor(Color.parseColor("#717688"));
+        etName.setTextColor(Color.WHITE);
+        etName.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etName.setPadding(14, 10, 14, 10);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 6, 0, 6);
+        etName.setLayoutParams(lp);
+
+        EditText etMobile = new EditText(this);
+        etMobile.setHint("Mobile Number");
+        etMobile.setHintTextColor(Color.parseColor("#717688"));
+        etMobile.setTextColor(Color.WHITE);
+        etMobile.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        etMobile.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etMobile.setPadding(14, 10, 14, 10);
+        etMobile.setLayoutParams(lp);
+
+        EditText etPassword = new EditText(this);
+        etPassword.setHint("Password");
+        etPassword.setHintTextColor(Color.parseColor("#717688"));
+        etPassword.setTextColor(Color.WHITE);
+        etPassword.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        etPassword.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etPassword.setPadding(14, 10, 14, 10);
+        etPassword.setLayoutParams(lp);
+
+        EditText etUpi = new EditText(this);
+        etUpi.setHint("UPI ID (e.g. mobile@paytm)");
+        etUpi.setHintTextColor(Color.parseColor("#717688"));
+        etUpi.setTextColor(Color.WHITE);
+        etUpi.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etUpi.setPadding(14, 10, 14, 10);
+        etUpi.setLayoutParams(lp);
+
+        formContainer.addView(etMobile);
+        formContainer.addView(etPassword);
+        d.addView(formContainer);
+
+        final boolean[] isLoginMode = {true};
+
+        bTabLogin.setOnClickListener(v -> {
+            isLoginMode[0] = true;
+            bTabLogin.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+            bTabLogin.setTextColor(Color.BLACK);
+            bTabSignup.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+            bTabSignup.setTextColor(Color.parseColor("#8E92A4"));
+            formContainer.removeAllViews();
+            formContainer.addView(etMobile);
+            formContainer.addView(etPassword);
+        });
+
+        bTabSignup.setOnClickListener(v -> {
+            isLoginMode[0] = false;
+            bTabSignup.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+            bTabSignup.setTextColor(Color.BLACK);
+            bTabLogin.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+            bTabLogin.setTextColor(Color.parseColor("#8E92A4"));
+            formContainer.removeAllViews();
+            formContainer.addView(etName);
+            formContainer.addView(etMobile);
+            formContainer.addView(etPassword);
+            formContainer.addView(etUpi);
+        });
+
+        Button bAction = new Button(this);
+        bAction.setText("🚀 CONTINUE");
+        bAction.setBackground(box(Color.parseColor("#38BDF8"), 8, 0, 0));
+        bAction.setTextColor(Color.BLACK);
+        bAction.setTypeface(Typeface.DEFAULT_BOLD);
+        bAction.setPadding(0, 12, 0, 12);
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(-1, -2);
+        bLp.setMargins(0, 12, 0, 0);
+        bAction.setLayoutParams(bLp);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(d)
+            .setCancelable(false)
+            .create();
+
+        bAction.setOnClickListener(v -> {
+            String mob = etMobile.getText().toString().trim();
+            String pwd = etPassword.getText().toString().trim();
+            if (mob.isEmpty() || pwd.isEmpty()) {
+                Toast.makeText(this, "Mobile aur Password bharein", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (isLoginMode[0]) {
+                Cursor c = db.rawQuery("SELECT * FROM users WHERE mobile = ? AND password = ?", new String[]{mob, pwd});
+                if (c != null && c.moveToFirst()) {
+                    c.close();
+                    getSharedPreferences("TrackerPrefs", MODE_PRIVATE).edit().putString("logged_mobile", mob).apply();
+                    dialog.dismiss();
+                    buildUI();
+                    new Thread(() -> doSync(true)).start();
+                } else {
+                    if (c != null) c.close();
+                    Toast.makeText(this, "Galat Mobile Number ya Password!", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                String name = etName.getText().toString().trim();
+                String upi = etUpi.getText().toString().trim();
+                if (name.isEmpty() || upi.isEmpty()) {
+                    Toast.makeText(this, "Sabhi fields bharein (Name & UPI)", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                try {
+                    ContentValues cv = new ContentValues();
+                    cv.put("mobile", mob);
+                    cv.put("name", name);
+                    cv.put("password", pwd);
+                    cv.put("upi", upi);
+                    db.insertOrThrow("users", null, cv);
+                    getSharedPreferences("TrackerPrefs", MODE_PRIVATE).edit().putString("logged_mobile", mob).apply();
+                    dialog.dismiss();
+                    buildUI();
+                    new Thread(() -> doSync(true)).start();
+                    Toast.makeText(this, "✅ Signup Successful!", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Toast.makeText(this, "Yeh Mobile Number pehle se registered hai!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        d.addView(bAction);
+        dialog.show();
+    }
+
+        void showUpiPaymentDialog() {
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(20, 18, 20, 18);
+        d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        d.addView(tv("💸 UPI PAYMENT COLLECTION", Color.parseColor("#F59E0B"), 15f, true));
+
+        String savedUpi = "";
+        try {
+            String loggedMob = getSharedPreferences("TrackerPrefs", MODE_PRIVATE).getString("logged_mobile", "");
+            Cursor c = db.rawQuery("SELECT upi FROM users WHERE mobile = ?", new String[]{loggedMob});
+            if (c != null && c.moveToFirst()) {
+                savedUpi = c.getString(0);
+                c.close();
+            }
+        } catch (Exception ignored) {}
+
+        EditText etUpiId = new EditText(this);
+        etUpiId.setText(savedUpi);
+        etUpiId.setHint("Enter UPI ID");
+        etUpiId.setHintTextColor(Color.parseColor("#717688"));
+        etUpiId.setTextColor(Color.WHITE);
+        etUpiId.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#F59E0B"), 1));
+        etUpiId.setPadding(14, 10, 14, 10);
+        etUpiId.setTextSize(13f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 8, 0, 6);
+        etUpiId.setLayoutParams(lp);
+        d.addView(etUpiId);
+
+        EditText etAmount = new EditText(this);
+        etAmount.setHint("Enter Amount (₹)");
+        etAmount.setHintTextColor(Color.parseColor("#717688"));
+        etAmount.setTextColor(Color.WHITE);
+        etAmount.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        etAmount.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#F59E0B"), 1));
+        etAmount.setPadding(14, 10, 14, 10);
+        etAmount.setLayoutParams(lp);
+        d.addView(etAmount);
+
+        Button bPayNow = new Button(this);
+        bPayNow.setText("🚀 PAY VIA UPI");
+        bPayNow.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bPayNow.setTextColor(Color.BLACK);
+        bPayNow.setTypeface(Typeface.DEFAULT_BOLD);
+        bPayNow.setTextSize(12f);
+        bPayNow.setOnClickListener(v -> {
+            try {
+                String upiId = etUpiId.getText().toString().trim();
+                String amt = etAmount.getText().toString().trim();
+                if (upiId.isEmpty() || amt.isEmpty()) {
+                    Toast.makeText(this, "UPI ID aur Amount bharein", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Uri uri = Uri.parse("upi://pay?pa=" + upiId + "&pn=DeliveryTracker&am=" + amt + "&cu=INR");
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                startActivity(Intent.createChooser(intent, "Pay with UPI"));
+            } catch (Exception e) {
+                Toast.makeText(this, "UPI App not found", Toast.LENGTH_SHORT).show();
+            }
+        });
+        d.addView(bPayNow);
+
+        new AlertDialog.Builder(this)
+            .setView(d)
+            .setPositiveButton("Close", null)
+            .show();
     }
 
     void showConversionCalculatorDialog() {
@@ -1442,7 +1702,7 @@ public class MainActivity extends Activity {
                 sb.append(gap <= 0 && ofd > 0 ? "🎯 *Target:* 92% Achieved! 🚀\n" : "🎯 *Target Gap:* " + gap + " more DEL required\n");
                 sb.append("🏆 *Rating:* ").append(badge).append("\n");
                 sb.append("━━━━━━━━━━━━━━━━━━━━\n");
-                sb.append("⚡ _Calculated via LIVE (Delivery Tracker Pro)_");
+                sb.append("⚡ _Generated via LIVE | Managed by Adarsh_");
 
                 Intent it = new Intent(Intent.ACTION_SEND);
                 it.setType("text/plain");
@@ -1462,4 +1722,3 @@ public class MainActivity extends Activity {
     String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
 }
-
