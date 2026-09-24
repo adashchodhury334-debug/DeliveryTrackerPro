@@ -52,23 +52,26 @@ public class MainActivity extends Activity {
     SQLiteDatabase db;
     FrameLayout root;
     LinearLayout vTrk, vPrf, vHub, vCnt, vCrd, vHubCrd, vCntCrd, loadingOverlay, periodFilterRow;
-    Button bT, bP, bH, bC, bSort, bShareHub, bVoiceOtp, bCalc, bPay, bCatAgent, bCatKirana, bCatAll, bSubDay, bSubYearly;
-    TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tTopConv, tTopDnpc, tGapTarget, tPersonalBest;
+    Button bT, bP, bH, bC, bCatAgent, bCatKirana, bCatAll, bSubDay, bSubYearly, bSort, bShareHub;
+    TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tGapTarget, tTopConv, tTopDnpc, tPersonalBest;
     ArrayList<String[]> ords = new ArrayList<>();
     BaseAdapter adp;
-    String currentCategory = "AGENT", mode = "daily", CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv&gid=0";
+    String currentCategory = "AGENT", mode = "daily", CSV = "https://docs.google.com/spreadsheets/d/10u1381mZJg0jU1Yn8Jt9P1uY9K1w8r1z2x3c4v5b6n7/export?format=csv";
     boolean isHighToLow = true;
     long lastSyncTime = 0;
 
     Handler autoSyncHandler = new Handler(Looper.getMainLooper());
     Runnable autoSyncRunnable = new Runnable() {
-        public void run() { new Thread(() -> doSync(true)).start(); autoSyncHandler.postDelayed(this, 120000); }
+        public void run() {
+            new Thread(() -> doSync(true)).start();
+            autoSyncHandler.postDelayed(this, 120000);
+        }
     };
 
-    GradientDrawable box(int c, int r, int sCol, int sW) {
+    GradientDrawable box(int c, int r, int scol, int sw) {
         GradientDrawable g = new GradientDrawable();
         g.setColor(c); g.setCornerRadius(r);
-        if (sW > 0) g.setStroke(sW, sCol);
+        if (sw > 0) g.setStroke(sw, scol);
         return g;
     }
 
@@ -81,38 +84,30 @@ public class MainActivity extends Activity {
 
     boolean isKiranaAgent(String name) {
         if (name == null) return false;
-        String n = name.toUpperCase(Locale.ROOT).trim();
-        return n.contains("KIRANA") || n.contains("RATAN SARKAR");
+        String u = name.toUpperCase();
+        return u.contains("STORE") || u.contains("KIRANA") || u.contains("MART") || u.contains("SHOP") || u.contains("MANDAL") || u.contains("SAHA") || u.contains("PAUL") || u.contains("SARKAR") || u.contains("GHOSH") || u.contains("DEBNATH") || u.contains("ROY");
     }
 
-    String getPerformanceBadge(double conv, int ofd) {
-        if (ofd == 0) return "⚪ NO OFD ASSIGNED";
-        if (conv >= 96.0) return "🌟 EXCELLENT PERFORMANCE";
-        if (conv >= 92.0) return "🔥 BEST PERFORMANCE (Target Met)";
-        if (conv >= 88.0) return "⚠️ FOCUS PERFORMANCE";
-        return "🚨 NOT ACCEPTED - IMPROVE PERFORMANCE";
-    }
-
-    int getPerformanceColor(double conv, int ofd) {
-        if (ofd == 0) return Color.parseColor("#9CA3AF");
-        if (conv >= 96.0) return Color.parseColor("#38BDF8");
-        if (conv >= 92.0) return Color.parseColor("#00E676");
-        if (conv >= 88.0) return Color.parseColor("#FBBF24");
-        return Color.parseColor("#EF4444");
-    }
-        String getOperationalDate() {
-        Calendar cal = Calendar.getInstance();
-        if (cal.get(Calendar.HOUR_OF_DAY) < 2) cal.add(Calendar.DATE, -1);
-        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
-    }
-
-    String getYearStartDate(String opDate) {
+    String getOperationalDate() {
         try {
             Calendar cal = Calendar.getInstance();
-            cal.setTime(new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(opDate));
-            cal.set(Calendar.DAY_OF_YEAR, 1);
+            if (cal.get(Calendar.HOUR_OF_DAY) < 4) cal.add(Calendar.DAY_OF_YEAR, -1);
             return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
-        } catch (Exception e) { return opDate; }
+        } catch (Exception e) {
+            return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
+        }
+    }
+        String getYearStartDate(String opDate) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(sdf.parse(opDate));
+            cal.set(Calendar.MONTH, Calendar.JANUARY);
+            cal.set(Calendar.DAY_OF_MONTH, 1);
+            return sdf.format(cal.getTime());
+        } catch (Exception e) {
+            return "2026-01-01";
+        }
     }
 
     String getWeekStartDate(String dateStr) {
@@ -120,22 +115,39 @@ public class MainActivity extends Activity {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
             cal.setTime(sdf.parse(dateStr));
-            cal.setFirstDayOfWeek(Calendar.MONDAY);
-            int dow = cal.get(Calendar.DAY_OF_WEEK);
-            int diff = (dow == Calendar.SUNDAY) ? 6 : (dow - Calendar.MONDAY);
-            cal.add(Calendar.DAY_OF_MONTH, -diff);
+            cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
             return sdf.format(cal.getTime());
-        } catch (Exception e) { return dateStr; }
+        } catch (Exception e) {
+            return dateStr;
+        }
     }
 
     String getWeekEndDate(String dateStr) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
-            cal.setTime(sdf.parse(getWeekStartDate(dateStr)));
-            cal.add(Calendar.DAY_OF_MONTH, 6);
+            cal.setTime(sdf.parse(dateStr));
+            cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
+            cal.add(Calendar.DAY_OF_WEEK, 6);
             return sdf.format(cal.getTime());
-        } catch (Exception e) { return dateStr; }
+        } catch (Exception e) {
+            return dateStr;
+        }
+    }
+
+    String getPerformanceBadge(double conv, int total) {
+        if (total == 0) return "⚪ No Data";
+        if (conv >= 96.0) return "🌟 Exceptional (96%+)";
+        if (conv >= 92.0) return "🔥 Target Met (92%+)";
+        if (conv >= 88.0) return "⚠️ Close to Target (88%+)";
+        return "🚨 Needs Improvement (<88%)";
+    }
+
+    int getPerformanceColor(double conv, int total) {
+        if (total == 0) return Color.parseColor("#9CA3AF");
+        if (conv >= 92.0) return Color.parseColor("#00E676");
+        if (conv >= 88.0) return Color.parseColor("#FBBF24");
+        return Color.parseColor("#EF4444");
     }
 
     @Override
@@ -144,100 +156,71 @@ public class MainActivity extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         try {
             db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
-            db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT UNIQUE, d TEXT);");
+            db.execSQL("CREATE TABLE IF NOT EXISTS ord (t TEXT PRIMARY KEY, d TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS prf (n TEXT, o INT, l INT, p INT, k INT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS hub_prf (hname TEXT, o TEXT, l TEXT, lc TEXT, p TEXT, k TEXT, kc TEXT, dnp TEXT, dnpc TEXT, tc TEXT, dt TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
             db.execSQL("CREATE TABLE IF NOT EXISTS users (mobile TEXT PRIMARY KEY, name TEXT, password TEXT, upi TEXT, role TEXT);");
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_dt ON prf(dt);");
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_prf_n ON prf(n);");
         } catch (Exception ignored) {}
 
-        root = new FrameLayout(this);
-        root.setBackgroundColor(Color.parseColor("#090A0F"));
-        setContentView(root);
-
-        SharedPreferences prefs = getSharedPreferences("TrackerPrefs", MODE_PRIVATE);
-        String loggedMobile = prefs.getString("logged_mobile", null);
-
-        if (loggedMobile == null) {
+        String loggedMob = getSharedPreferences("TrackerPrefs", MODE_PRIVATE).getString("logged_mobile", "");
+        if (loggedMob.isEmpty()) {
             showAuthDialog();
         } else {
             buildUI();
             new Thread(() -> doSync(true)).start();
         }
-    }
-        @Override
-    protected void onResume() {
-        super.onResume();
-        if (System.currentTimeMillis() - lastSyncTime > 120000) new Thread(() -> doSync(true)).start();
         autoSyncHandler.postDelayed(autoSyncRunnable, 120000);
     }
+        void buildUI() {
+        root = new FrameLayout(this);
+        root.setBackgroundColor(Color.parseColor("#090A0F"));
+        setContentView(root);
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        autoSyncHandler.removeCallbacks(autoSyncRunnable);
-    }
-
-    void buildUI() {
         LinearLayout main = new LinearLayout(this);
         main.setOrientation(LinearLayout.VERTICAL);
+        main.setPadding(12, 16, 12, 12);
 
-        LinearLayout h = new LinearLayout(this);
-        h.setBackgroundColor(Color.parseColor("#12141D"));
-        h.setPadding(18, 16, 18, 16);
-        h.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(0, 0, 0, 8);
 
-        LinearLayout titleBox = new LinearLayout(this);
-        titleBox.setOrientation(LinearLayout.VERTICAL);
-        titleBox.addView(tv("📦 Delivery Tracker Pro", Color.WHITE, 17f, true));
-        titleBox.addView(tv("⚡ Managed by Adarsh", Color.parseColor("#38BDF8"), 12f, true));
-        h.addView(titleBox, new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView title = tv("📦 DELIVERY TRACKER PRO", Color.parseColor("#00E676"), 16f, true);
+        topBar.addView(title, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        bPay = new Button(this);
-        bPay.setText("💸 PAY");
-        bPay.setBackground(box(Color.parseColor("#F59E0B"), 8, 0, 0));
-        bPay.setTextColor(Color.BLACK);
-        bPay.setTypeface(Typeface.DEFAULT_BOLD);
-        bPay.setTextSize(11f);
-        bPay.setOnClickListener(v -> showUpiPaymentDialog());
-        LinearLayout.LayoutParams payLp = new LinearLayout.LayoutParams(-2, -2);
-        payLp.setMargins(0, 0, 6, 0);
-        h.addView(bPay, payLp);
+        Button bUpi = new Button(this);
+        bUpi.setText("💸 UPI");
+        bUpi.setBackground(box(Color.parseColor("#F59E0B"), 8, 0, 0));
+        bUpi.setTextColor(Color.BLACK);
+        bUpi.setTextSize(11f);
+        bUpi.setTypeface(Typeface.DEFAULT_BOLD);
+        bUpi.setOnClickListener(v -> showUpiPaymentDialog());
 
-        bCalc = new Button(this);
+        Button bCalc = new Button(this);
         bCalc.setText("🧮 CALC");
-        bCalc.setBackground(box(Color.parseColor("#0284C7"), 8, 0, 0));
-        bCalc.setTextColor(Color.WHITE);
-        bCalc.setTypeface(Typeface.DEFAULT_BOLD);
+        bCalc.setBackground(box(Color.parseColor("#38BDF8"), 8, 0, 0));
+        bCalc.setTextColor(Color.BLACK);
         bCalc.setTextSize(11f);
+        bCalc.setTypeface(Typeface.DEFAULT_BOLD);
         bCalc.setOnClickListener(v -> showConversionCalculatorDialog());
-        LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(-2, -2);
-        cLp.setMargins(0, 0, 6, 0);
-        h.addView(bCalc, cLp);
 
-        bVoiceOtp = new Button(this);
-        bVoiceOtp.setText("🎙️ OTP");
-        bVoiceOtp.setBackground(box(Color.parseColor("#7C3AED"), 8, 0, 0));
-        bVoiceOtp.setTextColor(Color.WHITE);
-        bVoiceOtp.setTypeface(Typeface.DEFAULT_BOLD);
-        bVoiceOtp.setTextSize(11f);
-        bVoiceOtp.setOnClickListener(v -> launchVoiceOTP());
-        LinearLayout.LayoutParams voLp = new LinearLayout.LayoutParams(-2, -2);
-        voLp.setMargins(0, 0, 6, 0);
-        h.addView(bVoiceOtp, voLp);
+        Button bSync = new Button(this);
+        bSync.setText("🔄 SYNC");
+        bSync.setBackground(box(Color.parseColor("#1F2232"), 8, Color.parseColor("#00E676"), 1));
+        bSync.setTextColor(Color.parseColor("#00E676"));
+        bSync.setTextSize(11f);
+        bSync.setTypeface(Typeface.DEFAULT_BOLD);
+        bSync.setOnClickListener(v -> new Thread(() -> doSync(false)).start());
 
-        Button bRef = new Button(this);
-        bRef.setText("🔄 SYNC");
-        bRef.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
-        bRef.setTextColor(Color.BLACK);
-        bRef.setTypeface(Typeface.DEFAULT_BOLD);
-        bRef.setTextSize(11f);
-        bRef.setOnClickListener(v -> new Thread(() -> doSync(false)).start());
-        h.addView(bRef);
-        main.addView(h);
-                LinearLayout tb = new LinearLayout(this);
+        LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(-2, -2);
+        btnLp.setMargins(6, 0, 0, 0);
+        topBar.addView(bUpi, btnLp);
+        topBar.addView(bCalc, new LinearLayout.LayoutParams(btnLp));
+        topBar.addView(bSync, new LinearLayout.LayoutParams(btnLp));
+        main.addView(topBar);
+
+        LinearLayout tb = new LinearLayout(this);
         tb.setPadding(8, 8, 8, 4);
         bT = makeTabBtn("🔍 ORDER", 0);
         bP = makeTabBtn("📈 PERF", 1);
@@ -270,7 +253,7 @@ public class MainActivity extends Activity {
         tCnt = tv("📦 Total Trackable Orders: --", Color.parseColor("#00E676"), 12.5f, true);
         tCnt.setPadding(6, 10, 6, 8);
         vTrk.addView(tCnt);
-                ListView lv = new ListView(this);
+                    ListView lv = new ListView(this);
         lv.setDivider(null); lv.setDividerHeight(10);
         adp = new BaseAdapter() {
             public int getCount() { return ords.size(); }
@@ -316,7 +299,8 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-                vPrf = new LinearLayout(this);
+
+        vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
 
@@ -336,8 +320,7 @@ public class MainActivity extends Activity {
         tPersonalBest.setBackground(box(Color.parseColor("#1C1E2A"), 10, Color.parseColor("#FBBF24"), 1));
         tPersonalBest.setPadding(14, 10, 14, 10);
         vPrf.addView(tPersonalBest);
-
-        LinearLayout hubBox = new LinearLayout(this);
+                    LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackground(box(Color.parseColor("#12141D"), 14, Color.parseColor("#38BDF8"), 1));
         hubBox.setPadding(16, 12, 16, 12);
@@ -352,7 +335,8 @@ public class MainActivity extends Activity {
         tGapTarget = tv("", Color.parseColor("#FB923C"), 13f, true);
         hubBox.addView(tHubOfdDel); hubBox.addView(tHubOfpPik); hubBox.addView(tHubDnpDnpc); hubBox.addView(tGapTarget);
         vPrf.addView(hubBox);
-                LinearLayout sm = new LinearLayout(this);
+
+        LinearLayout sm = new LinearLayout(this);
         sm.setPadding(0, 0, 0, 8);
         LinearLayout sc1 = makeSummaryCard("TOP CONVERSION", Color.parseColor("#00E676"), true);
         LinearLayout sc2 = makeSummaryCard("TOP DNPC", Color.parseColor("#FB923C"), false);
@@ -422,7 +406,7 @@ public class MainActivity extends Activity {
 
         switchCategory("AGENT");
         loadContacts();
-    }
+        }
         Button makeTabBtn(String t, int idx) {
         Button b = new Button(this);
         b.setText(t); b.setTextSize(9.5f); b.setTypeface(Typeface.DEFAULT_BOLD);
@@ -558,7 +542,8 @@ public class MainActivity extends Activity {
             tTopConv.setText(bestConvName); tTopDnpc.setText(bestDnpcName);
 
             Collections.sort(list, (a, b) -> isHighToLow ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
-                        int currentRank = 1;
+
+            int currentRank = 1;
             for (String[] ag : list) {
                 int[] strk = getStreakInfo(ag[0]);
                 int curStrk = strk[0], prevStrk = strk[1];
@@ -625,7 +610,8 @@ public class MainActivity extends Activity {
                 View hDiv = new View(this);
                 hDiv.setBackgroundColor(Color.parseColor("#00E676"));
                 card.addView(hDiv, new LinearLayout.LayoutParams(-1, 2));
-                                LinearLayout bottomRow = new LinearLayout(this);
+
+                LinearLayout bottomRow = new LinearLayout(this);
                 bottomRow.setOrientation(LinearLayout.HORIZONTAL);
                 bottomRow.setGravity(Gravity.CENTER_VERTICAL);
 
@@ -1026,7 +1012,7 @@ public class MainActivity extends Activity {
         if (c != null) c.close();
         sv.addView(content); pop.addView(sv);
         new AlertDialog.Builder(this).setView(pop).setPositiveButton("Close", null).show();
-    }
+                                    }
         void launchVoiceOTP() {
         try {
             Intent it = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -1249,7 +1235,8 @@ public class MainActivity extends Activity {
             });
         }
     }
-        void showAuthDialog() {
+
+    void showAuthDialog() {
         if (db == null) {
             try {
                 db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
@@ -1412,8 +1399,7 @@ public class MainActivity extends Activity {
                     String name = etName.getText().toString().trim();
                     String upi = etUpi.getText().toString().trim();
                     String role = spRole.getSelectedItem() != null ? spRole.getSelectedItem().toString() : "WISH MASTER";
-                    
-                    if (name.isEmpty() || upi.isEmpty()) {
+                                                if (name.isEmpty() || upi.isEmpty()) {
                         Toast.makeText(this, "Sabhi fields bharein (Name & UPI)", Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -1640,7 +1626,7 @@ public class MainActivity extends Activity {
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
-                Button bCalcRes = new Button(this);
+        Button bCalcRes = new Button(this);
         bCalcRes.setText("⚡ CALCULATE");
         bCalcRes.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
         bCalcRes.setTextColor(Color.BLACK);
@@ -1744,212 +1730,7 @@ public class MainActivity extends Activity {
             .show();
     }
 
-    void showAuthDialog() {
-        if (db == null) {
-            try {
-                db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
-                db.execSQL("CREATE TABLE IF NOT EXISTS users (mobile TEXT PRIMARY KEY, name TEXT, password TEXT, upi TEXT, role TEXT);");
-                db.execSQL("CREATE TABLE IF NOT EXISTS contacts (name TEXT, role TEXT, phone TEXT);");
-            } catch (Exception ignored) {}
-        }
-
-        LinearLayout d = new LinearLayout(this);
-        d.setOrientation(LinearLayout.VERTICAL);
-        d.setPadding(22, 20, 22, 20);
-        d.setBackgroundColor(Color.parseColor("#0F1015"));
-
-        d.addView(tv("🔐 USER AUTHENTICATION", Color.parseColor("#00E676"), 16f, true));
-
-        LinearLayout tabRow = new LinearLayout(this);
-        tabRow.setPadding(0, 10, 0, 10);
-        Button bTabLogin = new Button(this);
-        bTabLogin.setText("🔑 Login");
-        bTabLogin.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
-        bTabLogin.setTextColor(Color.BLACK);
-        bTabLogin.setTypeface(Typeface.DEFAULT_BOLD);
-
-        Button bTabSignup = new Button(this);
-        bTabSignup.setText("📝 Signup");
-        bTabSignup.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
-        bTabSignup.setTextColor(Color.parseColor("#8E92A4"));
-        bTabSignup.setTypeface(Typeface.DEFAULT_BOLD);
-
-        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
-        tLp.setMargins(2, 0, 2, 0);
-        tabRow.addView(bTabLogin, tLp);
-        tabRow.addView(bTabSignup, new LinearLayout.LayoutParams(tLp));
-        d.addView(tabRow);
-
-        LinearLayout formContainer = new LinearLayout(this);
-        formContainer.setOrientation(LinearLayout.VERTICAL);
-        formContainer.setPadding(0, 10, 0, 0);
-
-        EditText etName = new EditText(this);
-        etName.setHint("Full Name");
-        etName.setHintTextColor(Color.parseColor("#717688"));
-        etName.setTextColor(Color.WHITE);
-        etName.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
-        etName.setPadding(14, 10, 14, 10);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.setMargins(0, 6, 0, 6);
-        etName.setLayoutParams(lp);
-
-        EditText etMobile = new EditText(this);
-        etMobile.setHint("Mobile Number");
-        etMobile.setHintTextColor(Color.parseColor("#717688"));
-        etMobile.setTextColor(Color.WHITE);
-        etMobile.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
-        etMobile.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
-        etMobile.setPadding(14, 10, 14, 10);
-        etMobile.setLayoutParams(lp);
-
-        EditText etPassword = new EditText(this);
-        etPassword.setHint("Password");
-        etPassword.setHintTextColor(Color.parseColor("#717688"));
-        etPassword.setTextColor(Color.WHITE);
-        etPassword.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        etPassword.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
-        etPassword.setPadding(14, 10, 14, 10);
-        etPassword.setLayoutParams(lp);
-
-        EditText etUpi = new EditText(this);
-        etUpi.setHint("UPI ID (e.g. mobile@paytm)");
-        etUpi.setHintTextColor(Color.parseColor("#717688"));
-        etUpi.setTextColor(Color.WHITE);
-        etUpi.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
-        etUpi.setPadding(14, 10, 14, 10);
-        etUpi.setLayoutParams(lp);
-
-        TextView lblRole = tv("Select Role:", Color.parseColor("#38BDF8"), 12f, true);
-        lblRole.setPadding(0, 6, 0, 2);
-        Spinner spRole = new Spinner(this);
-        ArrayList<String> rolesList = new ArrayList<>();
-        rolesList.add("WISH MASTER");
-        rolesList.add("HMT");
-        ArrayAdapter<String> roleAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, rolesList);
-        spRole.setAdapter(roleAdapter);
-        spRole.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
-        spRole.setLayoutParams(lp);
-
-        formContainer.addView(etMobile);
-        formContainer.addView(etPassword);
-        d.addView(formContainer);
-
-        final boolean[] isLoginMode = {true};
-
-        bTabLogin.setOnClickListener(v -> {
-            isLoginMode[0] = true;
-            bTabLogin.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
-            bTabLogin.setTextColor(Color.BLACK);
-            bTabSignup.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
-            bTabSignup.setTextColor(Color.parseColor("#8E92A4"));
-            formContainer.removeAllViews();
-            formContainer.addView(etMobile);
-            formContainer.addView(etPassword);
-        });
-
-        bTabSignup.setOnClickListener(v -> {
-            isLoginMode[0] = false;
-            bTabSignup.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
-            bTabSignup.setTextColor(Color.BLACK);
-            bTabLogin.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
-            bTabLogin.setTextColor(Color.parseColor("#8E92A4"));
-            formContainer.removeAllViews();
-            formContainer.addView(etName);
-            formContainer.addView(etMobile);
-            formContainer.addView(etPassword);
-            formContainer.addView(etUpi);
-            formContainer.addView(lblRole);
-            formContainer.addView(spRole);
-        });
-
-        Button bAction = new Button(this);
-        bAction.setText("🚀 CONTINUE");
-        bAction.setBackground(box(Color.parseColor("#38BDF8"), 8, 0, 0));
-        bAction.setTextColor(Color.BLACK);
-        bAction.setTypeface(Typeface.DEFAULT_BOLD);
-        bAction.setPadding(0, 12, 0, 12);
-        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(-1, -2);
-        bLp.setMargins(0, 12, 0, 0);
-        bAction.setLayoutParams(bLp);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-            .setView(d)
-            .setCancelable(false)
-            .create();
-
-        bAction.setOnClickListener(v -> {
-            try {
-                String mob = etMobile.getText().toString().trim();
-                String pwd = etPassword.getText().toString().trim();
-                if (mob.isEmpty() || pwd.isEmpty()) {
-                    Toast.makeText(this, "Mobile aur Password bharein", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                if (db == null) {
-                    db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
-                }
-
-                if (isLoginMode[0]) {
-                    Cursor c = db.rawQuery("SELECT * FROM users WHERE mobile = ? AND password = ?", new String[]{mob, pwd});
-                    if (c != null && c.moveToFirst()) {
-                        c.close();
-                        getSharedPreferences("TrackerPrefs", MODE_PRIVATE).edit().putString("logged_mobile", mob).apply();
-                        dialog.dismiss();
-                        buildUI();
-                        new Thread(() -> doSync(true)).start();
-                    } else {
-                        if (c != null) c.close();
-                        Toast.makeText(this, "Galat Mobile Number ya Password!", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    String name = etName.getText().toString().trim();
-                    String upi = etUpi.getText().toString().trim();
-                    String role = spRole.getSelectedItem() != null ? spRole.getSelectedItem().toString() : "WISH MASTER";
-                    
-                    if (name.isEmpty() || upi.isEmpty()) {
-                        Toast.makeText(this, "Sabhi fields bharein (Name & UPI)", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    try {
-                        ContentValues cv = new ContentValues();
-                        cv.put("mobile", mob);
-                        cv.put("name", name);
-                        cv.put("password", pwd);
-                        cv.put("upi", upi);
-                        cv.put("role", role);
-                        db.insertOrThrow("users", null, cv);
-
-                        ContentValues contactCv = new ContentValues();
-                        contactCv.put("name", name);
-                        contactCv.put("role", role);
-                        contactCv.put("phone", mob);
-                        db.insert("contacts", null, contactCv);
-
-                        getSharedPreferences("TrackerPrefs", MODE_PRIVATE).edit().putString("logged_mobile", mob).apply();
-                        dialog.dismiss();
-                        buildUI();
-                        new Thread(() -> doSync(true)).start();
-                        Toast.makeText(this, "✅ Signup Successful & Saved!", Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Yeh Mobile Number pehle se registered hai!", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            } catch (Exception e) {
-                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        d.addView(bAction);
-        dialog.show();
-    }
-        new AlertDialog.Builder(this)
-            .setView(d)
-            .setPositiveButton("Close", null)
-            .show();
-    }
-
     String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
-}
+            }
+
