@@ -83,10 +83,10 @@ public class MainActivity extends Activity {
     }
 
     boolean isKiranaAgent(String name) {
-        if (name == null) return false;
-        String u = name.toUpperCase();
-        return u.contains("STORE") || u.contains("KIRANA") || u.contains("MART") || u.contains("SHOP") || u.contains("MANDAL") || u.contains("SAHA") || u.contains("PAUL") || u.contains("SARKAR") || u.contains("GHOSH") || u.contains("DEBNATH") || u.contains("ROY");
-    }
+    if (name == null) return false;
+    return name.trim().equalsIgnoreCase("Ratan Sarkar");
+}
+
 
     String getOperationalDate() {
         try {
