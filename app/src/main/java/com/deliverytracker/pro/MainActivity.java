@@ -1707,3 +1707,649 @@ public class MainActivity extends Activity {
     String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
 }
+    void showAuthDialog() {
+        if (db == null) {
+            try {
+                db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
+                db.execSQL("CREATE TABLE IF NOT EXISTS users (mobile TEXT PRIMARY KEY, name TEXT, password TEXT, upi TEXT);");
+            } catch (Exception ignored) {}
+        }
+
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(22, 20, 22, 20);
+        d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        d.addView(tv("🔐 USER AUTHENTICATION", Color.parseColor("#00E676"), 16f, true));
+
+        LinearLayout tabRow = new LinearLayout(this);
+        tabRow.setPadding(0, 10, 0, 10);
+        Button bTabLogin = new Button(this);
+        bTabLogin.setText("🔑 Login");
+        bTabLogin.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bTabLogin.setTextColor(Color.BLACK);
+        bTabLogin.setTypeface(Typeface.DEFAULT_BOLD);
+
+        Button bTabSignup = new Button(this);
+        bTabSignup.setText("📝 Signup");
+        bTabSignup.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bTabSignup.setTextColor(Color.parseColor("#8E92A4"));
+        bTabSignup.setTypeface(Typeface.DEFAULT_BOLD);
+
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        tLp.setMargins(2, 0, 2, 0);
+        tabRow.addView(bTabLogin, tLp);
+        tabRow.addView(bTabSignup, new LinearLayout.LayoutParams(tLp));
+        d.addView(tabRow);
+
+        LinearLayout formContainer = new LinearLayout(this);
+        formContainer.setOrientation(LinearLayout.VERTICAL);
+        formContainer.setPadding(0, 10, 0, 0);
+
+        EditText etName = new EditText(this);
+        etName.setHint("Full Name");
+        etName.setHintTextColor(Color.parseColor("#717688"));
+        etName.setTextColor(Color.WHITE);
+        etName.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etName.setPadding(14, 10, 14, 10);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 6, 0, 6);
+        etName.setLayoutParams(lp);
+
+        EditText etMobile = new EditText(this);
+        etMobile.setHint("Mobile Number");
+        etMobile.setHintTextColor(Color.parseColor("#717688"));
+        etMobile.setTextColor(Color.WHITE);
+        etMobile.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        etMobile.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etMobile.setPadding(14, 10, 14, 10);
+        etMobile.setLayoutParams(lp);
+
+        EditText etPassword = new EditText(this);
+        etPassword.setHint("Password");
+        etPassword.setHintTextColor(Color.parseColor("#717688"));
+        etPassword.setTextColor(Color.WHITE);
+        etPassword.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        etPassword.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etPassword.setPadding(14, 10, 14, 10);
+        etPassword.setLayoutParams(lp);
+
+        EditText etUpi = new EditText(this);
+        etUpi.setHint("UPI ID (e.g. mobile@paytm)");
+        etUpi.setHintTextColor(Color.parseColor("#717688"));
+        etUpi.setTextColor(Color.WHITE);
+        etUpi.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etUpi.setPadding(14, 10, 14, 10);
+        etUpi.setLayoutParams(lp);
+
+        formContainer.addView(etMobile);
+        formContainer.addView(etPassword);
+        d.addView(formContainer);
+
+        final boolean[] isLoginMode = {true};
+
+        bTabLogin.setOnClickListener(v -> {
+            isLoginMode[0] = true;
+            bTabLogin.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+            bTabLogin.setTextColor(Color.BLACK);
+            bTabSignup.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+            bTabSignup.setTextColor(Color.parseColor("#8E92A4"));
+            formContainer.removeAllViews();
+            formContainer.addView(etMobile);
+            formContainer.addView(etPassword);
+        });
+
+        bTabSignup.setOnClickListener(v -> {
+            isLoginMode[0] = false;
+            bTabSignup.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+            bTabSignup.setTextColor(Color.BLACK);
+            bTabLogin.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+            bTabLogin.setTextColor(Color.parseColor("#8E92A4"));
+            formContainer.removeAllViews();
+            formContainer.addView(etName);
+            formContainer.addView(etMobile);
+            formContainer.addView(etPassword);
+            formContainer.addView(etUpi);
+        });
+
+        Button bAction = new Button(this);
+        bAction.setText("🚀 CONTINUE");
+        bAction.setBackground(box(Color.parseColor("#38BDF8"), 8, 0, 0));
+        bAction.setTextColor(Color.BLACK);
+        bAction.setTypeface(Typeface.DEFAULT_BOLD);
+        bAction.setPadding(0, 12, 0, 12);
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(-1, -2);
+        bLp.setMargins(0, 12, 0, 0);
+        bAction.setLayoutParams(bLp);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(d)
+            .setCancelable(false)
+            .create();
+
+        bAction.setOnClickListener(v -> {
+            try {
+                String mob = etMobile.getText().toString().trim();
+                String pwd = etPassword.getText().toString().trim();
+                if (mob.isEmpty() || pwd.isEmpty()) {
+                    Toast.makeText(this, "Mobile aur Password bharein", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (db == null) {
+                    db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
+                    db.execSQL("CREATE TABLE IF NOT EXISTS users (mobile TEXT PRIMARY KEY, name TEXT, password TEXT, upi TEXT);");
+                }
+
+                if (isLoginMode[0]) {
+                    Cursor c = db.rawQuery("SELECT * FROM users WHERE mobile = ? AND password = ?", new String[]{mob, pwd});
+                    if (c != null && c.moveToFirst()) {
+                        c.close();
+                        getSharedPreferences("TrackerPrefs", MODE_PRIVATE).edit().putString("logged_mobile", mob).apply();
+                        dialog.dismiss();
+                        buildUI();
+                        new Thread(() -> doSync(true)).start();
+                    } else {
+                        if (c != null) c.close();
+                        Toast.makeText(this, "Galat Mobile Number ya Password!", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    String name = etName.getText().toString().trim();
+                    String upi = etUpi.getText().toString().trim();
+                    if (name.isEmpty() || upi.isEmpty()) {
+                        Toast.makeText(this, "Sabhi fields bharein (Name & UPI)", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    try {
+                        ContentValues cv = new ContentValues();
+                        cv.put("mobile", mob);
+                        cv.put("name", name);
+                        cv.put("password", pwd);
+                        cv.put("upi", upi);
+                        db.insertOrThrow("users", null, cv);
+                        getSharedPreferences("TrackerPrefs", MODE_PRIVATE).edit().putString("logged_mobile", mob).apply();
+                        dialog.dismiss();
+                        buildUI();
+                        new Thread(() -> doSync(true)).start();
+                        Toast.makeText(this, "✅ Signup Successful!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Yeh Mobile Number pehle se registered hai!", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        d.addView(bAction);
+        dialog.show();
+    }
+
+    void showUpiPaymentDialog() {
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(20, 18, 20, 18);
+        d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        d.addView(tv("💸 UPI PAYMENT COLLECTION", Color.parseColor("#F59E0B"), 15f, true));
+
+        String savedUpi = "";
+        try {
+            String loggedMob = getSharedPreferences("TrackerPrefs", MODE_PRIVATE).getString("logged_mobile", "");
+            Cursor c = db.rawQuery("SELECT upi FROM users WHERE mobile = ?", new String[]{loggedMob});
+            if (c != null && c.moveToFirst()) {
+                savedUpi = c.getString(0);
+                c.close();
+            }
+        } catch (Exception ignored) {}
+
+        EditText etUpiId = new EditText(this);
+        etUpiId.setText(savedUpi);
+        etUpiId.setHint("Enter UPI ID");
+        etUpiId.setHintTextColor(Color.parseColor("#717688"));
+        etUpiId.setTextColor(Color.WHITE);
+        etUpiId.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#F59E0B"), 1));
+        etUpiId.setPadding(14, 10, 14, 10);
+        etUpiId.setTextSize(13f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 8, 0, 6);
+        etUpiId.setLayoutParams(lp);
+        d.addView(etUpiId);
+
+        EditText etAmount = new EditText(this);
+        etAmount.setHint("Enter Amount (₹)");
+        etAmount.setHintTextColor(Color.parseColor("#717688"));
+        etAmount.setTextColor(Color.WHITE);
+        etAmount.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        etAmount.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#F59E0B"), 1));
+        etAmount.setPadding(14, 10, 14, 10);
+        etAmount.setLayoutParams(lp);
+        d.addView(etAmount);
+
+        Button bPayNow = new Button(this);
+        bPayNow.setText("🚀 PAY VIA UPI");
+        bPayNow.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bPayNow.setTextColor(Color.BLACK);
+        bPayNow.setTypeface(Typeface.DEFAULT_BOLD);
+        bPayNow.setTextSize(12f);
+        bPayNow.setOnClickListener(v -> {
+            try {
+                String upiId = etUpiId.getText().toString().trim();
+                String amt = etAmount.getText().toString().trim();
+                if (upiId.isEmpty() || amt.isEmpty()) {
+                    Toast.makeText(this, "UPI ID aur Amount bharein", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Uri uri = Uri.parse("upi://pay?pa=" + upiId + "&pn=DeliveryTracker&am=" + amt + "&cu=INR");
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                startActivity(Intent.createChooser(intent, "Pay with UPI"));
+            } catch (Exception e) {
+                Toast.makeText(this, "UPI App not found", Toast.LENGTH_SHORT).show();
+            }
+        });
+        d.addView(bPayNow);
+
+        new AlertDialog.Builder(this)
+            .setView(d)
+            .setPositiveButton("Close", null)
+            .show();
+    }
+
+    void showConversionCalculatorDialog() {
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(20, 18, 20, 18);
+        d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        d.addView(tv("🧮 CONV & TARGET CALCULATOR", Color.parseColor("#38BDF8"), 15f, true));
+
+        EditText etSearch = new EditText(this);
+        etSearch.setHint("🔍 Search Agent / Kirana (A-Z)...");
+        etSearch.setHintTextColor(Color.parseColor("#717688"));
+        etSearch.setTextColor(Color.WHITE);
+        etSearch.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etSearch.setPadding(14, 10, 14, 10);
+        etSearch.setTextSize(13f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 8, 0, 6);
+        etSearch.setLayoutParams(lp);
+        d.addView(etSearch);
+
+        Spinner spNames = new Spinner(this);
+        ArrayList<String> namesList = new ArrayList<>();
+        namesList.add("-- Select Active Agent / Kirana --");
+        
+        Cursor c = db.rawQuery("SELECT DISTINCT n FROM prf ORDER BY n ASC", null);
+        while (c != null && c.moveToNext()) {
+            String n = c.getString(0);
+            if (n != null && !n.isEmpty()) namesList.add(n);
+        }
+        if (c != null) c.close();
+
+        ArrayAdapter<String> nameAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, namesList);
+        spNames.setAdapter(nameAdapter);
+        d.addView(spNames);
+
+        EditText etOfdTotal = new EditText(this);
+        etOfdTotal.setHint("OFD Total (Assigned)");
+        etOfdTotal.setHintTextColor(Color.parseColor("#717688"));
+        etOfdTotal.setTextColor(Color.WHITE);
+        etOfdTotal.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etOfdTotal.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etOfdTotal.setPadding(14, 10, 14, 10);
+        etOfdTotal.setLayoutParams(lp);
+        d.addView(etOfdTotal);
+
+        EditText etDelDone = new EditText(this);
+        etDelDone.setHint("DEL Done (Delivered)");
+        etDelDone.setHintTextColor(Color.parseColor("#717688"));
+        etDelDone.setTextColor(Color.WHITE);
+        etDelDone.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etDelDone.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etDelDone.setPadding(14, 10, 14, 10);
+        etDelDone.setLayoutParams(lp);
+        d.addView(etDelDone);
+
+        EditText etOfpTotal = new EditText(this);
+        etOfpTotal.setHint("OFP Total (Assigned)");
+        etOfpTotal.setHintTextColor(Color.parseColor("#717688"));
+        etOfpTotal.setTextColor(Color.WHITE);
+        etOfpTotal.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etOfpTotal.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etOfpTotal.setPadding(14, 10, 14, 10);
+        etOfpTotal.setLayoutParams(lp);
+        d.addView(etOfpTotal);
+
+        EditText etPikDone = new EditText(this);
+        etPikDone.setHint("PIK Done (Picked)");
+        etPikDone.setHintTextColor(Color.parseColor("#717688"));
+        etPikDone.setTextColor(Color.WHITE);
+        etPikDone.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etPikDone.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#38BDF8"), 1));
+        etPikDone.setPadding(14, 10, 14, 10);
+        etPikDone.setLayoutParams(lp);
+        d.addView(etPikDone);
+
+        etSearch.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+                ArrayList<String> filtered = new ArrayList<>();
+                filtered.add("-- Select Active Agent / Kirana --");
+                Cursor fc = db.rawQuery("SELECT DISTINCT n FROM prf WHERE n LIKE ? ORDER BY n ASC", new String[]{"%" + query + "%"});
+                while (fc != null && fc.moveToNext()) {
+                    String n = fc.getString(0);
+                    if (n != null && !n.isEmpty()) filtered.add(n);
+                }
+                if (fc != null) fc.close();
+                ArrayAdapter<String> fAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, filtered);
+                spNames.setAdapter(fAdapter);
+            }
+            public void afterTextChanged(Editable s) {}
+        });
+
+        spNames.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                String selectedName = (String) spNames.getSelectedItem();
+                if (selectedName != null && !selectedName.startsWith("--")) {
+                    Cursor sc = db.rawQuery("SELECT o, l, p, k FROM prf WHERE n = ? ORDER BY dt DESC LIMIT 1", new String[]{selectedName});
+                    if (sc != null && sc.moveToFirst()) {
+                        etOfdTotal.setText(String.valueOf(sc.getInt(0)));
+                        etDelDone.setText(String.valueOf(sc.getInt(1)));
+                        etOfpTotal.setText(String.valueOf(sc.getInt(2)));
+                        etPikDone.setText(String.valueOf(sc.getInt(3)));
+                    }
+                    if (sc != null) sc.close();
+                }
+            }
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+
+        ScrollView sv = new ScrollView(this);
+        LinearLayout resBox = new LinearLayout(this);
+        resBox.setOrientation(LinearLayout.VERTICAL);
+        resBox.setPadding(0, 8, 0, 8);
+        sv.addView(resBox);
+        d.addView(sv, new LinearLayout.LayoutParams(-1, 240));
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button bCalcRes = new Button(this);
+        bCalcRes.setText("⚡ CALCULATE");
+        bCalcRes.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bCalcRes.setTextColor(Color.BLACK);
+        bCalcRes.setTypeface(Typeface.DEFAULT_BOLD);
+        bCalcRes.setTextSize(11f);
+
+        Button bShareCalc = new Button(this);
+        bShareCalc.setText("📢 SHARE RESULT");
+        bShareCalc.setBackground(box(Color.parseColor("#25D366"), 8, 0, 0));
+        bShareCalc.setTextColor(Color.BLACK);
+        bShareCalc.setTypeface(Typeface.DEFAULT_BOLD);
+        bShareCalc.setTextSize(11f);
+
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        bLp.setMargins(0, 4, 4, 0);
+        btnRow.addView(bCalcRes, bLp);
+        btnRow.addView(bShareCalc, new LinearLayout.LayoutParams(0, -2, 1f));
+        d.addView(btnRow);
+
+                bCalcRes.setOnClickListener(v -> {
+            try {
+                int ofd = parseInt(etOfdTotal.getText().toString());
+                int del = parseInt(etDelDone.getText().toString());
+                int ofp = parseInt(etOfpTotal.getText().toString());
+                int pik = parseInt(etPikDone.getText().toString());
+
+                resBox.removeAllViews();
+                if (ofd <= 0 && ofp <= 0) {
+                    resBox.addView(tv("⚠️ Please enter valid totals", Color.parseColor("#EF4444"), 13f, true));
+                    return;
+                }
+
+                double ofdC = ofd > 0 ? ((double) del / ofd) * 100.0 : 0.0;
+                double ofpC = ofp > 0 ? ((double) pik / ofp) * 100.0 : 0.0;
+                int totDnp = ofd + ofp;
+                int totDnpc = del + pik;
+                double totC = totDnp > 0 ? ((double) totDnpc / totDnp) * 100.0 : 0.0;
+
+                int targetNeeded = (int) Math.ceil(0.92 * ofd);
+                int gap = targetNeeded - del;
+
+                resBox.addView(tv("📊 Calculation Results:", Color.parseColor("#38BDF8"), 13f, true));
+                resBox.addView(tv("• OFD/DEL Conv: " + String.format(Locale.US, "%.1f%%", ofdC), Color.parseColor("#00E676"), 13.5f, true));
+                resBox.addView(tv("• OFP/PIK Conv: " + String.format(Locale.US, "%.1f%%", ofpC), Color.parseColor("#38BDF8"), 13.5f, true));
+                resBox.addView(tv("• Total DNP Conv: " + String.format(Locale.US, "%.1f%%", totC), Color.parseColor("#34D399"), 13.5f, true));
+
+                if (ofd > 0) {
+                    if (gap <= 0) {
+                        resBox.addView(tv("• 92% Target: Achieved! 🚀", Color.parseColor("#00E676"), 13f, true));
+                    } else {
+                        resBox.addView(tv("• 92% Target Gap: Need " + gap + " more DEL", Color.parseColor("#FB923C"), 13f, true));
+                    }
+                }
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Enter valid numbers", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        bShareCalc.setOnClickListener(v -> {
+            try {
+                int ofd = parseInt(etOfdTotal.getText().toString());
+                int del = parseInt(etDelDone.getText().toString());
+                int ofp = parseInt(etOfpTotal.getText().toString());
+                int pik = parseInt(etPikDone.getText().toString());
+                double ofdC = ofd > 0 ? ((double) del / ofd) * 100.0 : 0.0;
+                double ofpC = ofp > 0 ? ((double) pik / ofp) * 100.0 : 0.0;
+                int totDnp = ofd + ofp;
+                int totDnpc = del + pik;
+                double totC = totDnp > 0 ? ((double) totDnpc / totDnp) * 100.0 : 0.0;
+                int gap = (int) Math.ceil(0.92 * ofd) - del;
+
+                String selName = (String) spNames.getSelectedItem();
+                String agentTitle = (selName != null && !selName.startsWith("--")) ? selName : "Manual Calculation";
+                String badge = getPerformanceBadge(ofdC, ofd);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("🧮 *CONVERSION & TARGET REPORT*\n");
+                sb.append("👤 *Name:* ").append(agentTitle).append("\n");
+                sb.append("📅 *Date:* ").append(getOperationalDate()).append("\n");
+                sb.append("━━━━━━━━━━━━━━━━━━━━\n");
+                sb.append("🚚 *OFD / DEL:* ").append(ofd).append(" / ").append(del).append(" (").append(String.format(Locale.US, "%.1f%%", ofdC)).append(")\n");
+                sb.append("📦 *OFP / PIK:* ").append(ofp).append(" / ").append(pik).append(" (").append(String.format(Locale.US, "%.1f%%", ofpC)).append(")\n");
+                sb.append("🔄 *Total DNP:* ").append(totDnp).append(" / ").append(totDnpc).append(" (").append(String.format(Locale.US, "%.1f%%", totC)).append(")\n");
+                sb.append(gap <= 0 && ofd > 0 ? "🎯 *Target:* 92% Achieved! 🚀\n" : "🎯 *Target Gap:* " + gap + " more DEL required\n");
+                sb.append("🏆 *Rating:* ").append(badge).append("\n");
+                sb.append("━━━━━━━━━━━━━━━━━━━━\n");
+                sb.append("⚡ _Generated via LIVE | Managed by Adarsh_");
+
+                Intent it = new Intent(Intent.ACTION_SEND);
+                it.setType("text/plain");
+                it.putExtra(Intent.EXTRA_TEXT, sb.toString());
+                startActivity(Intent.createChooser(it, "📢 Share Calculation"));
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Please calculate first", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        new AlertDialog.Builder(this)
+            .setView(d)
+            .setPositiveButton("Close", null)
+            .show();
+    }
+
+    void showAuthDialog() {
+        LinearLayout d = new LinearLayout(this);
+        d.setOrientation(LinearLayout.VERTICAL);
+        d.setPadding(22, 20, 22, 20);
+        d.setBackgroundColor(Color.parseColor("#0F1015"));
+
+        d.addView(tv("🔐 USER AUTHENTICATION", Color.parseColor("#00E676"), 16f, true));
+
+        LinearLayout tabRow = new LinearLayout(this);
+        tabRow.setPadding(0, 10, 0, 10);
+        Button bTabLogin = new Button(this);
+        bTabLogin.setText("🔑 Login");
+        bTabLogin.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bTabLogin.setTextColor(Color.BLACK);
+        bTabLogin.setTypeface(Typeface.DEFAULT_BOLD);
+
+        Button bTabSignup = new Button(this);
+        bTabSignup.setText("📝 Signup");
+        bTabSignup.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+        bTabSignup.setTextColor(Color.parseColor("#8E92A4"));
+        bTabSignup.setTypeface(Typeface.DEFAULT_BOLD);
+
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        tLp.setMargins(2, 0, 2, 0);
+        tabRow.addView(bTabLogin, tLp);
+        tabRow.addView(bTabSignup, new LinearLayout.LayoutParams(tLp));
+        d.addView(tabRow);
+
+        LinearLayout formContainer = new LinearLayout(this);
+        formContainer.setOrientation(LinearLayout.VERTICAL);
+        formContainer.setPadding(0, 10, 0, 0);
+
+        EditText etName = new EditText(this);
+        etName.setHint("Full Name");
+        etName.setHintTextColor(Color.parseColor("#717688"));
+        etName.setTextColor(Color.WHITE);
+        etName.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etName.setPadding(14, 10, 14, 10);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 6, 0, 6);
+        etName.setLayoutParams(lp);
+
+        EditText etMobile = new EditText(this);
+        etMobile.setHint("Mobile Number");
+        etMobile.setHintTextColor(Color.parseColor("#717688"));
+        etMobile.setTextColor(Color.WHITE);
+        etMobile.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        etMobile.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etMobile.setPadding(14, 10, 14, 10);
+        etMobile.setLayoutParams(lp);
+
+        EditText etPassword = new EditText(this);
+        etPassword.setHint("Password");
+        etPassword.setHintTextColor(Color.parseColor("#717688"));
+        etPassword.setTextColor(Color.WHITE);
+        etPassword.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        etPassword.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etPassword.setPadding(14, 10, 14, 10);
+        etPassword.setLayoutParams(lp);
+
+        EditText etUpi = new EditText(this);
+        etUpi.setHint("UPI ID (e.g. mobile@paytm)");
+        etUpi.setHintTextColor(Color.parseColor("#717688"));
+        etUpi.setTextColor(Color.WHITE);
+        etUpi.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#00E676"), 1));
+        etUpi.setPadding(14, 10, 14, 10);
+        etUpi.setLayoutParams(lp);
+
+        formContainer.addView(etMobile);
+        formContainer.addView(etPassword);
+        d.addView(formContainer);
+
+        final boolean[] isLoginMode = {true};
+
+        bTabLogin.setOnClickListener(v -> {
+            isLoginMode[0] = true;
+            bTabLogin.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+            bTabLogin.setTextColor(Color.BLACK);
+            bTabSignup.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+            bTabSignup.setTextColor(Color.parseColor("#8E92A4"));
+            formContainer.removeAllViews();
+            formContainer.addView(etMobile);
+            formContainer.addView(etPassword);
+        });
+
+        bTabSignup.setOnClickListener(v -> {
+            isLoginMode[0] = false;
+            bTabSignup.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+            bTabSignup.setTextColor(Color.BLACK);
+            bTabLogin.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
+            bTabLogin.setTextColor(Color.parseColor("#8E92A4"));
+            formContainer.removeAllViews();
+            formContainer.addView(etName);
+            formContainer.addView(etMobile);
+            formContainer.addView(etPassword);
+            formContainer.addView(etUpi);
+        });
+
+        Button bAction = new Button(this);
+        bAction.setText("🚀 CONTINUE");
+        bAction.setBackground(box(Color.parseColor("#38BDF8"), 8, 0, 0));
+        bAction.setTextColor(Color.BLACK);
+        bAction.setTypeface(Typeface.DEFAULT_BOLD);
+        bAction.setPadding(0, 12, 0, 12);
+        LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(-1, -2);
+        bLp.setMargins(0, 12, 0, 0);
+        bAction.setLayoutParams(bLp);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(d)
+            .setCancelable(false)
+            .create();
+
+        bAction.setOnClickListener(v -> {
+            try {
+                String mob = etMobile.getText().toString().trim();
+                String pwd = etPassword.getText().toString().trim();
+                if (mob.isEmpty() || pwd.isEmpty()) {
+                    Toast.makeText(this, "Mobile aur Password bharein", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (db == null) {
+                    db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
+                    db.execSQL("CREATE TABLE IF NOT EXISTS users (mobile TEXT PRIMARY KEY, name TEXT, password TEXT, upi TEXT);");
+                }
+
+                if (isLoginMode[0]) {
+                    Cursor c = db.rawQuery("SELECT * FROM users WHERE mobile = ? AND password = ?", new String[]{mob, pwd});
+                    if (c != null && c.moveToFirst()) {
+                        c.close();
+                        getSharedPreferences("TrackerPrefs", MODE_PRIVATE).edit().putString("logged_mobile", mob).apply();
+                        dialog.dismiss();
+                        buildUI();
+                        new Thread(() -> doSync(true)).start();
+                    } else {
+                        if (c != null) c.close();
+                        Toast.makeText(this, "Galat Mobile Number ya Password!", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    String name = etName.getText().toString().trim();
+                    String upi = etUpi.getText().toString().trim();
+                    if (name.isEmpty() || upi.isEmpty()) {
+                        Toast.makeText(this, "Sabhi fields bharein (Name & UPI)", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    try {
+                        ContentValues cv = new ContentValues();
+                        cv.put("mobile", mob);
+                        cv.put("name", name);
+                        cv.put("password", pwd);
+                        cv.put("upi", upi);
+                        db.insertOrThrow("users", null, cv);
+                        getSharedPreferences("TrackerPrefs", MODE_PRIVATE).edit().putString("logged_mobile", mob).apply();
+                        dialog.dismiss();
+                        buildUI();
+                        new Thread(() -> doSync(true)).start();
+                        Toast.makeText(this, "✅ Signup Successful!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Yeh Mobile Number pehle se registered hai!", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        d.addView(bAction);
+        dialog.show();
+    }
+
+    String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
+    int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
+                               }
