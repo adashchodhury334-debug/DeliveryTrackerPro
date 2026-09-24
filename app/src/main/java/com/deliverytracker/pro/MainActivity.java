@@ -1944,3 +1944,12 @@ public class MainActivity extends Activity {
         d.addView(bAction);
         dialog.show();
     }
+        new AlertDialog.Builder(this)
+            .setView(d)
+            .setPositiveButton("Close", null)
+            .show();
+    }
+
+    String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
+    int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
+}
