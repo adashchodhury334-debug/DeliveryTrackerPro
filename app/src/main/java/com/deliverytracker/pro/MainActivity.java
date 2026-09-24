@@ -100,8 +100,7 @@ public class MainActivity extends Activity {
         if (conv >= 88.0) return Color.parseColor("#FBBF24");
         return Color.parseColor("#EF4444");
     }
-
-    String getOperationalDate() {
+        String getOperationalDate() {
         Calendar cal = Calendar.getInstance();
         if (cal.get(Calendar.HOUR_OF_DAY) < 2) cal.add(Calendar.DATE, -1);
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(cal.getTime());
@@ -168,8 +167,7 @@ public class MainActivity extends Activity {
             new Thread(() -> doSync(true)).start();
         }
     }
-
-    @Override
+        @Override
     protected void onResume() {
         super.onResume();
         if (System.currentTimeMillis() - lastSyncTime > 120000) new Thread(() -> doSync(true)).start();
@@ -239,8 +237,7 @@ public class MainActivity extends Activity {
         bRef.setOnClickListener(v -> new Thread(() -> doSync(false)).start());
         h.addView(bRef);
         main.addView(h);
-
-        LinearLayout tb = new LinearLayout(this);
+                LinearLayout tb = new LinearLayout(this);
         tb.setPadding(8, 8, 8, 4);
         bT = makeTabBtn("🔍 ORDER", 0);
         bP = makeTabBtn("📈 PERF", 1);
@@ -256,7 +253,6 @@ public class MainActivity extends Activity {
         body.setPadding(12, 6, 12, 10);
         main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
-        // 1. ORDER TAB
         vTrk = new LinearLayout(this);
         vTrk.setOrientation(LinearLayout.VERTICAL);
         EditText s = new EditText(this);
@@ -274,8 +270,7 @@ public class MainActivity extends Activity {
         tCnt = tv("📦 Total Trackable Orders: --", Color.parseColor("#00E676"), 12.5f, true);
         tCnt.setPadding(6, 10, 6, 8);
         vTrk.addView(tCnt);
-
-        ListView lv = new ListView(this);
+                ListView lv = new ListView(this);
         lv.setDivider(null); lv.setDividerHeight(10);
         adp = new BaseAdapter() {
             public int getCount() { return ords.size(); }
@@ -321,9 +316,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-
-        // 2. PERF TAB
-        vPrf = new LinearLayout(this);
+                vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
 
@@ -343,8 +336,7 @@ public class MainActivity extends Activity {
         tPersonalBest.setBackground(box(Color.parseColor("#1C1E2A"), 10, Color.parseColor("#FBBF24"), 1));
         tPersonalBest.setPadding(14, 10, 14, 10);
         vPrf.addView(tPersonalBest);
-
-        LinearLayout hubBox = new LinearLayout(this);
+                LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackground(box(Color.parseColor("#12141D"), 14, Color.parseColor("#38BDF8"), 1));
         hubBox.setPadding(16, 12, 16, 12);
@@ -369,8 +361,7 @@ public class MainActivity extends Activity {
         sc2Lp.setMargins(8, 0, 0, 0);
         sm.addView(sc2, sc2Lp);
         vPrf.addView(sm);
-
-        LinearLayout actRow = new LinearLayout(this);
+                LinearLayout actRow = new LinearLayout(this);
         bSort = new Button(this);
         bSort.setText("↕️ Sort Rate");
         bSort.setBackground(box(Color.parseColor("#1C1E2A"), 8, 0, 0));
@@ -399,9 +390,7 @@ public class MainActivity extends Activity {
         sv.addView(vCrd);
         vPrf.addView(sv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vPrf);
-
-        // 3. HUBS TAB
-        vHub = new LinearLayout(this);
+               vHub = new LinearLayout(this);
         vHub.setOrientation(LinearLayout.VERTICAL);
         vHub.setVisibility(View.GONE);
         ScrollView svHub = new ScrollView(this);
@@ -411,7 +400,6 @@ public class MainActivity extends Activity {
         vHub.addView(svHub, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vHub);
 
-        // 4. CONTACTS TAB
         vCnt = new LinearLayout(this);
         vCnt.setOrientation(LinearLayout.VERTICAL);
         vCnt.setVisibility(View.GONE);
@@ -449,7 +437,6 @@ public class MainActivity extends Activity {
     }
 
     LinearLayout makeSummaryCard(String title, int accent, boolean isConv) {
-            LinearLayout makeSummaryCard(String title, int accent, boolean isConv) {
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setBackground(box(Color.parseColor("#12141D"), 12, Color.parseColor("#1E2235"), 1));
@@ -461,8 +448,7 @@ public class MainActivity extends Activity {
         if (isConv) tTopConv = v; else tTopDnpc = v;
         return c;
     }
-
-    void switchTab(int idx) {
+        void switchTab(int idx) {
         vTrk.setVisibility(idx == 0 ? View.VISIBLE : View.GONE);
         vPrf.setVisibility(idx == 1 ? View.VISIBLE : View.GONE);
         vHub.setVisibility(idx == 2 ? View.VISIBLE : View.GONE);
@@ -488,7 +474,8 @@ public class MainActivity extends Activity {
         bCatAll.setTextColor("ALL".equals(cat) ? Color.BLACK : Color.parseColor("#8E92A4"));
         setupPeriodButtons(); load();
     }
-        void setupPeriodButtons() {
+
+    void setupPeriodButtons() {
         periodFilterRow.removeAllViews();
         LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(0, -2, 1f);
         pLp.setMargins(1, 0, 1, 0);
@@ -510,8 +497,7 @@ public class MainActivity extends Activity {
         bSubYearly.setBackground(box(!d ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
         bSubYearly.setTextColor(!d ? Color.BLACK : Color.parseColor("#8E92A4"));
     }
-
-    void load() {
+        void load() {
         try {
             vCrd.removeAllViews();
             String opDate = getOperationalDate();
@@ -544,8 +530,7 @@ public class MainActivity extends Activity {
             }
             if (hc != null) hc.close();
             updatePersonalBest();
-
-            Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
+                        Cursor ac = db.rawQuery("SELECT n, SUM(o), SUM(l), SUM(p), SUM(k) FROM prf " + w + " GROUP BY n", null);
             ArrayList<String[]> list = new ArrayList<>();
             String bestConvName = "--", bestDnpcName = "--";
             double maxConv = -1; int maxDnpc = -1;
@@ -570,8 +555,7 @@ public class MainActivity extends Activity {
             tTopConv.setText(bestConvName); tTopDnpc.setText(bestDnpcName);
 
             Collections.sort(list, (a, b) -> isHighToLow ? Double.compare(Double.parseDouble(b[8]), Double.parseDouble(a[8])) : Double.compare(Double.parseDouble(a[8]), Double.parseDouble(b[8])));
-
-            int currentRank = 1;
+                        int currentRank = 1;
             for (String[] ag : list) {
                 int[] strk = getStreakInfo(ag[0]);
                 int curStrk = strk[0], prevStrk = strk[1];
@@ -715,8 +699,8 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
-                    }
-                        void showHubShareChooserDialog() {
+        }
+        void showHubShareChooserDialog() {
         String[] options = {
             "👥 ALL AGENT (Sabhi Agent + Kirana Data)",
             "🏪 KIRANA (Sirf Kirana Data)",
@@ -815,7 +799,8 @@ public class MainActivity extends Activity {
         it.setType("text/plain"); it.putExtra(Intent.EXTRA_TEXT, sb.toString());
         startActivity(Intent.createChooser(it, "📢 Share Scorecard"));
     }
-        int[] getStreakInfo(String name) {
+
+    int[] getStreakInfo(String name) {
         int cur = 0, prev = 0;
         try {
             Cursor c = db.rawQuery("SELECT DISTINCT dt FROM prf WHERE n = ? AND (o+p) > 0 ORDER BY dt DESC", new String[]{name});
@@ -1039,7 +1024,7 @@ public class MainActivity extends Activity {
         if (c != null) c.close();
         sv.addView(content); pop.addView(sv);
         new AlertDialog.Builder(this).setView(pop).setPositiveButton("Close", null).show();
-    }
+            }
         void launchVoiceOTP() {
         try {
             Intent it = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -1425,7 +1410,7 @@ public class MainActivity extends Activity {
         dialog.show();
     }
 
-        void showUpiPaymentDialog() {
+    void showUpiPaymentDialog() {
         LinearLayout d = new LinearLayout(this);
         d.setOrientation(LinearLayout.VERTICAL);
         d.setPadding(20, 18, 20, 18);
@@ -1719,6 +1704,6 @@ public class MainActivity extends Activity {
             .show();
     }
 
-        String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
+    String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
 }
