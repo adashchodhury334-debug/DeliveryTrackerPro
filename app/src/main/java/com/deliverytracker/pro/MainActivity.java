@@ -60,8 +60,7 @@ public class MainActivity extends Activity {
     String currentCategory = "AGENT", mode = "daily", CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
     boolean isHighToLow = true;
     long lastSyncTime = 0;
-
-    Handler autoSyncHandler = new Handler(Looper.getMainLooper());
+        Handler autoSyncHandler = new Handler(Looper.getMainLooper());
     Runnable autoSyncRunnable = new Runnable() {
         public void run() {
             new Thread(() -> doSync(true)).start();
@@ -98,8 +97,7 @@ public class MainActivity extends Activity {
             return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
         }
     }
-
-    String getYearStartDate(String opDate) {
+        String getYearStartDate(String opDate) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
@@ -174,8 +172,7 @@ public class MainActivity extends Activity {
         }
         autoSyncHandler.postDelayed(autoSyncRunnable, 120000);
     }
-
-    void buildUI() {
+        void buildUI() {
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#090A0F"));
         setContentView(root);
@@ -234,8 +231,7 @@ public class MainActivity extends Activity {
         tb.addView(bT, tLp); tb.addView(bP, new LinearLayout.LayoutParams(tLp));
         tb.addView(bH, new LinearLayout.LayoutParams(tLp)); tb.addView(bC, new LinearLayout.LayoutParams(tLp));
         main.addView(tb);
-
-        FrameLayout body = new FrameLayout(this);
+                    FrameLayout body = new FrameLayout(this);
         body.setPadding(12, 6, 12, 10);
         main.addView(body, new LinearLayout.LayoutParams(-1, -1));
 
@@ -303,8 +299,7 @@ public class MainActivity extends Activity {
         lv.setAdapter(adp);
         vTrk.addView(lv, new LinearLayout.LayoutParams(-1, -1));
         body.addView(vTrk);
-
-        vPrf = new LinearLayout(this);
+                    vPrf = new LinearLayout(this);
         vPrf.setOrientation(LinearLayout.VERTICAL);
         vPrf.setVisibility(View.GONE);
 
@@ -411,14 +406,8 @@ public class MainActivity extends Activity {
 
         switchCategory("AGENT");
         loadContacts();
-            }
+        }
         Button makeTabBtn(String t, int idx) {
-        Button b = new Button(this);
-        b.setText(t); b.setTextSize(9.5f); b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setOnClickListener(v -> switchTab(idx));
-        return b;
-    }
-    Button makeTabBtn(String t, int idx) {
         Button b = new Button(this);
         b.setText(t); b.setTextSize(9.5f); b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setOnClickListener(v -> switchTab(idx));
@@ -494,8 +483,7 @@ public class MainActivity extends Activity {
         bSubYearly.setBackground(box(!d ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
         bSubYearly.setTextColor(!d ? Color.BLACK : Color.parseColor("#8E92A4"));
     }
-
-    void load() {
+        void load() {
         try {
             vCrd.removeAllViews();
             String opDate = getOperationalDate();
@@ -699,9 +687,8 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
-    }
-
-    void showHubShareChooserDialog() {
+        }
+        void showHubShareChooserDialog() {
         String[] options = {
             "👥 ALL AGENT (Sabhi Agent + Kirana Data)",
             "🏪 KIRANA (Sirf Kirana Data)",
@@ -719,8 +706,9 @@ public class MainActivity extends Activity {
             })
             .setNegativeButton("Cancel", null)
             .show();
-                            }
-        void generateAndShareReport(String type) {
+    }
+
+    void generateAndShareReport(String type) {
         try {
             String opDate = getOperationalDate();
             StringBuilder sb = new StringBuilder();
@@ -799,8 +787,7 @@ public class MainActivity extends Activity {
         it.setType("text/plain"); it.putExtra(Intent.EXTRA_TEXT, sb.toString());
         startActivity(Intent.createChooser(it, "📢 Share Scorecard"));
     }
-
-    int[] getStreakInfo(String name) {
+        int[] getStreakInfo(String name) {
         int cur = 0, prev = 0;
         try {
             Cursor c = db.rawQuery("SELECT DISTINCT dt FROM prf WHERE n = ? AND (o+p) > 0 ORDER BY dt DESC", new String[]{name});
@@ -1000,8 +987,7 @@ public class MainActivity extends Activity {
         sv.addView(content); pop.addView(sv);
         new AlertDialog.Builder(this).setView(pop).setPositiveButton("Close", null).show();
     }
-
-    void showHubDetails(String hname) {
+        void showHubDetails(String hname) {
         Cursor c = db.rawQuery("SELECT dt, o, l, lc, p, k, kc, tc FROM hub_prf WHERE hname = ? ORDER BY dt DESC LIMIT 30", new String[]{hname});
         LinearLayout pop = new LinearLayout(this);
         pop.setOrientation(LinearLayout.VERTICAL);
@@ -1248,8 +1234,7 @@ public class MainActivity extends Activity {
             });
         }
     }
-
-    void showAuthDialog() {
+        void showAuthDialog() {
         if (db == null) {
             try {
                 db = openOrCreateDatabase("TrackerV21.db", MODE_PRIVATE, null);
@@ -1438,7 +1423,7 @@ public class MainActivity extends Activity {
                         new Thread(() -> doSync(true)).start();
                         Toast.makeText(this, "✅ Signup Successful & Saved!", Toast.LENGTH_SHORT).show();
                     } catch (Exception e) {
-                        Toast.makeText(this, "Yeh Mobile Number pehle से registered hai!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Yeh Mobile Number pehle se registered hai!", Toast.LENGTH_SHORT).show();
                     }
                 }
             } catch (Exception e) {
@@ -1452,7 +1437,7 @@ public class MainActivity extends Activity {
 
     void showUpiPaymentDialog() {
         LinearLayout d = new LinearLayout(this);
-        ntation(LinearLayout.VERTICAL);
+        d.setOrientation(LinearLayout.VERTICAL);
         d.setPadding(20, 18, 20, 18);
         d.setBackgroundColor(Color.parseColor("#0F1015"));
 
@@ -1739,4 +1724,5 @@ public class MainActivity extends Activity {
 
     String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
-                          }
+}
+
