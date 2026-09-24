@@ -29,6 +29,7 @@ import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -56,7 +57,7 @@ public class MainActivity extends Activity {
     TextView tCnt, tHubOfdDel, tHubOfpPik, tHubDnpDnpc, tGapTarget, tTopConv, tTopDnpc, tPersonalBest;
     ArrayList<String[]> ords = new ArrayList<>();
     BaseAdapter adp;
-    String currentCategory = "AGENT", mode = "daily", CSV = "https://docs.google.com/spreadsheets/d/10u1381mZJg0jU1Yn8Jt9P1uY9K1w8r1z2x3c4v5b6n7/export?format=csv";
+    String currentCategory = "AGENT", mode = "daily", CSV = "https://docs.google.com/spreadsheets/d/1Dul38iNZ_eNmABVuYVWhrUg9F_xVMvaVvQvLIXlySj4/export?format=csv";
     boolean isHighToLow = true;
     long lastSyncTime = 0;
 
@@ -97,7 +98,8 @@ public class MainActivity extends Activity {
             return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
         }
     }
-        String getYearStartDate(String opDate) {
+
+    String getYearStartDate(String opDate) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Calendar cal = Calendar.getInstance();
@@ -172,7 +174,8 @@ public class MainActivity extends Activity {
         }
         autoSyncHandler.postDelayed(autoSyncRunnable, 120000);
     }
-        void buildUI() {
+
+    void buildUI() {
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#090A0F"));
         setContentView(root);
@@ -253,7 +256,8 @@ public class MainActivity extends Activity {
         tCnt = tv("📦 Total Trackable Orders: --", Color.parseColor("#00E676"), 12.5f, true);
         tCnt.setPadding(6, 10, 6, 8);
         vTrk.addView(tCnt);
-                    ListView lv = new ListView(this);
+
+        ListView lv = new ListView(this);
         lv.setDivider(null); lv.setDividerHeight(10);
         adp = new BaseAdapter() {
             public int getCount() { return ords.size(); }
@@ -320,7 +324,8 @@ public class MainActivity extends Activity {
         tPersonalBest.setBackground(box(Color.parseColor("#1C1E2A"), 10, Color.parseColor("#FBBF24"), 1));
         tPersonalBest.setPadding(14, 10, 14, 10);
         vPrf.addView(tPersonalBest);
-                    LinearLayout hubBox = new LinearLayout(this);
+
+        LinearLayout hubBox = new LinearLayout(this);
         hubBox.setOrientation(LinearLayout.VERTICAL);
         hubBox.setBackground(box(Color.parseColor("#12141D"), 14, Color.parseColor("#38BDF8"), 1));
         hubBox.setPadding(16, 12, 16, 12);
@@ -406,8 +411,14 @@ public class MainActivity extends Activity {
 
         switchCategory("AGENT");
         loadContacts();
-        }
+            }
         Button makeTabBtn(String t, int idx) {
+        Button b = new Button(this);
+        b.setText(t); b.setTextSize(9.5f); b.setTypeface(Typeface.DEFAULT_BOLD);
+        b.setOnClickListener(v -> switchTab(idx));
+        return b;
+    }
+    Button makeTabBtn(String t, int idx) {
         Button b = new Button(this);
         b.setText(t); b.setTextSize(9.5f); b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setOnClickListener(v -> switchTab(idx));
@@ -483,7 +494,8 @@ public class MainActivity extends Activity {
         bSubYearly.setBackground(box(!d ? Color.parseColor("#00E676") : Color.parseColor("#1C1E2A"), 8, 0, 0));
         bSubYearly.setTextColor(!d ? Color.BLACK : Color.parseColor("#8E92A4"));
     }
-        void load() {
+
+    void load() {
         try {
             vCrd.removeAllViews();
             String opDate = getOperationalDate();
@@ -687,8 +699,9 @@ public class MainActivity extends Activity {
                 currentRank++;
             }
         } catch (Exception ignored) {}
-        }
-        void showHubShareChooserDialog() {
+    }
+
+    void showHubShareChooserDialog() {
         String[] options = {
             "👥 ALL AGENT (Sabhi Agent + Kirana Data)",
             "🏪 KIRANA (Sirf Kirana Data)",
@@ -706,9 +719,8 @@ public class MainActivity extends Activity {
             })
             .setNegativeButton("Cancel", null)
             .show();
-    }
-
-    void generateAndShareReport(String type) {
+                            }
+        void generateAndShareReport(String type) {
         try {
             String opDate = getOperationalDate();
             StringBuilder sb = new StringBuilder();
@@ -1012,8 +1024,9 @@ public class MainActivity extends Activity {
         if (c != null) c.close();
         sv.addView(content); pop.addView(sv);
         new AlertDialog.Builder(this).setView(pop).setPositiveButton("Close", null).show();
-                                    }
-        void launchVoiceOTP() {
+    }
+
+    void launchVoiceOTP() {
         try {
             Intent it = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             it.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -1399,7 +1412,8 @@ public class MainActivity extends Activity {
                     String name = etName.getText().toString().trim();
                     String upi = etUpi.getText().toString().trim();
                     String role = spRole.getSelectedItem() != null ? spRole.getSelectedItem().toString() : "WISH MASTER";
-                                                if (name.isEmpty() || upi.isEmpty()) {
+                    
+                    if (name.isEmpty() || upi.isEmpty()) {
                         Toast.makeText(this, "Sabhi fields bharein (Name & UPI)", Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -1424,7 +1438,7 @@ public class MainActivity extends Activity {
                         new Thread(() -> doSync(true)).start();
                         Toast.makeText(this, "✅ Signup Successful & Saved!", Toast.LENGTH_SHORT).show();
                     } catch (Exception e) {
-                        Toast.makeText(this, "Yeh Mobile Number pehle se registered hai!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Yeh Mobile Number pehle से registered hai!", Toast.LENGTH_SHORT).show();
                     }
                 }
             } catch (Exception e) {
@@ -1438,67 +1452,60 @@ public class MainActivity extends Activity {
 
     void showUpiPaymentDialog() {
         LinearLayout d = new LinearLayout(this);
-        d.setOrientation(LinearLayout.VERTICAL);
+        ntation(LinearLayout.VERTICAL);
         d.setPadding(20, 18, 20, 18);
         d.setBackgroundColor(Color.parseColor("#0F1015"));
 
-        d.addView(tv("💸 UPI PAYMENT COLLECTION", Color.parseColor("#F59E0B"), 15f, true));
+        d.addView(tv("📱 SCAN & PAY VIA QR CODE", Color.parseColor("#F59E0B"), 15f, true));
 
-        String savedUpi = "";
+        String savedUpi = "a.chowdhury.6@superyes";
         try {
             String loggedMob = getSharedPreferences("TrackerPrefs", MODE_PRIVATE).getString("logged_mobile", "");
             Cursor c = db.rawQuery("SELECT upi FROM users WHERE mobile = ?", new String[]{loggedMob});
             if (c != null && c.moveToFirst()) {
-                savedUpi = c.getString(0);
+                if (!c.getString(0).isEmpty()) savedUpi = c.getString(0);
                 c.close();
             }
         } catch (Exception ignored) {}
 
-        EditText etUpiId = new EditText(this);
-        etUpiId.setText(savedUpi);
-        etUpiId.setHint("Enter UPI ID");
-        etUpiId.setHintTextColor(Color.parseColor("#717688"));
-        etUpiId.setTextColor(Color.WHITE);
-        etUpiId.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#F59E0B"), 1));
-        etUpiId.setPadding(14, 10, 14, 10);
-        etUpiId.setTextSize(13f);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.setMargins(0, 8, 0, 6);
-        etUpiId.setLayoutParams(lp);
-        d.addView(etUpiId);
+        TextView tUpi = tv("UPI ID: " + savedUpi, Color.WHITE, 13.5f, true);
+        tUpi.setPadding(0, 10, 0, 10);
+        d.addView(tUpi);
 
-        EditText etAmount = new EditText(this);
-        etAmount.setHint("Enter Amount (₹)");
-        etAmount.setHintTextColor(Color.parseColor("#717688"));
-        etAmount.setTextColor(Color.WHITE);
-        etAmount.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        etAmount.setBackground(box(Color.parseColor("#161824"), 10, Color.parseColor("#F59E0B"), 1));
-        etAmount.setPadding(14, 10, 14, 10);
-        etAmount.setLayoutParams(lp);
-        d.addView(etAmount);
+        ImageView imgQr = new ImageView(this);
+        LinearLayout.LayoutParams imgLp = new LinearLayout.LayoutParams(500, 500);
+        imgLp.gravity = Gravity.CENTER;
+        imgLp.setMargins(0, 10, 0, 14);
+        imgQr.setLayoutParams(imgLp);
+        imgQr.setBackgroundColor(Color.WHITE);
+        d.addView(imgQr);
 
-        Button bPayNow = new Button(this);
-        bPayNow.setText("🚀 PAY VIA UPI");
-        bPayNow.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
-        bPayNow.setTextColor(Color.BLACK);
-        bPayNow.setTypeface(Typeface.DEFAULT_BOLD);
-        bPayNow.setTextSize(12f);
-        bPayNow.setOnClickListener(v -> {
+        final String upiForQr = savedUpi;
+        new Thread(() -> {
             try {
-                String upiId = etUpiId.getText().toString().trim();
-                String amt = etAmount.getText().toString().trim();
-                if (upiId.isEmpty() || amt.isEmpty()) {
-                    Toast.makeText(this, "UPI ID aur Amount bharein", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                Uri uri = Uri.parse("upi://pay?pa=" + upiId + "&pn=DeliveryTracker&am=" + amt + "&cu=INR");
-                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                startActivity(Intent.createChooser(intent, "Pay with UPI"));
-            } catch (Exception e) {
-                Toast.makeText(this, "UPI App not found", Toast.LENGTH_SHORT).show();
-            }
+                String qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + Uri.encode("upi://pay?pa=" + upiForQr + "&pn=DeliveryTracker");
+                java.net.URL url = new java.net.URL(qrUrl);
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeStream(url.openConnection().getInputStream());
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    if (bmp != null) imgQr.setImageBitmap(bmp);
+                });
+            } catch (Exception ignored) {}
+        }).start();
+
+        Button bCopy = new Button(this);
+        bCopy.setText("📋 Copy UPI ID");
+        bCopy.setBackground(box(Color.parseColor("#00E676"), 8, 0, 0));
+        bCopy.setTextColor(Color.BLACK);
+        bCopy.setTypeface(Typeface.DEFAULT_BOLD);
+        bCopy.setTextSize(12f);
+        LinearLayout.LayoutParams lpBtn = new LinearLayout.LayoutParams(-1, -2);
+        lpBtn.setMargins(0, 10, 0, 0);
+        bCopy.setLayoutParams(lpBtn);
+        bCopy.setOnClickListener(v -> {
+            ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("UPI", upiForQr));
+            Toast.makeText(this, "✅ UPI ID Copied to Clipboard!", Toast.LENGTH_SHORT).show();
         });
-        d.addView(bPayNow);
+        d.addView(bCopy);
 
         new AlertDialog.Builder(this)
             .setView(d)
@@ -1732,5 +1739,4 @@ public class MainActivity extends Activity {
 
     String clean(String s) { return s == null ? "" : s.replace("\"", "").trim(); }
     int parseInt(String s) { try { return Integer.parseInt(clean(s).replace("%", "")); } catch (Exception e) { return 0; } }
-            }
-
+                          }
